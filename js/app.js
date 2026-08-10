@@ -540,13 +540,6 @@ function relativeTime(iso) {
   return `${diffDay}일 전`;
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  if (
-    !CONFIG.KAKAO_APP_KEY ||
-    CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
-  ) {
-    document.getElementById("key-warning").classList.remove("hidden");
-    return;
-  }
+window.startConcreteSapiensApp = function () {
   kakao.maps.load(initApp);
-});
+};
