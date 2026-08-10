@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>콘크리트 사피엔스 지도</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="map"></div>
+
+    <!-- 상단: 워드마크 + 검색 -->
+    <div class="top-bar">
+      <div class="wordmark">
+        콘크리트 사피엔스
+        <small>MEMORY MAP</small>
+      </div>
+      <div class="search-box">
+        <div class="search-input-row">
+          <input type="text" id="search-input" placeholder="장소 검색 (예: 압구정현대아파트)" />
+          <button id="search-btn">검색</button>
+        </div>
+        <ul class="search-results hidden" id="search-results"></ul>
+      </div>
+    </div>
+
+    <!-- 해시태그 칩 -->
+    <div class="hashtag-bar" id="hashtag-chips"></div>
+
+    <!-- 하단 툴바 -->
+    <div class="bottom-toolbar">
+      <button class="tool-btn" id="btn-my-location">📍 내 위치</button>
+      <button class="tool-btn tool-btn--accent" id="btn-random">🎲 랜덤 발견</button>
+    </div>
+
+    <!-- 이야기 리스트 팝업 -->
+    <div class="overlay hidden" id="popup-overlay">
+      <div class="plaque-card">
+        <div class="plaque-card__inner" id="popup-panel">
+          <button class="plaque-close" id="popup-close">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 작성 폼 -->
+    <div class="overlay hidden" id="composer-overlay">
+      <div class="plaque-card">
+        <div class="plaque-card__inner" id="composer-panel">
+          <button class="plaque-close" id="composer-close">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API 키 미설정 시 안내 -->
+  <div id="key-warning" class="hidden">
+    <div class="box">
+      <h1>카카오맵 API 키가 필요해요</h1>
+      <p>js/config.js 파일을 열어 KAKAO_APP_KEY 값을 발급받은 JavaScript 키로 교체해주세요.</p>
+      <code>
+        1. https://developers.kakao.com 접속 후 앱 등록<br />
+        2. 플랫폼 &gt; Web에 사이트 도메인 등록<br />
+        3. 앱 키 &gt; JavaScript 키 복사<br />
+        4. js/config.js의 KAKAO_APP_KEY에 붙여넣기
+      </code>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    // 카카오맵 SDK를 config.js 로드 이후 동적으로 삽입
+    // (autoload=false로 불러온 뒤 app.js에서 kakao.maps.load 호출)
+    const kakaoScript = document.createElement("script");
+    kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
+    document.head.appendChild(kakaoScript);
+  </script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "정적 사이트라 별도 빌드 과정 없음"
+    build:
+      commands:
+        - echo "빌드 스킵 - HTML/CSS/JS 그대로 배포"
+  artifacts:
+    baseDirectory: /
+    files:
+      - "**/*"
+  cache:
+    paths: []
