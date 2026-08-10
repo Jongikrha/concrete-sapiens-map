@@ -14,7 +14,7 @@
 // ============================================================
 
 const CONFIG = {
-  KAKAO_APP_KEY: "YOUR_KAKAO_JAVASCRIPT_KEY_HERE",
+  KAKAO_APP_KEY: "2d563828a521e193fd6b06393f010fa2",
 
   // 지도 초기 중심 좌표 (대한민국 중심부 근처, 대전시청)
   DEFAULT_CENTER: { lat: 36.3504, lng: 127.3845 },
