@@ -70,11 +70,21 @@
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script>
-    // 카카오맵 SDK를 config.js 로드 이후 동적으로 삽입
-    // (autoload=false로 불러온 뒤 app.js에서 kakao.maps.load 호출)
-    const kakaoScript = document.createElement("script");
-    kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
-    document.head.appendChild(kakaoScript);
+    if (
+      !CONFIG.KAKAO_APP_KEY ||
+      CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
+    ) {
+      document.getElementById("key-warning").classList.remove("hidden");
+    } else {
+      const kakaoScript = document.createElement("script");
+      kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
+      kakaoScript.onload = () => {
+        if (window.startConcreteSapiensApp) {
+          window.startConcreteSapiensApp();
+        }
+      };
+      document.head.appendChild(kakaoScript);
+    }
   </script>
   <script src="js/app.js"></script>
 </body>
