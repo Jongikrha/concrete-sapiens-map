@@ -767,6 +767,14 @@ body {
   color: var(--cs-orange);
 }
 
+.story-year-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 22px;
+  flex-wrap: wrap;
+}
+
 .story-year {
   font-family: var(--font-sans);
   font-weight: 400;
@@ -775,6 +783,12 @@ body {
   line-height: 1;
   color: var(--cs-black);
   margin: 0;
+}
+
+.story-year-suffix {
+  font-size: 19px;
+  color: var(--cs-text-muted);
+  font-weight: 400;
 }
 
 .story-eyebrow {
@@ -883,13 +897,21 @@ body {
 
 .year-explore-link {
   display: block;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
   border-top: 1px solid var(--cs-map-gray);
+  border-radius: 0;
+  outline: none;
   background: none;
+  font-family: var(--font-sans);
   color: var(--cs-text-muted);
   font-size: 12.5px;
   cursor: pointer;
   padding: 14px 0 0;
-  margin-top: 0;
+  margin: 0;
   text-align: left;
 }
 

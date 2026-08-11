@@ -68,7 +68,7 @@ function initMap() {
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,
-    minLevel: 8,
+    minLevel: 3, // 더 확대해도(1km 스케일 부근까지) 숫자 클러스터가 유지되도록 낮춤
     disableClickZoom: false,
     styles: [
       {
@@ -596,19 +596,20 @@ function renderSheetContent(group) {
 }
 
 function renderStoryItem(story) {
-  const year = getStoryYearLabel(story);
+  const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
+  const yearMain = numericYear !== null ? numericYear : "· · ·";
+  const yearSuffix = numericYear !== null ? `년${month ? ` ${month}월` : ""}` : "";
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
-  const numericYear = Storage.getStoryYear(story);
   const duration = estimateDurationSeconds(story.content);
 
   return `
     <div class="story-item">
       <div class="story-item-top">
-        <div>
-          <p class="story-year">${year}</p>
-          ${month ? `<p class="story-month">${month}월</p>` : ""}
+        <div class="story-year-row">
+          <span class="story-year">${yearMain}</span>
+          ${yearSuffix ? `<span class="story-year-suffix">${yearSuffix}</span>` : ""}
         </div>
         <div class="story-item-menu">
           <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
