@@ -203,11 +203,33 @@ function flyToStory(story, openSheetAfter) {
   highlightMarkerForStory(story);
 
   if (openSheetAfter) {
-    const group = Storage.getGroupedByPlace().find((g) => g.stories.some((s) => s.id === story.id));
-    if (group) {
+    const group = buildFilteredGroupContainingStory(story.id);
+    if (group && group.stories.length > 0) {
       setTimeout(() => openSheet(group), 250);
     }
   }
+}
+
+/**
+ * 특정 이야기가 속한 스팟을 찾되, 지금 활성화된 필터(해시태그/연도)가
+ * 있으면 그 필터에 맞는 이야기만 담아서 반환한다. 예를 들어 #첫사랑
+ * 필터를 타고 이동했는데, 우연히 같은 좌표에 태그와 무관한 다른
+ * 이야기가 함께 있다고 해서 그것까지 섞여 보이면 안 되기 때문이다.
+ */
+function buildFilteredGroupContainingStory(storyId) {
+  const rawGroup = Storage.getGroupedByPlace().find((g) => g.stories.some((s) => s.id === storyId));
+  if (!rawGroup) return null;
+  return applyActiveFilterToGroup(rawGroup);
+}
+
+function applyActiveFilterToGroup(rawGroup) {
+  if (activeYearFilter !== null) {
+    return { ...rawGroup, stories: rawGroup.stories.filter((s) => Storage.getStoryYear(s) === activeYearFilter) };
+  }
+  if (activeHashtagFilter) {
+    return { ...rawGroup, stories: rawGroup.stories.filter((s) => (s.hashtags || []).includes(activeHashtagFilter)) };
+  }
+  return rawGroup;
 }
 
 function highlightMarkerForStory(story) {
@@ -611,7 +633,8 @@ function renderSheetContent(group) {
       if (confirm("이 기록을 신고하시겠습니까?")) {
         Storage.reportStory(btn.dataset.id);
         alert("신고가 접수되었습니다.");
-        const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
+        const rawRefreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
+        const refreshed = rawRefreshed ? applyActiveFilterToGroup(rawRefreshed) : null;
         if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
         else closeSheet();
         renderMarkers();
