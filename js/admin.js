@@ -11,7 +11,8 @@ import { signIn, signOut, fetchAuthSession, getCurrentUser } from "https://esm.s
 import { generateClient } from "https://esm.sh/aws-amplify@6.20.0/data";
 
 const isLocalDev = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const OUTPUTS_FILE = isLocalDev ? "amplify_outputs.local.json" : "amplify_outputs.json";
+// /admin(리다이렉트) 경로에서 열릴 수도 있어서 상대경로는 위험하다 — 절대경로로 고정.
+const OUTPUTS_FILE = isLocalDev ? "/amplify_outputs.local.json" : "/amplify_outputs.json";
 
 let activeTab = "queue";
 let activeDeviceFilter = null;
