@@ -25,8 +25,30 @@ const schema = a.schema({
       status: a.string().required(),
       reactionCount: a.integer().required(),
       shareCount: a.integer().required(),
+      // 어드민 전용 필드 — 공개 화면에는 절대 노출하지 않는다.
+      // authorDeviceId: 실계정 없이 브라우저 단위 비식별 상관관계(진짜 신원 아님).
+      authorDeviceId: a.string(),
+      viewCount: a.integer(),
     })
-    .authorization((allow) => [allow.guest().to(['create', 'read', 'update'])]),
+    .authorization((allow) => [
+      allow.guest().to(['create', 'read', 'update']),
+      allow.group('Admins'),
+    ]),
+
+  // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
+  BannedWord: a
+    .model({
+      word: a.string().required(),
+    })
+    .authorization((allow) => [allow.group('Admins'), allow.guest().to(['read'])]),
+
+  // 방문 로그 — write-only 텔레메트리. 게스트는 쓰기만(자기가 남긴 것도 못 읽음),
+  // 관리자만 읽는다.
+  PageView: a
+    .model({
+      storyId: a.string(), // ?story=로 특정 기억을 보고 들어온 경우만 채움
+    })
+    .authorization((allow) => [allow.guest().to(['create']), allow.group('Admins').to(['read'])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
