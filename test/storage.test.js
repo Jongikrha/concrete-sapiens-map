@@ -17,6 +17,18 @@ function createLocalStorageMock() {
   };
 }
 
+function createFakeClient() {
+  return {
+    models: {
+      Story: {
+        create: async () => ({}),
+        update: async () => ({}),
+        list: async () => ({ data: [], nextToken: null }),
+      },
+    },
+  };
+}
+
 global.localStorage = createLocalStorageMock();
 global.CONFIG = {
   REPORT_HIDE_THRESHOLD: 5,
@@ -50,6 +62,8 @@ function createStory(overrides = {}) {
 
 beforeEach(() => {
   global.localStorage.clear();
+  Storage._setClient(createFakeClient());
+  Storage._setCache([]);
 });
 
 test("generatePublicId는 허용된 문자로 8자리 문자열을 생성한다", () => {
@@ -133,44 +147,44 @@ test("getStoryMonth는 referenceDate가 없으면 null을 반환한다", () => {
   assert.equal(Storage.getStoryMonth(story), null);
 });
 
-test("saveStory로 저장한 스토리는 getAllStories로 그대로 조회된다", () => {
+test("saveStory는 캐시에 즉시 반영되고 저장한 값을 그대로 반환한다", () => {
   const story = createStory({ id: "s1" });
-  Storage.saveStory(story);
-  const all = Storage.getAllStories();
-  assert.equal(all.length, 1);
-  assert.equal(all[0].id, "s1");
+  const saved = Storage.saveStory(story);
+  assert.equal(saved.id, "s1");
+  assert.equal(Storage.getAllStories().length, 1);
+  assert.equal(Storage.getAllStories()[0].id, "s1");
 });
 
 test("getVisibleStories는 status가 HIDDEN인 스토리를 제외한다", () => {
-  Storage.saveAll([createStory({ id: "visible", status: "ACTIVE" }), createStory({ id: "hidden", status: "HIDDEN" })]);
+  Storage._setCache([createStory({ id: "visible", status: "ACTIVE" }), createStory({ id: "hidden", status: "HIDDEN" })]);
   const visible = Storage.getVisibleStories();
   assert.equal(visible.length, 1);
   assert.equal(visible[0].id, "visible");
 });
 
 test("reportStory는 신고 누적이 REPORT_HIDE_THRESHOLD에 도달하면 status를 HIDDEN으로 바꾼다", () => {
-  Storage.saveAll([createStory({ id: "s1", reportCount: 4, status: "ACTIVE" })]);
+  Storage._setCache([createStory({ id: "s1", reportCount: 4, status: "ACTIVE" })]);
   const updated = Storage.reportStory("s1");
   assert.equal(updated.reportCount, 5);
   assert.equal(updated.status, "HIDDEN");
 });
 
 test("reportStory는 임계치 미만이면 status를 바꾸지 않는다", () => {
-  Storage.saveAll([createStory({ id: "s1", reportCount: 0, status: "ACTIVE" })]);
+  Storage._setCache([createStory({ id: "s1", reportCount: 0, status: "ACTIVE" })]);
   const updated = Storage.reportStory("s1");
   assert.equal(updated.reportCount, 1);
   assert.equal(updated.status, "ACTIVE");
 });
 
 test("toggleReaction은 처음 호출 시 반응 수를 늘리고 hasReacted를 true로 만든다", () => {
-  Storage.saveAll([createStory({ id: "s1", reactionCount: 0 })]);
+  Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
   const updated = Storage.toggleReaction("s1");
   assert.equal(updated.reactionCount, 1);
   assert.equal(Storage.hasReacted("s1"), true);
 });
 
 test("toggleReaction은 두 번째 호출(같은 사람이 다시 누름) 시 반응을 취소한다", () => {
-  Storage.saveAll([createStory({ id: "s1", reactionCount: 0 })]);
+  Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
   Storage.toggleReaction("s1");
   const reverted = Storage.toggleReaction("s1");
   assert.equal(reverted.reactionCount, 0);
@@ -178,7 +192,7 @@ test("toggleReaction은 두 번째 호출(같은 사람이 다시 누름) 시 �
 });
 
 test("getTopHashtags는 사용 빈도 내림차순으로 정렬하고 limit만큼만 반환한다", () => {
-  Storage.saveAll([
+  Storage._setCache([
     createStory({ id: "s1", hashtags: ["회사", "카페"] }),
     createStory({ id: "s2", hashtags: ["회사"] }),
     createStory({ id: "s3", hashtags: ["학교"] }),
@@ -193,11 +207,21 @@ test("getYearRange는 연도 정보가 있는 스토리가 없으면 최근 10�
 });
 
 test("getYearRange는 스토리들의 최소/최대 연도를 계산한다", () => {
-  Storage.saveAll([
+  Storage._setCache([
     createStory({ id: "s1", dateMode: "past", referenceDate: "1998-03" }),
     createStory({ id: "s2", dateMode: "past", referenceDate: "2010-07" }),
   ]);
   const range = Storage.getYearRange();
   assert.equal(range.min, 1998);
   assert.equal(range.max, new Date().getFullYear());
+});
+
+test("importStories는 이미 있는 id는 건너뛰고 새 항목만 캐시에 추가한다", async () => {
+  Storage._setCache([createStory({ id: "existing" })]);
+  const addedCount = await Storage.importStories([
+    createStory({ id: "existing" }),
+    createStory({ id: "new-1" }),
+  ]);
+  assert.equal(addedCount, 1);
+  assert.equal(Storage.getAllStories().length, 2);
 });

@@ -95,6 +95,19 @@
   </div>
 
   <script src="js/config.js"></script>
+  <!-- backend.js(ES 모듈)는 aws-amplify를 CDN에서 받아오는데, 이게 카카오 SDK
+       로딩보다 늦게 끝날 수도 있다(네트워크 타이밍에 따라 달라짐 — 실제로
+       역전되는 걸 확인함). 그래서 순서에 기대지 않고, 여기서 미리 Promise를
+       만들어두고 backend.js가 다 되면 그 Promise를 resolve하는 방식으로
+       확실하게 동기화한다. -->
+  <script>
+    window._backendClientReadyResolvers = {};
+    window._backendClientReady = new Promise((resolve, reject) => {
+      window._backendClientReadyResolvers.resolve = resolve;
+      window._backendClientReadyResolvers.reject = reject;
+    });
+  </script>
+  <script type="module" src="js/backend.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/backup.js"></script>
   <script src="js/map.js"></script>

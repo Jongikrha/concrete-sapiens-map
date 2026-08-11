@@ -5,8 +5,8 @@
 // backup.js로 분리되어 있다. 이 파일은 그 조각들을 엮는 core.
 // ============================================================
 
-function initApp() {
-  Storage.seedIfEmpty();
+async function initApp() {
+  await Storage.init();
   initMap();
   bindUIEvents();
   renderHashtagChips();

@@ -36,7 +36,7 @@ function handleImportFile(e) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const payload = JSON.parse(reader.result);
       const importedStories = Array.isArray(payload) ? payload : payload.stories;
@@ -46,12 +46,8 @@ function handleImportFile(e) {
         return;
       }
 
-      const existing = Storage.getAllStories();
-      const existingIds = new Set(existing.map((s) => s.id));
-      const merged = [...existing, ...importedStories.filter((s) => !existingIds.has(s.id))];
-
-      Storage.saveAll(merged);
-      alert(`${importedStories.length}개 중 ${merged.length - existing.length}개를 새로 불러왔습니다.`);
+      const addedCount = await Storage.importStories(importedStories);
+      alert(`${importedStories.length}개 중 ${addedCount}개를 새로 불러왔습니다.`);
       renderMarkers();
       renderHashtagChips();
       openRecentMemoriesModal();

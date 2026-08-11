@@ -1,19 +1,27 @@
 // ============================================================
-// 데이터 저장 계층 (Storage Layer)
+// 데이터 저장 계층 (Storage Layer) — AppSync + DynamoDB 연동
 // ============================================================
-// v4: 주소 우선 구조 / 년-월 시점 / 태그 별도 입력 반영
+// v5: localStorage 전체 저장을 AppSync(GraphQL)로 교체.
 //
-// Story 스키마 변경 사항:
-//  - placeName(단일 필드) 폐기 → officialPlaceName(검색형 장소의 공식 이름,
-//    카카오 Places API 결과) / address(항상 시도하는 역지오코딩 결과) /
-//    customName(자유 핀에서 작성자가 붙인 개인적 이름, 선택) 로 분리
-//  - referenceDate는 "YYYY-MM" 형식으로 저장 (일자 없이 년/월까지만)
+// 설계: app.js/map.js/composer.js/storySheet.js/filters.js 전역의 Storage.*
+// 호출부가 전부 동기 호출이라(렌더 함수 안 체인 등), 인터페이스는 계속 동기로
+// 유지한다. 부팅 시 전체 스토리를 한 번 메모리 캐시(_cache)로 가져오고,
+// 순수 조회 메서드는 전부 이 캐시를 대상으로 지금 코드 그대로 동작한다.
+// 쓰기 메서드(saveStory/reportStory/toggleReaction/incrementShareCount)는
+// 캐시를 동기로 먼저 바꾸고 즉시 반환한 뒤, AppSync mutation은 백그라운드로
+// fire-and-forget 전송한다(낙관적 업데이트). 네트워크 실패 시 로컬 캐시와
+// 서버가 어긋날 수 있다는 건 알려진 트레이드오프로 받아들인다 — 재시도
+// 큐는 이 트래픽 규모에 과설계라 만들지 않는다.
+//
+// 실제 AppSync 클라이언트 생성(Amplify.configure 등)은 js/backend.js(ES
+// 모듈)가 담당하고 window._backendClientReady(Promise, index.html에서 미리
+// 생성)로 넘겨준다 — 이 파일은 import 문이 없는 클래식 스크립트로 남겨서
+// Node(node:test)에서도 그대로 require해 테스트할 수 있게 한다.
 // ============================================================
 
-const STORAGE_KEY = "concrete_sapiens_stories_v3";
 const REACTED_KEY = "concrete_sapiens_reacted_v1";
 
-// 오늘의 질문 프롬프트 목록 (매일 하나씩 결정론적으로 노출)
+// 오늘의 질문 프롬프트 목록 (매일 하나씩 결정론적으로 노출) — 데이터 의존 없음
 const DAILY_PROMPTS = [
   "당신이 처음으로 혼자 소주를 마셨던 가게는 어디인가요?",
   "부모님과 마지막으로 손을 잡고 걸었던 길을 기억하나요?",
@@ -27,26 +35,54 @@ const DAILY_PROMPTS = [
   "누군가를 배웅하며 눈물을 참았던 곳이 있나요?",
 ];
 
+let client = null;
+let _cache = [];
+
+async function fetchAllStories() {
+  const items = [];
+  let nextToken = null;
+  do {
+    const { data, nextToken: token, errors } = await client.models.Story.list({
+      limit: 1000,
+      nextToken,
+    });
+    if (errors) {
+      console.error("스토리 목록 조회 실패", errors);
+      break;
+    }
+    items.push(...data);
+    nextToken = token;
+  } while (nextToken);
+  return items;
+}
+
 const Storage = {
-  getAllStories() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+  async init() {
     try {
-      return JSON.parse(raw);
+      client = await window._backendClientReady;
+      _cache = await fetchAllStories();
     } catch (e) {
-      console.error("스토리 데이터 파싱 실패", e);
-      return [];
+      console.error("백엔드 연결 실패 — 빈 지도로 시작합니다", e);
+      _cache = [];
     }
   },
 
-  saveAll(stories) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+  // 테스트 전용 — client/_cache를 직접 주입한다.
+  _setClient(c) {
+    client = c;
+  },
+  _setCache(c) {
+    _cache = c;
+  },
+
+  getAllStories() {
+    return _cache;
   },
 
   saveStory(story) {
-    const stories = this.getAllStories();
-    stories.push(story);
-    this.saveAll(stories);
+    _cache.push(story);
+    if (client) client.models.Story.create(story).catch((e) => console.error("스토리 저장 실패(백그라운드)", story.id, e));
+    else console.error("백엔드 미연결 상태라 저장이 서버에 반영되지 않았습니다", story.id);
     return story;
   },
 
@@ -59,20 +95,21 @@ const Storage = {
   },
 
   reportStory(storyId) {
-    const stories = this.getAllStories();
-    const target = stories.find((s) => s.id === storyId);
+    const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
     target.reportCount = (target.reportCount || 0) + 1;
     if (target.reportCount >= CONFIG.REPORT_HIDE_THRESHOLD) {
       target.status = "HIDDEN";
     }
-    this.saveAll(stories);
+    if (client) {
+      client.models.Story.update({ id: storyId, reportCount: target.reportCount, status: target.status })
+        .catch((e) => console.error("신고 반영 실패(백그라운드)", storyId, e));
+    }
     return target;
   },
 
   toggleReaction(storyId) {
-    const stories = this.getAllStories();
-    const target = stories.find((s) => s.id === storyId);
+    const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
 
     const reactedSet = this._getReactedSet();
@@ -87,7 +124,10 @@ const Storage = {
     }
 
     this._saveReactedSet(reactedSet);
-    this.saveAll(stories);
+    if (client) {
+      client.models.Story.update({ id: storyId, reactionCount: target.reactionCount })
+        .catch((e) => console.error("반응 반영 실패(백그라운드)", storyId, e));
+    }
     return target;
   },
 
@@ -95,6 +135,9 @@ const Storage = {
     return this._getReactedSet().has(storyId);
   },
 
+  // "내가 반응했는지" 표시는 의도적으로 브라우저 로컬에만 둔다 — 서버의
+  // reactionCount가 이미 공유 진실이고, "누가" 반응했는지는 사용자 계정
+  // 개념이 필요한 나중 단계(로그인/어드민)의 몫이다.
   _getReactedSet() {
     const raw = localStorage.getItem(REACTED_KEY);
     try {
@@ -109,12 +152,33 @@ const Storage = {
   },
 
   incrementShareCount(storyId) {
-    const stories = this.getAllStories();
-    const target = stories.find((s) => s.id === storyId);
+    const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
     target.shareCount = (target.shareCount || 0) + 1;
-    this.saveAll(stories);
+    if (client) {
+      client.models.Story.update({ id: storyId, shareCount: target.shareCount })
+        .catch((e) => console.error("공유 수 반영 실패(백그라운드)", storyId, e));
+    }
     return target;
+  },
+
+  /**
+   * 백업 파일 가져오기 전용 — 이미 없는 id만 추가한다(additive-only).
+   * 공유 DB에서는 로컬 백업으로 전체를 덮어쓰는 saveAll류 동작이 파괴적이라
+   * 의도적으로 없앴다.
+   */
+  async importStories(stories) {
+    const existingIds = new Set(_cache.map((s) => s.id));
+    const toAdd = stories.filter((s) => s.id && !existingIds.has(s.id));
+    for (const story of toAdd) {
+      try {
+        await client.models.Story.create(story);
+        _cache.push(story);
+      } catch (e) {
+        console.error("가져오기 실패", story.id, e);
+      }
+    }
+    return toAdd.length;
   },
 
   /**
@@ -284,18 +348,10 @@ const Storage = {
     }
     return id;
   },
-
-  /**
-   * 예전에는 데모용 예시 이야기 3개를 자동으로 심어뒀지만, 지금은
-   * 실제 서비스이므로 아무것도 심지 않는다. (빈 지도로 시작)
-   */
-  seedIfEmpty() {
-    return;
-  },
 };
 
 // 브라우저에서는 <script src="js/storage.js">로 로드되어 전역 Storage를
 // 그대로 쓰고, Node(node:test)에서는 이 guard로 require해서 테스트한다.
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { Storage, DAILY_PROMPTS, STORAGE_KEY, REACTED_KEY };
+  module.exports = { Storage, DAILY_PROMPTS };
 }
