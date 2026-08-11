@@ -78,6 +78,11 @@
     <div class="overlay hidden" id="recent-overlay">
       <div class="composer-card" id="recent-panel"></div>
     </div>
+
+    <!-- 회원가입/로그인 (기억 남기기 진입 시 게이트) -->
+    <div class="overlay hidden" id="auth-overlay">
+      <div class="composer-card" id="auth-panel"></div>
+    </div>
   </div>
 
   <!-- API 키 미설정 시 안내 -->
@@ -106,9 +111,15 @@
       window._backendClientReadyResolvers.resolve = resolve;
       window._backendClientReadyResolvers.reject = reject;
     });
+    window._authReadyResolvers = {};
+    window._authReady = new Promise((resolve, reject) => {
+      window._authReadyResolvers.resolve = resolve;
+      window._authReadyResolvers.reject = reject;
+    });
   </script>
   <script type="module" src="js/backend.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/backup.js"></script>
   <script src="js/map.js"></script>
   <script src="js/composer.js"></script>

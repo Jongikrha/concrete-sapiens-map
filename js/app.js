@@ -7,6 +7,7 @@
 
 async function initApp() {
   await Storage.init();
+  await Auth.init();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   initMap();
   bindUIEvents();
@@ -216,6 +217,9 @@ function bindUIEvents() {
   document.getElementById("recent-overlay").addEventListener("click", (e) => {
     if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
   });
+  document.getElementById("auth-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "auth-overlay") closeAuthOverlay();
+  });
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
@@ -229,6 +233,10 @@ function bindUIEvents() {
 
   document.getElementById("fab-add").onclick = () => {
     const center = map.getCenter();
+    if (!Auth.isLoggedIn()) {
+      openAuthOverlay(() => startFreePinComposer(center.getLat(), center.getLng()));
+      return;
+    }
     startFreePinComposer(center.getLat(), center.getLng());
   };
 
@@ -239,6 +247,7 @@ function bindUIEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       if (sheetOpen) closeSheetToUnfiltered();
+      else if (!document.getElementById("auth-overlay").classList.contains("hidden")) closeAuthOverlay();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
     }

@@ -5,6 +5,10 @@
 이 프로젝트는 jongik.rha가 바이브코딩으로 계속 직접 작업 중입니다. `main`에 실시간으로
 push가 들어올 수 있으므로, 저(Claude)와 함께하는 작업은 아래 규칙을 기본으로 따릅니다.
 
+## 대화 언어
+
+- Claude는 항상 한글로 대답한다.
+
 ## Git 워크플로우
 
 - **작업 시작 전** 항상 `git fetch origin` + `git status`로 로컬이 `origin/main`보다
