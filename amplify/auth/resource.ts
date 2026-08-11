@@ -9,4 +9,10 @@ export const auth = defineAuth({
     email: true,
   },
   groups: ['Admins'],
+  senders: {
+    email: {
+      fromEmail: 'no-reply@concretesapiens.com',
+      fromName: '콘크리트 사피엔스 지도',
+    },
+  },
 });
