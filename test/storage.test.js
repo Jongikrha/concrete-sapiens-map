@@ -23,7 +23,16 @@ function createFakeClient() {
       Story: {
         create: async () => ({}),
         update: async () => ({}),
+        delete: async () => ({}),
         list: async () => ({ data: [], nextToken: null }),
+      },
+      BannedWord: {
+        create: async ({ word }) => ({ data: { id: `bw-${word}`, word } }),
+        delete: async () => ({}),
+        list: async () => ({ data: [], nextToken: null }),
+      },
+      PageView: {
+        create: async () => ({}),
       },
     },
   };
@@ -64,6 +73,7 @@ beforeEach(() => {
   global.localStorage.clear();
   Storage._setClient(createFakeClient());
   Storage._setCache([]);
+  Storage._setBannedWords([]);
 });
 
 test("generatePublicId는 허용된 문자로 8자리 문자열을 생성한다", () => {
@@ -224,4 +234,46 @@ test("importStories는 이미 있는 id는 건너뛰고 새 항목만 캐시에 
   ]);
   assert.equal(addedCount, 1);
   assert.equal(Storage.getAllStories().length, 2);
+});
+
+test("incrementViewCount는 조회수를 1 늘린다", () => {
+  Storage._setCache([createStory({ id: "s1", viewCount: 2 })]);
+  const updated = Storage.incrementViewCount("s1");
+  assert.equal(updated.viewCount, 3);
+});
+
+test("hideStory는 신고 카운트를 건드리지 않고 바로 status를 HIDDEN으로 바꾼다", async () => {
+  Storage._setCache([createStory({ id: "s1", status: "ACTIVE", reportCount: 0 })]);
+  const hidden = await Storage.hideStory("s1");
+  assert.equal(hidden.status, "HIDDEN");
+  assert.equal(hidden.reportCount, 0);
+});
+
+test("deleteStory는 캐시에서 해당 스토리를 제거한다", async () => {
+  Storage._setCache([createStory({ id: "s1" }), createStory({ id: "s2" })]);
+  await Storage.deleteStory("s1");
+  const remaining = Storage.getAllStories();
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].id, "s2");
+});
+
+test("restoreStory는 status를 ACTIVE로, reportCount를 0으로 되돌린다", async () => {
+  Storage._setCache([createStory({ id: "s1", status: "HIDDEN", reportCount: 5 })]);
+  const restored = await Storage.restoreStory("s1");
+  assert.equal(restored.status, "ACTIVE");
+  assert.equal(restored.reportCount, 0);
+});
+
+test("containsBannedWord는 캐시된 금칙어가 본문에 포함되면 true를 반환한다", () => {
+  Storage._setBannedWords([{ id: "bw-1", word: "나쁜말" }]);
+  assert.equal(Storage.containsBannedWord("이건 나쁜말이 섞인 문장"), true);
+  assert.equal(Storage.containsBannedWord("이건 깨끗한 문장"), false);
+});
+
+test("addBannedWord/removeBannedWord는 캐시에 즉시 반영된다", async () => {
+  await Storage.addBannedWord("금지어");
+  assert.equal(Storage.getBannedWords().length, 1);
+  const id = Storage.getBannedWords()[0].id;
+  await Storage.removeBannedWord(id);
+  assert.equal(Storage.getBannedWords().length, 0);
 });

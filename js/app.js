@@ -7,6 +7,7 @@
 
 async function initApp() {
   await Storage.init();
+  Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   initMap();
   bindUIEvents();
   renderHashtagChips();

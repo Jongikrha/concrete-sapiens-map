@@ -37,17 +37,18 @@ const DAILY_PROMPTS = [
 
 let client = null;
 let _cache = [];
+let _bannedWords = [];
 
-async function fetchAllStories() {
+async function fetchAll(modelName) {
   const items = [];
   let nextToken = null;
   do {
-    const { data, nextToken: token, errors } = await client.models.Story.list({
+    const { data, nextToken: token, errors } = await client.models[modelName].list({
       limit: 1000,
       nextToken,
     });
     if (errors) {
-      console.error("스토리 목록 조회 실패", errors);
+      console.error(`${modelName} 목록 조회 실패`, errors);
       break;
     }
     items.push(...data);
@@ -60,19 +61,34 @@ const Storage = {
   async init() {
     try {
       client = await window._backendClientReady;
-      _cache = await fetchAllStories();
+      await this.refresh();
     } catch (e) {
       console.error("백엔드 연결 실패 — 빈 지도로 시작합니다", e);
       _cache = [];
     }
   },
 
-  // 테스트 전용 — client/_cache를 직접 주입한다.
+  /**
+   * 전체 스토리 + 금칙어 목록을 서버에서 다시 가져와 캐시를 갱신한다.
+   * init()이 부팅 시 한 번 호출하고, admin.js는 로그인 직후와 각 액션
+   * (숨김/삭제/복구) 이후 재호출해서 화면을 최신 상태로 유지한다.
+   */
+  async refresh() {
+    _cache = await fetchAll("Story");
+    _bannedWords = await fetchAll("BannedWord");
+  },
+
+  // client/_cache 직접 주입 — 원래 테스트 전용이었지만, admin.js도 로그인 후
+  // 게스트 클라이언트 대신 관리자 권한 클라이언트를 주입하는 데 그대로
+  // 재사용한다(정식 확장 지점).
   _setClient(c) {
     client = c;
   },
   _setCache(c) {
     _cache = c;
+  },
+  _setBannedWords(w) {
+    _bannedWords = w;
   },
 
   getAllStories() {
@@ -160,6 +176,92 @@ const Storage = {
         .catch((e) => console.error("공유 수 반영 실패(백그라운드)", storyId, e));
     }
     return target;
+  },
+
+  incrementViewCount(storyId) {
+    const target = _cache.find((s) => s.id === storyId);
+    if (!target) return null;
+    target.viewCount = (target.viewCount || 0) + 1;
+    if (client) {
+      client.models.Story.update({ id: storyId, viewCount: target.viewCount })
+        .catch((e) => console.error("조회수 반영 실패(백그라운드)", storyId, e));
+    }
+    return target;
+  },
+
+  /**
+   * 방문 로그 기록 — write-only(게스트는 read 권한이 없어 자기가 남긴 것도
+   * 못 읽는다). 실패해도 지도 사용에는 영향 없으니 fire-and-forget.
+   */
+  logPageView(storyId) {
+    if (!client) return;
+    client.models.PageView.create({ storyId: storyId || null })
+      .catch((e) => console.error("방문 로그 기록 실패", e));
+  },
+
+  /**
+   * 관리자 전용 — 방문 로그 전체 조회. refresh()에 안 끼워넣는 이유: 게스트는
+   * PageView read 권한이 없어서, 일반 방문자 부팅 흐름에서 이걸 부르면 매번
+   * 권한 에러만 콘솔에 쌓인다. admin.js가 로그인 후에만 명시적으로 부른다.
+   */
+  async listPageViews() {
+    return fetchAll("PageView");
+  },
+
+  /**
+   * 관리자 전용 — 신고 없이도 바로 숨김 처리(신고 임계치 로직인
+   * reportStory와는 별개). 부적절한 글을 신고 들어오기 전에 선제 조치할 때.
+   */
+  async hideStory(storyId) {
+    const target = _cache.find((s) => s.id === storyId);
+    if (!target) return null;
+    target.status = "HIDDEN";
+    await client.models.Story.update({ id: storyId, status: "HIDDEN" });
+    return target;
+  },
+
+  /**
+   * 관리자 전용 — 완전 삭제. 게스트가 호출해도 서버(@auth)가 거부하므로
+   * 프론트에서 숨길 필요 없다.
+   */
+  async deleteStory(storyId) {
+    await client.models.Story.delete({ id: storyId });
+    _cache = _cache.filter((s) => s.id !== storyId);
+  },
+
+  /**
+   * 관리자 전용 — 신고 검토에서 "복구" 눌렀을 때 원상복구.
+   */
+  async restoreStory(storyId) {
+    const target = _cache.find((s) => s.id === storyId);
+    if (!target) return null;
+    target.status = "ACTIVE";
+    target.reportCount = 0;
+    await client.models.Story.update({ id: storyId, status: "ACTIVE", reportCount: 0 });
+    return target;
+  },
+
+  // ------------------------------------------------------------
+  // 금칙어 — 게스트는 읽기만(작성 화면 체크용), 추가/삭제는 관리자만
+  // (서버 @auth가 실제 경계, 여기 함수는 누구나 호출은 가능).
+  // ------------------------------------------------------------
+  getBannedWords() {
+    return _bannedWords;
+  },
+
+  containsBannedWord(text) {
+    return _bannedWords.some((b) => b.word && text.includes(b.word));
+  },
+
+  async addBannedWord(word) {
+    const created = await client.models.BannedWord.create({ word });
+    _bannedWords.push(created.data);
+    return created.data;
+  },
+
+  async removeBannedWord(id) {
+    await client.models.BannedWord.delete({ id });
+    _bannedWords = _bannedWords.filter((b) => b.id !== id);
   },
 
   /**

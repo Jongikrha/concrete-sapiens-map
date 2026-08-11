@@ -4,6 +4,22 @@
 
 let pendingPin = null;
 
+const DEVICE_ID_KEY = "concrete_sapiens_device_id";
+
+/**
+ * 실계정 없이 어드민 화면에서만 "이 브라우저가 쓴 기억들"을 묶어보기 위한
+ * 비식별 상관관계 ID. 공개 화면에는 절대 노출하지 않는다(진짜 신원 아님 —
+ * 브라우저 데이터를 지우거나 다른 브라우저를 쓰면 새 ID가 생긴다).
+ */
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
 // ------------------------------------------------------------
 // 자유 핀 작성 시작 — 주소를 먼저 조회한 뒤 작성 화면을 연다
 // ------------------------------------------------------------
@@ -134,6 +150,10 @@ function openComposer(pin) {
       alert("기억을 적어주세요.");
       return;
     }
+    if (Storage.containsBannedWord(content)) {
+      alert("부적절한 단어가 포함되어 있어 남길 수 없어요. 표현을 조금 바꿔주세요.");
+      return;
+    }
     if (dateMode === "past" && (!yearInput || !monthInput)) {
       alert("기억의 연도와 월을 선택해주세요.");
       return;
@@ -174,6 +194,8 @@ function openComposer(pin) {
       status: "ACTIVE",
       reactionCount: 0,
       shareCount: 0,
+      viewCount: 0,
+      authorDeviceId: getDeviceId(),
     };
 
     Storage.saveStory(story);

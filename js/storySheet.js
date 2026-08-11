@@ -15,6 +15,7 @@ function openSheet(group) {
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
   sheetOpen = true;
+  group.stories.forEach((s) => Storage.incrementViewCount(s.id));
 }
 
 function closeSheet() {
