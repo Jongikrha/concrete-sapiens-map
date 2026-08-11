@@ -1,0 +1,8 @@
+{
+  "name": "concrete-sapiens-map",
+  "private": true,
+  "description": "정적 프론트엔드 프로토타입 - 빌드 도구/의존성 없음. 테스트만 Node 내장 test runner 사용.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

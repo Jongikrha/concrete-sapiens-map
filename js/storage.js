@@ -293,3 +293,9 @@ const Storage = {
     return;
   },
 };
+
+// 브라우저에서는 <script src="js/storage.js">로 로드되어 전역 Storage를
+// 그대로 쓰고, Node(node:test)에서는 이 guard로 require해서 테스트한다.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { Storage, DAILY_PROMPTS, STORAGE_KEY, REACTED_KEY };
+}
