@@ -34,6 +34,28 @@ push가 들어올 수 있으므로, 저(Claude)와 함께하는 작업은 아래
   여러 단계로 나뉘는 작업은 각 단계를 로컬(브라우저)에서 확인한 뒤에만 `main`에 올린다.
 - Amplify 콘솔 상태는 `aws amplify get-branch --app-id deamvdd5u8dcf --branch-name main --profile todoc`로 확인 가능.
 
+## 백엔드 배포 (Amplify Gen2 — Cognito/AppSync)
+
+- `amplify/auth/resource.ts`, `amplify/data/resource.ts`(스키마/인증 규칙)는
+  **`main`에 push한다고 자동 반영되지 않는다.** `amplify.yml`이 빌드를 스킵하는
+  정적 배포라, 백엔드는 별도로 `npm run deploy`(`scripts/deploy-backend.sh`)를
+  실행해야 한다 — `ampx sandbox --once --identifier prod --profile todoc`로 실제
+  AWS 리소스에 배포한 뒤, 재생성된 `amplify_outputs.json`을 커밋+push까지 처리한다.
+- **`amplify/` 아래 스키마를 바꾼 프론트 코드를 `npm run deploy` 없이 먼저
+  push하면 라이브 사이트가 깨진다** (2026-08-11 확인 — `StoryAuthor` 모델 참조
+  코드가 먼저 배포되어 어드민 로그인 후 `Cannot read properties of undefined
+  (reading 'list')`로 크래시, `Story` 모델의 `authenticated` 권한 누락으로
+  로그인 사용자 쓰기 거부도 같은 패턴으로 발생). `amplify/*.ts`를 건드리는
+  작업은 항상 프론트 코드보다 먼저(또는 같은 시점에) `npm run deploy`부터
+  실행한다.
+- 로컬 `.git/hooks/pre-push`에 경고 훅이 설치되어 있다 — `amplify/` 스키마가
+  `amplify_outputs.json`보다 최근에 바뀐 채 push하면 경고를 띄운다(막지는
+  않음). 이 훅은 git에 커밋되지 않는 로컬 파일이라 새 머신에서 클론하면
+  다시 설치해야 한다.
+- dev 전용 샌드박스는 `--identifier dev`(별도 스택), 로컬 테스트는
+  `amplify_outputs.local.json`(gitignore 대상)을 쓴다 — prod 리소스를
+  건드리지 않기 위함.
+
 ## 커밋
 
 - 사용자가 명시적으로 지시하지 않으면 커밋하지 않는다 (전역 규칙과 동일, 여기서 재확인).
