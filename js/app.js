@@ -432,7 +432,7 @@ function openSheet(group) {
 }
 
 function closeSheet() {
-  stopRadio();
+  stopRadioPlayback(radioStoryId ? document.querySelector(`.radio-row[data-id="${radioStoryId}"]`) : null);
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
@@ -514,7 +514,7 @@ function renderSheetContent(group) {
     <div class="story-list">${listHtml}</div>
     ${distinctYears.length > 1 ? `<button class="spot-timeline-toggle" id="spot-timeline-toggle">${isTimelineOpen ? "시간연대표 접기" : spotCountLabel + " · 연대표 보기"} →</button>` : ""}
     ${timelineHtml}
-    <button class="btn-primary btn-add-story" id="btn-add-story">기억 남기기</button>
+    <button class="btn-primary btn-add-story" id="btn-add-story">나도 이곳에 기억 남기기</button>
   `;
 
   content.querySelectorAll(".sort-btn").forEach((btn) => {
@@ -537,12 +537,24 @@ function renderSheetContent(group) {
     btn.onclick = () => handleShare(btn.dataset.id);
   });
 
-  content.querySelectorAll(".radio-btn").forEach((btn) => {
-    btn.onclick = () => toggleRadio(btn.dataset.id, btn);
+  content.querySelectorAll(".radio-row").forEach((row) => {
+    row.onclick = () => handleRadioRowClick(row.dataset.id, row);
+  });
+
+  content.querySelectorAll(".story-item-menu-btn").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const dropdown = document.getElementById(`menu-${btn.dataset.menuId}`);
+      document.querySelectorAll(".story-item-menu-dropdown").forEach((d) => {
+        if (d !== dropdown) d.classList.add("hidden");
+      });
+      dropdown.classList.toggle("hidden");
+    };
   });
 
   content.querySelectorAll(".report-link").forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       if (confirm("이 기록을 신고하시겠습니까?")) {
         Storage.reportStory(btn.dataset.id);
         alert("신고가 접수되었습니다.");
@@ -589,24 +601,41 @@ function renderStoryItem(story) {
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
   const numericYear = Storage.getStoryYear(story);
+  const duration = estimateDurationSeconds(story.content);
 
   return `
     <div class="story-item">
-      <p class="story-year">${year}</p>
-      ${month ? `<p class="story-month">${month}월</p>` : ""}
+      <div class="story-item-top">
+        <div>
+          <p class="story-year">${year}</p>
+          ${month ? `<p class="story-month">${month}월</p>` : ""}
+        </div>
+        <div class="story-item-menu">
+          <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
+          <div class="story-item-menu-dropdown hidden" id="menu-${story.id}">
+            <button class="report-link" data-id="${story.id}">이 기록 신고하기</button>
+          </div>
+        </div>
+      </div>
       <p class="story-content">${escapeHtml(story.content)}</p>
       <p class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</p>
       ${story.customName ? `<p class="story-custom-name">${escapeHtml(story.displayAuthorName || "익명")}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
-      <div class="story-actions">
+
+      <button class="radio-row" data-id="${story.id}" data-duration="${duration}">
+        <span class="radio-row-icon">▶</span>
+        <span class="radio-row-label">이 기억을 라디오로 듣기</span>
+        <span class="radio-row-time">${formatTime(duration)}</span>
+      </button>
+
+      <div class="action-row-split">
         <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
-          <span class="dot-icon">${reacted ? "●" : "○"}</span>
-          나도 이 기억이 떠올랐어요
+          <span class="dot-icon">${reacted ? "●" : "♡"}</span>
+          떠올랐어요
         </button>
-        <button class="share-btn share-btn--emphasized" data-id="${story.id}">↗ 이 기억, 누군가에게 전달하기</button>
-        <button class="radio-btn" data-id="${story.id}">🔊 라디오로 듣기</button>
-        <button class="report-link" data-id="${story.id}">이 기록 신고하기</button>
+        <button class="share-btn" data-id="${story.id}">↗ 기억 전하기</button>
       </div>
+
       ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
     </div>
   `;
@@ -618,39 +647,118 @@ function getStoryYearLabel(story) {
 }
 
 // ------------------------------------------------------------
-// 기억 라디오 (TTS)
+// 기억 라디오 (TTS) — 미니 플레이어
 // ------------------------------------------------------------
-function toggleRadio(storyId, btn) {
+let radioTimer = null;
+let radioElapsed = 0;
+let radioStoryId = null;
+let radioDuration = 0;
+
+function estimateDurationSeconds(text) {
+  // 한국어 TTS 평균 속도 추정치 (초당 약 4.5자)
+  return Math.max(2, Math.round(text.length / 4.5));
+}
+
+function formatTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function playStartupBeep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {
+    // 오디오 컨텍스트 미지원 브라우저는 조용히 무시
+  }
+}
+
+function updateRadioRowUI(rowEl, playing) {
+  const total = parseFloat(rowEl.dataset.duration) || 0;
+  if (playing) {
+    const pct = total > 0 ? Math.min(100, (radioElapsed / total) * 100) : 0;
+    rowEl.innerHTML = `
+      <span class="radio-row-icon">Ⅱ</span>
+      <span class="radio-row-label">듣는 중</span>
+      <span class="radio-progress-track"><span class="radio-progress-fill" style="width:${pct}%"></span></span>
+      <span class="radio-row-time">${formatTime(radioElapsed)} / ${formatTime(total)}</span>
+    `;
+  } else {
+    rowEl.innerHTML = `
+      <span class="radio-row-icon">▶</span>
+      <span class="radio-row-label">이 기억을 라디오로 듣기</span>
+      <span class="radio-row-time">${formatTime(total)}</span>
+    `;
+  }
+}
+
+function stopRadioPlayback(rowEl) {
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  if (radioTimer) {
+    clearInterval(radioTimer);
+    radioTimer = null;
+  }
+  radioStoryId = null;
+  radioElapsed = 0;
+  currentUtterance = null;
+  if (rowEl) {
+    rowEl.classList.remove("radio-row--playing");
+    updateRadioRowUI(rowEl, false);
+  }
+}
+
+function handleRadioRowClick(storyId, rowEl) {
   if (!("speechSynthesis" in window)) {
     alert("이 브라우저에서는 음성 재생을 지원하지 않습니다.");
     return;
   }
 
-  if (currentUtterance && speechSynthesis.speaking) {
-    stopRadio();
-    if (btn) { btn.textContent = "🔊 라디오로 듣기"; btn.classList.remove("radio-btn--playing"); }
+  if (radioStoryId === storyId) {
+    stopRadioPlayback(rowEl);
     return;
+  }
+
+  if (radioStoryId) {
+    const prevRow = document.querySelector(`.radio-row[data-id="${radioStoryId}"]`);
+    stopRadioPlayback(prevRow);
   }
 
   const story = Storage.getAllStories().find((s) => s.id === storyId);
   if (!story) return;
 
+  radioDuration = parseFloat(rowEl.dataset.duration) || estimateDurationSeconds(story.content);
+  radioElapsed = 0;
+  radioStoryId = storyId;
+
+  playStartupBeep();
+
   const utter = new SpeechSynthesisUtterance(story.content);
   utter.lang = "ko-KR";
   utter.rate = 0.95;
-  utter.onend = () => {
-    if (btn) { btn.textContent = "🔊 라디오로 듣기"; btn.classList.remove("radio-btn--playing"); }
-    currentUtterance = null;
-  };
+  utter.onend = () => stopRadioPlayback(rowEl);
 
   currentUtterance = utter;
-  speechSynthesis.speak(utter);
-  if (btn) { btn.textContent = "■ 멈추기"; btn.classList.add("radio-btn--playing"); }
-}
+  setTimeout(() => speechSynthesis.speak(utter), 220); // 효과음이 끝난 뒤 시작
 
-function stopRadio() {
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
-  currentUtterance = null;
+  rowEl.classList.add("radio-row--playing");
+  updateRadioRowUI(rowEl, true);
+
+  radioTimer = setInterval(() => {
+    radioElapsed = Math.min(radioDuration, radioElapsed + 0.2);
+    updateRadioRowUI(rowEl, true);
+  }, 200);
 }
 
 // ------------------------------------------------------------
@@ -948,6 +1056,10 @@ function bindUIEvents() {
     const center = map.getCenter();
     startFreePinComposer(center.getLat(), center.getLng());
   };
+
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".story-item-menu-dropdown").forEach((d) => d.classList.add("hidden"));
+  });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
