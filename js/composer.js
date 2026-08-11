@@ -52,12 +52,16 @@ function openComposer(pin) {
   const panel = document.getElementById("composer-panel");
 
   const namePlaceholder = pin.isFreePin
-    ? "이 장소를 뭐라고 부르시나요? (선택)"
+    ? "이 장소를 뭐라고 부르시나요?"
     : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
   const nameValue = pin.isFreePin ? "" : (pin.officialPlaceName || "");
+  const nameHint = pin.isFreePin
+    ? `<div class="field-hint">지번 주소만으로는 다른 사람이 어딘지 알아보기 어려워요. 자유롭게 붙여주세요. 예) 서울역, 창천동 첫집</div>`
+    : "";
 
   const whereHtml = `
     <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(nameValue)}" maxlength="40" />
+    ${nameHint}
     <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
   `;
 
@@ -133,6 +137,11 @@ function openComposer(pin) {
     const nameInput = document.getElementById("input-place-name");
     const enteredName = nameInput ? nameInput.value.trim() : "";
 
+    if (pendingPin.isFreePin && !enteredName) {
+      alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 창천동 첫집");
+      nameInput.focus();
+      return;
+    }
     if (!content) {
       alert("기억을 적어주세요.");
       return;
