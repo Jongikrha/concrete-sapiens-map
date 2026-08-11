@@ -910,7 +910,8 @@ function openComposer(pin) {
     <div class="char-count"><span id="char-count-num">${(pin.prefillContent || "").length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
 
     <label class="field-label">TAGS</label>
-    <input type="text" id="input-tags" class="input-field" placeholder="예: 첫사랑 그리움 (스페이스로 구분, 본문 속 #태그도 자동 인식돼요)" />
+    <input type="text" id="input-tags" class="input-field" placeholder="첫사랑 그리움" />
+    <div class="field-hint">띄어쓰기로 구분해서 여러 개 입력할 수 있어요. 예) 첫사랑 그리움 이사 — # 없이 단어만 적어도 자동으로 붙어요.</div>
 
     <label class="field-label">NAME</label>
     <div class="author-mode-toggle">

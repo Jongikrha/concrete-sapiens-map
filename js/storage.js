@@ -285,75 +285,11 @@ const Storage = {
     return id;
   },
 
+  /**
+   * 예전에는 데모용 예시 이야기 3개를 자동으로 심어뒀지만, 지금은
+   * 실제 서비스이므로 아무것도 심지 않는다. (빈 지도로 시작)
+   */
   seedIfEmpty() {
-    if (this.getAllStories().length > 0) return;
-
-    const seeds = [
-      {
-        id: crypto.randomUUID(),
-        publicId: this.generatePublicId(),
-        lat: 37.5274,
-        lng: 127.0286,
-        placeId: null,
-        officialPlaceName: null,
-        address: "서울특별시 강남구 압구정로 111",
-        customName: "노을바위",
-        content: "학교가 끝나면 아무 이유 없이 이 앞을 몇 번씩 지나갔다. 그 애가 혹시 나올까 봐.",
-        hashtags: ["#첫사랑", "#그리움"],
-        authorMode: "anonymous",
-        displayAuthorName: "익명",
-        dateMode: "past",
-        referenceDate: "1995-05",
-        createdAt: new Date().toISOString(),
-        reportCount: 0,
-        status: "ACTIVE",
-        reactionCount: 12,
-        shareCount: 3,
-      },
-      {
-        id: crypto.randomUUID(),
-        publicId: this.generatePublicId(),
-        lat: 37.5665,
-        lng: 126.978,
-        placeId: "kakao-seoul-cityhall",
-        officialPlaceName: "서울시청",
-        address: "서울특별시 중구 세종대로 110",
-        customName: null,
-        content: "이십 년 전 여기서 첫 회사 면접을 봤다. 그날 비가 많이 왔었지.",
-        hashtags: ["#이직", "#추억"],
-        authorMode: "custom",
-        displayAuthorName: "콘크리트사피엔스",
-        dateMode: "past",
-        referenceDate: "2004-11",
-        createdAt: new Date().toISOString(),
-        reportCount: 0,
-        status: "ACTIVE",
-        reactionCount: 3,
-        shareCount: 0,
-      },
-      {
-        id: crypto.randomUUID(),
-        publicId: this.generatePublicId(),
-        lat: 35.1595,
-        lng: 129.0756,
-        placeId: null,
-        officialPlaceName: null,
-        address: "부산광역시 해운대구 해운대해변로 264",
-        customName: null,
-        content: "고향을 떠나기 전 마지막으로 걸었던 해변.",
-        hashtags: ["#고향", "#이사"],
-        authorMode: "anonymous",
-        displayAuthorName: "익명",
-        dateMode: "unknown",
-        referenceDate: null,
-        createdAt: new Date().toISOString(),
-        reportCount: 0,
-        status: "ACTIVE",
-        reactionCount: 0,
-        shareCount: 0,
-      },
-    ];
-
-    this.saveAll(seeds);
+    return;
   },
 };
