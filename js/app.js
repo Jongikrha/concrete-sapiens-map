@@ -24,23 +24,40 @@ let spotTimelineFocusYear = {};
 // Memory Dot 이미지 — 기억 수에 따라 크기 차등, 선택 시 Signal Orange
 // ------------------------------------------------------------
 function tierForCount(n) {
+  if (n >= 50) return 4;
   if (n >= 10) return 3;
   if (n >= 2) return 2;
   return 1;
 }
 
+/**
+ * Memory Ripple — 핀이 아니라 "누군가의 기억이 남아 있는 장소 =
+ * 도시 위에 켜진 작은 불빛"이라는 컨셉의 마커. 색은 전적으로
+ * Signal Orange 하나만 쓰고, 기억 수는 숫자로 노출하지 않고 크기
+ * 차이로만 표현한다(SNS 인기 경쟁처럼 보이지 않도록). 평소엔 조용한
+ * 점, 선택되면 링이 한 번 커지는 정도의 절제된 변화만 준다.
+ */
 function makeDotImage(tier, selected) {
-  const sizes = { 1: 12, 2: 16, 3: 20 };
-  const size = selected ? sizes[tier] + 3 : sizes[tier];
-  const fill = selected ? "#FF5A36" : "#2F3031";
-  const stroke = "#F4F3EF";
-  const r = size / 2 - 1.8;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/></svg>`;
+  const centerSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
+  const ringSizes = { 1: 22, 2: 26, 3: 30, 4: 34 };
+
+  const center = selected ? centerSizes[tier] + 3 : centerSizes[tier];
+  const ring = selected ? ringSizes[tier] + 6 : ringSizes[tier];
+  const ringOpacity = selected ? 0.28 : 0.18;
+
+  const canvas = ring + 6;
+  const c = canvas / 2;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
+    <circle cx="${c}" cy="${c}" r="${ring / 2}" fill="#FF5A36" opacity="${ringOpacity}"/>
+    <circle cx="${c}" cy="${c}" r="${center / 2}" fill="#FF5A36" stroke="#FFFFFF" stroke-width="2"/>
+  </svg>`;
+
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   return new kakao.maps.MarkerImage(
     url,
-    new kakao.maps.Size(size, size),
-    { offset: new kakao.maps.Point(size / 2, size / 2) }
+    new kakao.maps.Size(canvas, canvas),
+    { offset: new kakao.maps.Point(c, c) }
   );
 }
 
@@ -108,7 +125,7 @@ function initMap() {
 
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
     if (sheetOpen) {
-      closeSheet();
+      closeSheetToUnfiltered();
       return;
     }
     const latlng = mouseEvent.latLng;
@@ -515,6 +532,21 @@ function closeSheet() {
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
+}
+
+/**
+ * X 버튼 / 배경 클릭 / ESC / 스와이프처럼 "사용자가 직접 카드를 닫는"
+ * 경우에 쓴다. 해시태그나 연도 탐색으로 들어왔던 거라면, 카드를 덮고
+ * 나면 다시 전체 지도(필터 없는 상태)로 돌아가는 게 자연스럽기 때문에
+ * 필터도 함께 해제한다. (반면 다른 기억으로 바로 이동하는 내부 흐름
+ * 에서는 이 함수 대신 plain closeSheet()를 써서, 잠깐의 중간 상태로
+ * 불필요하게 화면이 두 번 깜빡이지 않도록 한다.)
+ */
+function closeSheetToUnfiltered() {
+  closeSheet();
+  if (activeHashtagFilter || activeYearFilter !== null) {
+    clearFilters();
+  }
 }
 
 function showGoneState() {
@@ -991,8 +1023,8 @@ function extractHashtags(text) {
 // 상단 검색 (카카오 장소 검색) / 기타 UI 이벤트
 // ------------------------------------------------------------
 function bindUIEvents() {
-  document.getElementById("sheet-close").onclick = closeSheet;
-  document.getElementById("sheet-backdrop").addEventListener("click", closeSheet);
+  document.getElementById("sheet-close").onclick = closeSheetToUnfiltered;
+  document.getElementById("sheet-backdrop").addEventListener("click", closeSheetToUnfiltered);
   document.getElementById("composer-overlay").addEventListener("click", (e) => {
     if (e.target.id === "composer-overlay") closeComposer();
   });
@@ -1018,7 +1050,7 @@ function bindUIEvents() {
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (sheetOpen) closeSheet();
+      if (sheetOpen) closeSheetToUnfiltered();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
     }
   });
@@ -1029,7 +1061,7 @@ function bindUIEvents() {
   handleRow.addEventListener("touchend", (e) => {
     if (touchStartY === null) return;
     const diff = e.changedTouches[0].clientY - touchStartY;
-    if (diff > 50) closeSheet();
+    if (diff > 50) closeSheetToUnfiltered();
     touchStartY = null;
   });
 
