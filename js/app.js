@@ -350,7 +350,7 @@ function renderHashtagChips() {
     const chip = document.createElement("button");
     chip.className = "chip";
     chip.textContent = tag;
-    chip.onclick = () => setHashtagFilter(tag);
+    chip.onclick = () => exploreHashtag(tag);
     wrap.appendChild(chip);
   });
 
@@ -365,12 +365,26 @@ function openDailyPrompt() {
   }
 }
 
-function setHashtagFilter(tag) {
+/**
+ * 해시태그 클릭 — 전국 필터를 걸어두는 데서 그치지 않고, 그 태그를 가진
+ * 기억 중 하나로 바로 날아가 카드를 열어준다. "N년의 다른 기억
+ * 둘러보기"와 동일한 문법으로, 눌렀을 때 즉각적인 보상을 준다.
+ */
+function exploreHashtag(tag, excludeStoryId) {
+  closeSheet();
   activeHashtagFilter = tag;
   activeYearFilter = null;
   closeSlider();
   renderHashtagChips();
   renderMarkers();
+
+  const all = Storage.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag));
+  const candidates = all.filter((s) => s.id !== excludeStoryId);
+  const pool = candidates.length > 0 ? candidates : all;
+  if (pool.length === 0) return;
+
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  flyToStory(target, true);
 }
 
 function setYearFilter(year) {
@@ -565,7 +579,7 @@ function renderSheetContent(group) {
   });
 
   content.querySelectorAll(".hashtag-link").forEach((link) => {
-    link.onclick = () => { closeSheet(); setHashtagFilter(link.dataset.tag); };
+    link.onclick = () => exploreHashtag(link.dataset.tag, link.dataset.storyId);
   });
 
   content.querySelectorAll(".year-explore-link").forEach((link) => {
@@ -638,7 +652,7 @@ function renderStoryItem(story) {
   const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
   const yearMain = numericYear !== null ? numericYear : "· · ·";
-  const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
+  const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}" data-story-id="${story.id}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
 
   return `
