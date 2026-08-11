@@ -64,6 +64,7 @@ function openMyMemoryList(kind) {
         const title = Storage.getGroupTitle({
           placeId: story.placeId,
           officialPlaceName: story.officialPlaceName,
+          customName: story.customName,
           address: story.address,
         });
         return `

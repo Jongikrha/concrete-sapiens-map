@@ -51,6 +51,7 @@ function openRecentMemoriesModal() {
         const title = Storage.getGroupTitle({
           placeId: story.placeId,
           officialPlaceName: story.officialPlaceName,
+          customName: story.customName,
           address: story.address,
         });
         return `
@@ -196,6 +197,7 @@ function goToRandomStory() {
       const title = Storage.getGroupTitle({
         placeId: story.placeId,
         officialPlaceName: story.officialPlaceName,
+        customName: story.customName,
         address: story.address,
       });
       const label = year ? `${year} · ${title}` : title;

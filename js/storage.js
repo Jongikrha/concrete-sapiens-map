@@ -391,6 +391,7 @@ const Storage = {
    */
   getGroupTitle(group) {
     if (group.placeId && group.officialPlaceName) return group.officialPlaceName;
+    if (group.customName) return group.customName;
     if (group.stories && group.stories.length) {
       const withCustomName = group.stories.find((s) => s.customName);
       if (withCustomName) return withCustomName.customName;

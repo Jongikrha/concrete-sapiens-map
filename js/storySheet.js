@@ -312,7 +312,7 @@ async function handleShare(storyId) {
   if (!story) return;
 
   const url = buildStoryUrl(story.publicId);
-  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, address: story.address });
+  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address });
   const year = Storage.getStoryYear(story);
   const shareText = `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`;
 
