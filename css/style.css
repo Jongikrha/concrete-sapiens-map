@@ -1107,6 +1107,29 @@ body {
   color: var(--cs-text-muted);
 }
 
+.backup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--cs-map-gray);
+}
+
+.backup-link {
+  border: none;
+  background: none;
+  color: var(--cs-text-muted);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.backup-link:hover {
+  color: var(--cs-black);
+}
+
 .date-mode-toggle,
 .author-mode-toggle {
   display: flex;
