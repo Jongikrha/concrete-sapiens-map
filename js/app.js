@@ -90,6 +90,63 @@ function renderTotalCountBanner() {
 }
 
 // ------------------------------------------------------------
+// 최근 기억 목록 모달 — 배너 클릭 시 최신순으로 쭉 훑어볼 수 있고,
+// "위치로 가기"를 눌러도 목록 모달은 닫히지 않는다 (연속 탐색용)
+// ------------------------------------------------------------
+function openRecentMemoriesModal() {
+  const panel = document.getElementById("recent-panel");
+  const recent = [...Storage.getVisibleStories()]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 50);
+
+  const listHtml = recent.length
+    ? recent.map((story) => {
+        const year = Storage.getStoryYear(story);
+        const title = Storage.getGroupTitle({
+          placeId: story.placeId,
+          officialPlaceName: story.officialPlaceName,
+          address: story.address,
+        });
+        return `
+          <div class="recent-item">
+            <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
+            <p class="recent-item-content">${escapeHtml(story.content)}</p>
+            <p class="recent-item-place">${escapeHtml(title)}</p>
+            <button class="recent-goto-btn" data-id="${story.id}">위치로 가기 →</button>
+          </div>
+        `;
+      }).join("")
+    : `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
+
+  panel.innerHTML = `
+    <div class="recent-header">
+      <h2 class="composer-title" style="margin:0;">최근 기억</h2>
+      <button class="recent-close" id="recent-close">✕</button>
+    </div>
+    ${listHtml}
+  `;
+
+  panel.querySelector("#recent-close").onclick = closeRecentMemoriesModal;
+
+  panel.querySelectorAll(".recent-goto-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const story = Storage.getAllStories().find((s) => s.id === btn.dataset.id);
+      if (!story) return;
+      map.setLevel(4);
+      map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
+      highlightMarkerForStory(story);
+      btn.textContent = "이동함 ✓";
+      btn.classList.add("recent-goto-btn--visited");
+      // 목록 모달은 그대로 열어둔 채 지도만 이동한다.
+    };
+  });
+
+  document.getElementById("recent-overlay").classList.remove("hidden");
+}
+
+function closeRecentMemoriesModal() {
+  document.getElementById("recent-overlay").classList.add("hidden");
+}
 // 지도 초기화
 // ------------------------------------------------------------
 function initMap() {
@@ -878,15 +935,15 @@ function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
 
-  const whereHtml = pin.isFreePin
-    ? `
-      <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
-      <input type="text" id="input-custom-name" class="input-field" style="margin-top:8px;" placeholder="이 장소를 뭐라고 부르시나요? (선택)" maxlength="40" />
-    `
-    : `
-      <div class="field-value">${escapeHtml(pin.officialPlaceName || "이름 없는 장소")}</div>
-      ${pin.address ? `<div class="field-address">${escapeHtml(pin.address)}</div>` : ""}
-    `;
+  const namePlaceholder = pin.isFreePin
+    ? "이 장소를 뭐라고 부르시나요? (선택)"
+    : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
+  const nameValue = pin.isFreePin ? "" : (pin.officialPlaceName || "");
+
+  const whereHtml = `
+    <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(nameValue)}" maxlength="40" />
+    <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
+  `;
 
   panel.innerHTML = `
     <h2 class="composer-title">기억 남기기</h2>
@@ -957,8 +1014,8 @@ function openComposer(pin) {
     const yearInput = document.getElementById("input-year").value;
     const monthInput = document.getElementById("input-month").value;
     const tagsInput = document.getElementById("input-tags").value.trim();
-    const customNameEl = document.getElementById("input-custom-name");
-    const customName = customNameEl ? customNameEl.value.trim() : "";
+    const nameInput = document.getElementById("input-place-name");
+    const enteredName = nameInput ? nameInput.value.trim() : "";
 
     if (!content) {
       alert("기억을 적어주세요.");
@@ -984,9 +1041,9 @@ function openComposer(pin) {
       lat: pendingPin.lat,
       lng: pendingPin.lng,
       placeId: pendingPin.placeId,
-      officialPlaceName: pendingPin.officialPlaceName || null,
+      officialPlaceName: pendingPin.placeId ? (enteredName || pendingPin.officialPlaceName || null) : null,
       address: pendingPin.address || null,
-      customName: pendingPin.isFreePin && customName ? customName : null,
+      customName: !pendingPin.placeId && enteredName ? enteredName : null,
       content,
       hashtags,
       authorMode,
@@ -1032,6 +1089,10 @@ function bindUIEvents() {
   document.getElementById("composer-overlay").addEventListener("click", (e) => {
     if (e.target.id === "composer-overlay") closeComposer();
   });
+  document.getElementById("total-count-banner").onclick = openRecentMemoriesModal;
+  document.getElementById("recent-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
+  });
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
@@ -1056,6 +1117,7 @@ function bindUIEvents() {
     if (e.key === "Escape") {
       if (sheetOpen) closeSheetToUnfiltered();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
+      else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
     }
   });
 
