@@ -1,6 +1,7 @@
 // ============================================================
-// 콘크리트 사피엔스 지도 — 메인 앱 로직
-// v3: 시간연대표 / 같은 해의 기억 / 오늘의 기억 / 공유 카드 반영
+// 콘크리트 사피엔스 지도 — 메인 앱 로직 (v4)
+// 주소 우선 구조 / 년-월 시점 / 태그 병행 입력 / 시간 슬라이더 /
+// 오늘의 질문 / 기억 라디오(TTS) 반영
 // ============================================================
 
 let map;
@@ -10,12 +11,15 @@ let geocoderService;
 let markers = []; // { marker, group }
 let activeHashtagFilter = null;
 let activeYearFilter = null;
+let sliderActive = false;
+let sliderYear = null;
 let pendingPin = null;
 let currentSort = "latest";
 let highlightedMarker = null;
 let sheetOpen = false;
-let spotTimelineOpen = {}; // groupKey -> boolean
-let spotTimelineFocusYear = {}; // groupKey -> year|null
+let spotTimelineOpen = {};
+let spotTimelineFocusYear = {};
+let currentUtterance = null;
 
 // ------------------------------------------------------------
 // Memory Dot 이미지 — 기억 수에 따라 크기 차등, 선택 시 Signal Orange
@@ -56,10 +60,7 @@ function initApp() {
 function initMap() {
   const container = document.getElementById("map");
   const options = {
-    center: new kakao.maps.LatLng(
-      CONFIG.DEFAULT_CENTER.lat,
-      CONFIG.DEFAULT_CENTER.lng
-    ),
+    center: new kakao.maps.LatLng(CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng),
     level: CONFIG.DEFAULT_LEVEL,
   };
   map = new kakao.maps.Map(container, options);
@@ -98,9 +99,6 @@ function initMap() {
   });
 }
 
-// ------------------------------------------------------------
-// 클릭 스탬프 효과
-// ------------------------------------------------------------
 function spawnClickStamp(mouseEvent) {
   const mapEl = document.getElementById("map");
   const rect = mapEl.getBoundingClientRect();
@@ -118,14 +116,15 @@ function spawnClickStamp(mouseEvent) {
 // ------------------------------------------------------------
 // 자유 핀 작성 시작 — 주소를 먼저 조회한 뒤 작성 화면을 연다
 // ------------------------------------------------------------
-function startFreePinComposer(lat, lng) {
+function startFreePinComposer(lat, lng, prefillContent) {
   openComposer({
     lat,
     lng,
-    placeName: null,
+    officialPlaceName: null,
     placeId: null,
     address: "주소 확인 중...",
     isFreePin: true,
+    prefillContent: prefillContent || "",
   });
 
   reverseGeocode(lat, lng).then((address) => {
@@ -147,11 +146,7 @@ function reverseGeocode(lat, lng) {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const road = result[0].road_address;
         const jibun = result[0].address;
-        resolve(
-          (road && road.address_name) ||
-            (jibun && jibun.address_name) ||
-            null
-        );
+        resolve((road && road.address_name) || (jibun && jibun.address_name) || null);
       } else {
         resolve(null);
       }
@@ -190,9 +185,7 @@ function flyToStory(story, openSheetAfter) {
   highlightMarkerForStory(story);
 
   if (openSheetAfter) {
-    const group = Storage.getGroupedByPlace().find((g) =>
-      g.stories.some((s) => s.id === story.id)
-    );
+    const group = Storage.getGroupedByPlace().find((g) => g.stories.some((s) => s.id === story.id));
     if (group) {
       setTimeout(() => openSheet(group), 250);
     }
@@ -200,9 +193,7 @@ function flyToStory(story, openSheetAfter) {
 }
 
 function highlightMarkerForStory(story) {
-  const entry = markers.find((m) =>
-    m.group.stories.some((s) => s.id === story.id)
-  );
+  const entry = markers.find((m) => m.group.stories.some((s) => s.id === story.id));
   if (!entry) return;
 
   if (highlightedMarker && highlightedMarker !== entry.marker) {
@@ -223,7 +214,7 @@ function showToast(elId, text, duration) {
 }
 
 // ------------------------------------------------------------
-// 어딘가의 기억 — 짧은 탐색 연출 후 부드럽게 착지
+// 어딘가의 기억
 // ------------------------------------------------------------
 function goToRandomStory() {
   const story = Storage.getRandomStory();
@@ -242,16 +233,19 @@ function goToRandomStory() {
 
     setTimeout(() => {
       const year = Storage.getStoryYear(story);
-      const label = year
-        ? `${year} · ${story.placeName}`
-        : `${story.placeName}`;
+      const title = Storage.getGroupTitle({
+        placeId: story.placeId,
+        officialPlaceName: story.officialPlaceName,
+        address: story.address,
+      });
+      const label = year ? `${year} · ${title}` : title;
       showToast("entry-toast", label, 1400);
     }, 500);
   }, 650);
 }
 
 // ------------------------------------------------------------
-// 마커 렌더링 (해시태그 또는 연도 필터 적용)
+// 마커 렌더링 (해시태그 / 연도 / 시간 슬라이더 필터 적용)
 // ------------------------------------------------------------
 function renderMarkers() {
   clusterer.clear();
@@ -261,19 +255,23 @@ function renderMarkers() {
 
   let groups = Storage.getGroupedByPlace();
 
-  if (activeYearFilter !== null) {
+  if (sliderActive && sliderYear !== null) {
     groups = groups
       .map((g) => ({
         ...g,
-        stories: g.stories.filter((s) => Storage.getStoryYear(s) === activeYearFilter),
+        stories: g.stories.filter((s) => {
+          const y = Storage.getStoryYear(s);
+          return y === null || y <= sliderYear;
+        }),
       }))
+      .filter((g) => g.stories.length > 0);
+  } else if (activeYearFilter !== null) {
+    groups = groups
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => Storage.getStoryYear(s) === activeYearFilter) }))
       .filter((g) => g.stories.length > 0);
   } else if (activeHashtagFilter) {
     groups = groups
-      .map((g) => ({
-        ...g,
-        stories: g.stories.filter((s) => s.hashtags.includes(activeHashtagFilter)),
-      }))
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => s.hashtags.includes(activeHashtagFilter)) }))
       .filter((g) => g.stories.length > 0);
   }
 
@@ -283,12 +281,10 @@ function renderMarkers() {
     const tier = tierForCount(group.stories.length);
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
-      title: group.placeName,
+      title: Storage.getGroupTitle(group),
       image: makeDotImage(tier, false),
     });
-    kakao.maps.event.addListener(marker, "click", () => {
-      openSheet(group);
-    });
+    kakao.maps.event.addListener(marker, "click", () => openSheet(group));
     markers.push({ marker, group });
     kakaoMarkers.push(marker);
   });
@@ -297,7 +293,7 @@ function renderMarkers() {
 }
 
 // ------------------------------------------------------------
-// 해시태그 칩 렌더링 ("오늘의 기억" + 많이 쓰인 순 상위 N개)
+// 해시태그 칩 렌더링 ("오늘의 기억" + "오늘의 질문" + 상위 N개)
 // ------------------------------------------------------------
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
@@ -325,6 +321,12 @@ function renderHashtagChips() {
     wrap.appendChild(todayChip);
   }
 
+  const promptChip = document.createElement("button");
+  promptChip.className = "chip chip--prompt";
+  promptChip.textContent = "오늘의 질문 ✉";
+  promptChip.onclick = openDailyPrompt;
+  wrap.appendChild(promptChip);
+
   const topTags = Storage.getTopHashtags(CONFIG.TOP_HASHTAG_LIMIT);
   topTags.forEach((tag) => {
     const chip = document.createElement("button");
@@ -335,9 +337,18 @@ function renderHashtagChips() {
   });
 }
 
+function openDailyPrompt() {
+  const prompt = Storage.getDailyPrompt();
+  const center = map.getCenter();
+  if (confirm(`오늘의 질문\n\n"${prompt}"\n\n이 질문에 답하며 기억을 남겨볼까요?`)) {
+    startFreePinComposer(center.getLat(), center.getLng(), `${prompt}\n`);
+  }
+}
+
 function setHashtagFilter(tag) {
   activeHashtagFilter = tag;
   activeYearFilter = null;
+  closeSlider();
   renderHashtagChips();
   renderMarkers();
 }
@@ -345,6 +356,7 @@ function setHashtagFilter(tag) {
 function setYearFilter(year) {
   activeYearFilter = year;
   activeHashtagFilter = null;
+  closeSlider();
   renderHashtagChips();
   renderMarkers();
 }
@@ -374,6 +386,39 @@ function renderFilterBanner() {
 }
 
 // ------------------------------------------------------------
+// 시간 슬라이더 (누적 보기)
+// ------------------------------------------------------------
+function toggleSlider() {
+  if (sliderActive) {
+    closeSlider();
+    return;
+  }
+  clearFilters();
+  const range = Storage.getYearRange();
+  sliderActive = true;
+  sliderYear = range.max;
+
+  const input = document.getElementById("time-slider-input");
+  input.min = range.min;
+  input.max = range.max;
+  input.value = range.max;
+  updateSliderLabel();
+
+  document.getElementById("time-slider-panel").classList.remove("hidden");
+  renderMarkers();
+}
+
+function closeSlider() {
+  sliderActive = false;
+  sliderYear = null;
+  document.getElementById("time-slider-panel").classList.add("hidden");
+}
+
+function updateSliderLabel() {
+  document.getElementById("time-slider-year-label").textContent = `~ ${sliderYear}년까지의 기억`;
+}
+
+// ------------------------------------------------------------
 // Bottom Sheet — 이야기 열람
 // ------------------------------------------------------------
 function openSheet(group) {
@@ -387,6 +432,7 @@ function openSheet(group) {
 }
 
 function closeSheet() {
+  stopRadio();
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
@@ -412,6 +458,7 @@ function showGoneState() {
 
 function renderSheetContent(group) {
   const content = document.getElementById("sheet-content");
+  const title = Storage.getGroupTitle(group);
 
   let displayStories = group.stories;
   const focusYear = spotTimelineFocusYear[group.key];
@@ -419,23 +466,32 @@ function renderSheetContent(group) {
     displayStories = group.stories.filter((s) => Storage.getStoryYear(s) === focusYear);
   }
 
-  const sorted = [...displayStories].sort((a, b) => {
-    if (currentSort === "latest") {
-      return new Date(b.createdAt) - new Date(a.createdAt);
+  let listHtml;
+  if (currentSort === "timetravel") {
+    const dated = displayStories.filter((s) => Storage.getStoryYear(s) !== null);
+    const undated = displayStories.filter((s) => Storage.getStoryYear(s) === null);
+
+    dated.sort((a, b) => {
+      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
+      if (ay !== by) return ay - by;
+      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
+      return am - bm;
+    });
+    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    listHtml = dated.map(renderStoryItem).join("");
+    if (undated.length > 0) {
+      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
+      listHtml += undated.map(renderStoryItem).join("");
     }
-    const da = a.referenceDate ? new Date(a.referenceDate) : new Date(8640000000000000);
-    const db = b.referenceDate ? new Date(b.referenceDate) : new Date(8640000000000000);
-    return da - db;
-  });
+  } else {
+    const sorted = [...displayStories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    listHtml = sorted.map(renderStoryItem).join("");
+  }
 
-  const distinctYears = [...new Set(
-    group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null)
-  )].sort((a, b) => a - b);
-
+  const distinctYears = [...new Set(group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null))].sort((a, b) => a - b);
   const isTimelineOpen = !!spotTimelineOpen[group.key];
-  const spotCountLabel = group.stories.length > 1
-    ? `이곳에 ${group.stories.length}개의 기억이 쌓여 있습니다`
-    : `${group.stories.length}개의 기억`;
+  const spotCountLabel = group.stories.length > 1 ? `이곳에 ${group.stories.length}개의 기억이 쌓여 있습니다` : `${group.stories.length}개의 기억`;
 
   const timelineHtml = isTimelineOpen && distinctYears.length > 0
     ? `
@@ -448,54 +504,41 @@ function renderSheetContent(group) {
 
   content.innerHTML = `
     <div class="story-spot-header">
-      <div>
-        <div class="story-spot-name">${escapeHtml(group.placeName || "이름 없는 곳")}</div>
-        ${group.address ? `<div class="story-spot-address">${escapeHtml(group.address)}</div>` : ""}
-      </div>
+      <div class="story-spot-name">${escapeHtml(title)}</div>
       <span class="story-spot-count">${group.stories.length}개의 기억</span>
     </div>
     <div class="sort-toggle">
       <button class="sort-btn ${currentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
       <button class="sort-btn ${currentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
     </div>
-    <div class="story-list">
-      ${sorted.map(renderStoryItem).join("")}
-    </div>
+    <div class="story-list">${listHtml}</div>
     ${distinctYears.length > 1 ? `<button class="spot-timeline-toggle" id="spot-timeline-toggle">${isTimelineOpen ? "시간연대표 접기" : spotCountLabel + " · 연대표 보기"} →</button>` : ""}
     ${timelineHtml}
     <button class="btn-primary btn-add-story" id="btn-add-story">기억 남기기</button>
   `;
 
   content.querySelectorAll(".sort-btn").forEach((btn) => {
-    btn.onclick = () => {
-      currentSort = btn.dataset.sort;
-      renderSheetContent(group);
-    };
+    btn.onclick = () => { currentSort = btn.dataset.sort; renderSheetContent(group); };
   });
 
   content.querySelectorAll(".hashtag-link").forEach((link) => {
-    link.onclick = () => {
-      closeSheet();
-      setHashtagFilter(link.dataset.tag);
-    };
+    link.onclick = () => { closeSheet(); setHashtagFilter(link.dataset.tag); };
   });
 
   content.querySelectorAll(".year-explore-link").forEach((link) => {
-    link.onclick = () => {
-      closeSheet();
-      setYearFilter(parseInt(link.dataset.year, 10));
-    };
+    link.onclick = () => { closeSheet(); setYearFilter(parseInt(link.dataset.year, 10)); };
   });
 
   content.querySelectorAll(".reaction-btn").forEach((btn) => {
-    btn.onclick = () => {
-      Storage.toggleReaction(btn.dataset.id);
-      renderSheetContent(group);
-    };
+    btn.onclick = () => { Storage.toggleReaction(btn.dataset.id); renderSheetContent(group); };
   });
 
   content.querySelectorAll(".share-btn").forEach((btn) => {
     btn.onclick = () => handleShare(btn.dataset.id);
+  });
+
+  content.querySelectorAll(".radio-btn").forEach((btn) => {
+    btn.onclick = () => toggleRadio(btn.dataset.id, btn);
   });
 
   content.querySelectorAll(".report-link").forEach((btn) => {
@@ -504,11 +547,8 @@ function renderSheetContent(group) {
         Storage.reportStory(btn.dataset.id);
         alert("신고가 접수되었습니다.");
         const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
-        if (refreshed && refreshed.stories.length > 0) {
-          renderSheetContent(refreshed);
-        } else {
-          closeSheet();
-        }
+        if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
+        else closeSheet();
         renderMarkers();
       }
     };
@@ -535,36 +575,36 @@ function renderSheetContent(group) {
     openComposer({
       lat: group.lat,
       lng: group.lng,
-      placeName: group.placeName,
-      placeId: group.stories[0]?.placeId || null,
+      officialPlaceName: group.officialPlaceName,
+      placeId: group.placeId,
       address: group.address || null,
+      isFreePin: !group.placeId,
     });
   };
 }
 
 function renderStoryItem(story) {
   const year = getStoryYearLabel(story);
-  const tagsHtml = story.hashtags
-    .map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`)
-    .join(" ");
+  const month = Storage.getStoryMonth(story);
+  const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
   const numericYear = Storage.getStoryYear(story);
 
   return `
     <div class="story-item">
       <p class="story-year">${year}</p>
-      <p class="story-place-line">${escapeHtml(story.placeName || "")}</p>
+      ${month ? `<p class="story-month">${month}월</p>` : ""}
       <p class="story-content">${escapeHtml(story.content)}</p>
       <p class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</p>
+      ${story.customName ? `<p class="story-custom-name">${escapeHtml(story.displayAuthorName || "익명")}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
       <div class="story-actions">
         <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
           <span class="dot-icon">${reacted ? "●" : "○"}</span>
           나도 이 기억이 떠올랐어요
         </button>
-        <button class="share-btn share-btn--emphasized" data-id="${story.id}">
-          ↗ 이 기억, 누군가에게 전달하기
-        </button>
+        <button class="share-btn share-btn--emphasized" data-id="${story.id}">↗ 이 기억, 누군가에게 전달하기</button>
+        <button class="radio-btn" data-id="${story.id}">🔊 라디오로 듣기</button>
         <button class="report-link" data-id="${story.id}">이 기록 신고하기</button>
       </div>
       ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
@@ -574,8 +614,43 @@ function renderStoryItem(story) {
 
 function getStoryYearLabel(story) {
   const y = Storage.getStoryYear(story);
-  if (y !== null) return y;
-  return "· · ·";
+  return y !== null ? y : "· · ·";
+}
+
+// ------------------------------------------------------------
+// 기억 라디오 (TTS)
+// ------------------------------------------------------------
+function toggleRadio(storyId, btn) {
+  if (!("speechSynthesis" in window)) {
+    alert("이 브라우저에서는 음성 재생을 지원하지 않습니다.");
+    return;
+  }
+
+  if (currentUtterance && speechSynthesis.speaking) {
+    stopRadio();
+    if (btn) { btn.textContent = "🔊 라디오로 듣기"; btn.classList.remove("radio-btn--playing"); }
+    return;
+  }
+
+  const story = Storage.getAllStories().find((s) => s.id === storyId);
+  if (!story) return;
+
+  const utter = new SpeechSynthesisUtterance(story.content);
+  utter.lang = "ko-KR";
+  utter.rate = 0.95;
+  utter.onend = () => {
+    if (btn) { btn.textContent = "🔊 라디오로 듣기"; btn.classList.remove("radio-btn--playing"); }
+    currentUtterance = null;
+  };
+
+  currentUtterance = utter;
+  speechSynthesis.speak(utter);
+  if (btn) { btn.textContent = "■ 멈추기"; btn.classList.add("radio-btn--playing"); }
+}
+
+function stopRadio() {
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  currentUtterance = null;
 }
 
 // ------------------------------------------------------------
@@ -587,10 +662,10 @@ function buildStoryUrl(publicId) {
 }
 
 function wrapCanvasText(ctx, text, maxWidth) {
-  const words = text.split("");
+  const chars = text.split("");
   const lines = [];
   let line = "";
-  words.forEach((ch) => {
+  chars.forEach((ch) => {
     const test = line + ch;
     if (ctx.measureText(test).width > maxWidth && line) {
       lines.push(line);
@@ -618,20 +693,20 @@ function generateShareCard(story) {
   ctx.fill();
 
   const year = Storage.getStoryYear(story);
+  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, address: story.address });
+
   ctx.fillStyle = "#F4F3EF";
   ctx.font = "700 96px sans-serif";
   ctx.fillText(year !== null ? String(year) : "· · ·", 80, 220);
 
   ctx.font = "400 32px sans-serif";
   ctx.fillStyle = "#B9B9B5";
-  ctx.fillText(story.placeName || "", 84, 270);
+  ctx.fillText(title, 84, 270);
 
   ctx.font = "400 34px serif";
   ctx.fillStyle = "#F4F3EF";
-  const lines = wrapCanvasText(ctx, `“${story.content}”`, 1020).slice(0, 5);
-  lines.forEach((line, i) => {
-    ctx.fillText(line, 84, 360 + i * 48);
-  });
+  const lines = wrapCanvasText(ctx, `"${story.content}"`, 1020).slice(0, 5);
+  lines.forEach((line, i) => ctx.fillText(line, 84, 360 + i * 48));
 
   ctx.font = "700 24px sans-serif";
   ctx.fillStyle = "#F4F3EF";
@@ -640,9 +715,7 @@ function generateShareCard(story) {
   ctx.fillStyle = "#B9B9B5";
   ctx.fillText("MEMORY MAP", 84, 588);
 
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), "image/png");
-  });
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
 
 async function handleShare(storyId) {
@@ -650,25 +723,21 @@ async function handleShare(storyId) {
   if (!story) return;
 
   const url = buildStoryUrl(story.publicId);
-  const shareText = `여기 이런 기억이 남아 있었어.\n${story.placeName || ""}${Storage.getStoryYear(story) ? " · " + Storage.getStoryYear(story) : ""}`;
+  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, address: story.address });
+  const year = Storage.getStoryYear(story);
+  const shareText = `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`;
 
   Storage.incrementShareCount(storyId);
 
   try {
     const blob = await generateShareCard(story);
     const file = new File([blob], "concrete-sapiens-memory.png", { type: "image/png" });
-
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: "콘크리트 사피엔스 지도",
-        text: shareText,
-        url,
-        files: [file],
-      });
+      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
       return;
     }
   } catch (e) {
-    // 카드 생성/공유 실패 시 아래 폴백으로 진행
+    // 폴백으로 진행
   }
 
   if (navigator.share) {
@@ -676,7 +745,6 @@ async function handleShare(storyId) {
       await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url });
       return;
     } catch (e) {
-      // 취소 등 - 무시
       return;
     }
   }
@@ -692,17 +760,34 @@ async function handleShare(storyId) {
 // ------------------------------------------------------------
 // 기억 남기기 (작성 화면)
 // ------------------------------------------------------------
+function buildYearOptions(selectedYear) {
+  const currentYear = new Date().getFullYear();
+  let opts = `<option value="">연도</option>`;
+  for (let y = currentYear; y >= CONFIG.MIN_YEAR; y--) {
+    opts += `<option value="${y}" ${String(y) === String(selectedYear) ? "selected" : ""}>${y}년</option>`;
+  }
+  return opts;
+}
+
+function buildMonthOptions(selectedMonth) {
+  let opts = `<option value="">월</option>`;
+  for (let m = 1; m <= 12; m++) {
+    opts += `<option value="${m}" ${String(m) === String(selectedMonth) ? "selected" : ""}>${m}월</option>`;
+  }
+  return opts;
+}
+
 function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
 
   const whereHtml = pin.isFreePin
     ? `
-      <input type="text" id="input-place-name" class="input-field" placeholder="이 장소에 이름을 붙여주세요 (선택)" maxlength="40" />
       <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
+      <input type="text" id="input-custom-name" class="input-field" style="margin-top:8px;" placeholder="이 장소를 뭐라고 부르시나요? (선택)" maxlength="40" />
     `
     : `
-      <div class="field-value">${escapeHtml(pin.placeName || "이름 없는 장소")}</div>
+      <div class="field-value">${escapeHtml(pin.officialPlaceName || "이름 없는 장소")}</div>
       ${pin.address ? `<div class="field-address">${escapeHtml(pin.address)}</div>` : ""}
     `;
 
@@ -718,11 +803,17 @@ function openComposer(pin) {
       <button class="mode-btn" data-mode="past">과거</button>
       <button class="mode-btn mode-btn--active" data-mode="unknown">기억나지 않음</button>
     </div>
-    <input type="date" id="input-refdate" class="input-field hidden" style="margin-top:8px;" max="${todayStr()}" />
+    <div class="year-month-row hidden" id="year-month-row">
+      <select id="input-year">${buildYearOptions()}</select>
+      <select id="input-month">${buildMonthOptions()}</select>
+    </div>
 
     <label class="field-label">MEMORY</label>
-    <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="이곳에 남아 있는 기억을 적어주세요."></textarea>
-    <div class="char-count"><span id="char-count-num">0</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
+    <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="이곳에 남아 있는 기억을 적어주세요.">${escapeHtml(pin.prefillContent || "")}</textarea>
+    <div class="char-count"><span id="char-count-num">${(pin.prefillContent || "").length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
+
+    <label class="field-label">TAGS</label>
+    <input type="text" id="input-tags" class="input-field" placeholder="예: 첫사랑 그리움 (스페이스로 구분, 본문 속 #태그도 자동 인식돼요)" />
 
     <label class="field-label">NAME</label>
     <div class="author-mode-toggle">
@@ -747,7 +838,7 @@ function openComposer(pin) {
       dateMode = btn.dataset.mode;
       panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
       btn.classList.add("mode-btn--active");
-      document.getElementById("input-refdate").classList.toggle("hidden", dateMode !== "past");
+      document.getElementById("year-month-row").classList.toggle("hidden", dateMode !== "past");
     };
   });
 
@@ -760,28 +851,23 @@ function openComposer(pin) {
     };
   });
 
-  function resolvePlaceName() {
-    if (pendingPin.isFreePin) {
-      const nameInput = document.getElementById("input-place-name");
-      const custom = nameInput ? nameInput.value.trim() : "";
-      return custom || pendingPin.address || "이름 없는 곳";
-    }
-    return pendingPin.placeName || "이름 없는 곳";
-  }
-
   document.getElementById("btn-cancel").onclick = closeComposer;
 
   document.getElementById("btn-submit").onclick = () => {
     const content = document.getElementById("input-content").value.trim();
     const authorInput = document.getElementById("input-author").value.trim();
-    const refDateInput = document.getElementById("input-refdate").value;
+    const yearInput = document.getElementById("input-year").value;
+    const monthInput = document.getElementById("input-month").value;
+    const tagsInput = document.getElementById("input-tags").value.trim();
+    const customNameEl = document.getElementById("input-custom-name");
+    const customName = customNameEl ? customNameEl.value.trim() : "";
 
     if (!content) {
       alert("기억을 적어주세요.");
       return;
     }
-    if (dateMode === "past" && !refDateInput) {
-      alert("기억의 시점을 선택해주세요.");
+    if (dateMode === "past" && (!yearInput || !monthInput)) {
+      alert("기억의 연도와 월을 선택해주세요.");
       return;
     }
     if (authorMode === "custom" && !authorInput) {
@@ -789,20 +875,26 @@ function openComposer(pin) {
       return;
     }
 
+    const tagsFromField = tagsInput
+      ? tagsInput.split(/\s|,/).map((t) => t.trim()).filter(Boolean).map((t) => (t.startsWith("#") ? t : `#${t}`))
+      : [];
+    const hashtags = [...new Set([...extractHashtags(content), ...tagsFromField])];
+
     const story = {
       id: crypto.randomUUID(),
       publicId: Storage.generatePublicId(),
       lat: pendingPin.lat,
       lng: pendingPin.lng,
-      placeName: resolvePlaceName(),
       placeId: pendingPin.placeId,
+      officialPlaceName: pendingPin.officialPlaceName || null,
       address: pendingPin.address || null,
+      customName: pendingPin.isFreePin && customName ? customName : null,
       content,
-      hashtags: extractHashtags(content),
+      hashtags,
       authorMode,
       displayAuthorName: authorMode === "custom" ? authorInput : "익명",
       dateMode,
-      referenceDate: dateMode === "past" ? refDateInput : null,
+      referenceDate: dateMode === "past" ? `${yearInput}-${String(monthInput).padStart(2, "0")}` : null,
       createdAt: new Date().toISOString(),
       reportCount: 0,
       status: "ACTIVE",
@@ -815,9 +907,7 @@ function openComposer(pin) {
     renderMarkers();
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
-    const group = Storage.getGroupedByPlace().find(
-      (g) => g.lat === story.lat && g.lng === story.lng
-    );
+    const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
     if (group) openSheet(group);
   };
 
@@ -846,6 +936,14 @@ function bindUIEvents() {
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
+  document.getElementById("btn-timeslider").onclick = toggleSlider;
+  document.getElementById("time-slider-close").onclick = closeSlider;
+  document.getElementById("time-slider-input").addEventListener("input", (e) => {
+    sliderYear = parseInt(e.target.value, 10);
+    updateSliderLabel();
+    renderMarkers();
+  });
+
   document.getElementById("fab-add").onclick = () => {
     const center = map.getCenter();
     startFreePinComposer(center.getLat(), center.getLng());
@@ -860,9 +958,7 @@ function bindUIEvents() {
 
   let touchStartY = null;
   const handleRow = document.getElementById("sheet-handle-row");
-  handleRow.addEventListener("touchstart", (e) => {
-    touchStartY = e.touches[0].clientY;
-  });
+  handleRow.addEventListener("touchstart", (e) => { touchStartY = e.touches[0].clientY; });
   handleRow.addEventListener("touchend", (e) => {
     if (touchStartY === null) return;
     const diff = e.changedTouches[0].clientY - touchStartY;
@@ -874,9 +970,7 @@ function bindUIEvents() {
   const searchResults = document.getElementById("search-results");
 
   document.getElementById("search-btn").onclick = () => runSearch();
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runSearch();
-  });
+  searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });
 
   function runSearch() {
     const keyword = searchInput.value.trim();
@@ -889,17 +983,12 @@ function bindUIEvents() {
         return;
       }
 
-      searchResults.innerHTML = data
-        .slice(0, 6)
-        .map(
-          (place) => `
+      searchResults.innerHTML = data.slice(0, 6).map((place) => `
         <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}" data-address="${escapeHtml(place.road_address_name || place.address_name || "")}">
           <strong>${escapeHtml(place.place_name)}</strong>
           <span>${escapeHtml(place.road_address_name || place.address_name)}</span>
         </li>
-      `
-        )
-        .join("");
+      `).join("");
       searchResults.classList.remove("hidden");
 
       searchResults.querySelectorAll(".search-result-item").forEach((item) => {
@@ -912,9 +1001,8 @@ function bindUIEvents() {
           searchInput.value = "";
 
           openComposer({
-            lat,
-            lng,
-            placeName: item.dataset.name,
+            lat, lng,
+            officialPlaceName: item.dataset.name,
             placeId: item.dataset.id,
             address: item.dataset.address || null,
             isFreePin: false,
@@ -947,10 +1035,6 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
-}
-
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
 }
 
 window.startConcreteSapiensApp = function () {

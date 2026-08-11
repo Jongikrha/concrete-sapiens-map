@@ -31,6 +31,15 @@
     <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
     <div class="filter-banner hidden" id="filter-banner"></div>
 
+    <!-- 시간 슬라이더 (누적 보기) -->
+    <div class="time-slider-panel hidden" id="time-slider-panel">
+      <div class="time-slider-label">
+        <span id="time-slider-year-label"></span>
+        <button class="time-slider-close" id="time-slider-close">✕</button>
+      </div>
+      <input type="range" id="time-slider-input" class="time-slider-input" />
+    </div>
+
     <!-- 최초 진입 안내 토스트 -->
     <div class="entry-toast" id="entry-toast"></div>
     <!-- 기억 전달하기(공유) 완료 토스트 -->
@@ -39,6 +48,7 @@
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
       <button class="tool-btn" id="btn-my-location">내 주변</button>
+      <button class="tool-btn" id="btn-timeslider">시간여행</button>
       <button class="tool-btn tool-btn--accent" id="btn-random">어딘가의 기억</button>
     </div>
     <button class="fab-add" id="fab-add" title="기억 남기기" aria-label="기억 남기기">＋</button>

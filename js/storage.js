@@ -1,19 +1,31 @@
 // ============================================================
 // 데이터 저장 계층 (Storage Layer)
 // ============================================================
-// 지금은 localStorage로 동작하는 MVP 데모용 구현입니다.
-// 나중에 AWS Amplify + DynamoDB(+ Cognito 인증)로 붙일 때는 이 파일의
-// 함수들만 동일한 시그니처(입출력 형태)로 API 호출로 바꿔주면 나머지
-// 코드는 수정할 필요가 없도록 설계했습니다.
+// v4: 주소 우선 구조 / 년-월 시점 / 태그 별도 입력 반영
 //
-// 주의: 회원가입/로그인/관리자 기능(개발기획서 §30~§52)은 이 파일에
-// 아직 반영되지 않았습니다. 실제 서비스에는 Cognito 인증과 서버 측
-// userId 연결이 반드시 필요합니다. 지금은 프론트엔드 프로토타입 단계로,
-// authorMode/displayAuthorName만 저장하고 실제 계정 시스템은 없습니다.
+// Story 스키마 변경 사항:
+//  - placeName(단일 필드) 폐기 → officialPlaceName(검색형 장소의 공식 이름,
+//    카카오 Places API 결과) / address(항상 시도하는 역지오코딩 결과) /
+//    customName(자유 핀에서 작성자가 붙인 개인적 이름, 선택) 로 분리
+//  - referenceDate는 "YYYY-MM" 형식으로 저장 (일자 없이 년/월까지만)
 // ============================================================
 
-const STORAGE_KEY = "concrete_sapiens_stories_v2";
+const STORAGE_KEY = "concrete_sapiens_stories_v3";
 const REACTED_KEY = "concrete_sapiens_reacted_v1";
+
+// 오늘의 질문 프롬프트 목록 (매일 하나씩 결정론적으로 노출)
+const DAILY_PROMPTS = [
+  "당신이 처음으로 혼자 소주를 마셨던 가게는 어디인가요?",
+  "부모님과 마지막으로 손을 잡고 걸었던 길을 기억하나요?",
+  "이사 가기 전, 마지막으로 눈에 담았던 우리 집 풍경은?",
+  "첫 출근길, 어떤 마음으로 그 길을 걸었나요?",
+  "가장 친했던 친구와 마지막으로 함께 있었던 장소는?",
+  "혼자 울고 싶을 때 찾아가던 곳이 있었나요?",
+  "첫사랑과 처음 손을 잡았던 곳은 어디였나요?",
+  "이제는 사라진, 그리운 동네 가게가 있나요?",
+  "졸업식 날, 가장 오래 머물렀던 장소는 어디였나요?",
+  "누군가를 배웅하며 눈물을 참았던 곳이 있나요?",
+];
 
 const Storage = {
   getAllStories() {
@@ -58,10 +70,6 @@ const Storage = {
     return target;
   },
 
-  /**
-   * 반응 토글: "나도 이 기억이 떠올랐어요"
-   * 좋아요가 아니라 서비스만의 반응 시스템 (design spec §19~§21)
-   */
   toggleReaction(storyId) {
     const stories = this.getAllStories();
     const target = stories.find((s) => s.id === storyId);
@@ -111,6 +119,10 @@ const Storage = {
 
   /**
    * 좌표 근처(같은 장소)의 이야기를 그룹핑합니다.
+   * - placeId가 있으면(검색형) 그룹 제목은 카카오 공식 장소명
+   * - 없으면(자유 핀) 그룹 제목은 항상 "주소" (첫 이야기의 address)
+   *   → 특정 유저가 붙인 임의의 이름이 장소의 "공식 명칭"처럼
+   *     굳어버리는 것을 방지하기 위한 설계
    */
   getGroupedByPlace() {
     const stories = this.getVisibleStories();
@@ -126,15 +138,25 @@ const Storage = {
           key,
           lat: story.lat,
           lng: story.lng,
-          placeName: story.placeName,
+          placeId: story.placeId,
+          officialPlaceName: story.officialPlaceName || null,
           address: story.address || null,
           stories: [],
         };
+      }
+      // 그룹 대표 주소가 비어있으면 이후 이야기의 주소로 보강
+      if (!groups[key].address && story.address) {
+        groups[key].address = story.address;
       }
       groups[key].stories.push(story);
     });
 
     return Object.values(groups);
+  },
+
+  getGroupTitle(group) {
+    if (group.placeId && group.officialPlaceName) return group.officialPlaceName;
+    return group.address || "주소를 확인할 수 없는 곳";
   },
 
   getTopHashtags(limit = 30) {
@@ -154,12 +176,23 @@ const Storage = {
     return this.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag)).length;
   },
 
+  /**
+   * referenceDate("YYYY-MM")에서 연도를 추출. dateMode에 따라 분기.
+   */
   getStoryYear(story) {
     if (story.dateMode === "past" && story.referenceDate) {
-      return new Date(story.referenceDate).getFullYear();
+      return parseInt(story.referenceDate.split("-")[0], 10);
     }
     if (story.dateMode === "now") {
       return new Date(story.createdAt).getFullYear();
+    }
+    return null;
+  },
+
+  getStoryMonth(story) {
+    if (story.dateMode === "past" && story.referenceDate) {
+      const parts = story.referenceDate.split("-");
+      return parts[1] ? parseInt(parts[1], 10) : null;
     }
     return null;
   },
@@ -169,9 +202,19 @@ const Storage = {
   },
 
   /**
-   * 오늘의 기억 — 매일 하나, 날짜를 시드로 결정론적 선정
-   * (같은 날 접속한 모든 사람에게 동일한 이야기가 노출됨)
+   * 전체 이야기 중 연도가 있는 것들의 최소/최대 연도 (시간 슬라이더 범위용)
    */
+  getYearRange() {
+    const years = this.getVisibleStories()
+      .map((s) => this.getStoryYear(s))
+      .filter((y) => y !== null);
+    if (years.length === 0) {
+      const thisYear = new Date().getFullYear();
+      return { min: thisYear - 10, max: thisYear };
+    }
+    return { min: Math.min(...years), max: new Date().getFullYear() };
+  },
+
   getDailyFeaturedStory() {
     const visible = this.getVisibleStories();
     if (visible.length === 0) return null;
@@ -185,10 +228,15 @@ const Storage = {
     return sorted[Math.abs(hash) % sorted.length];
   },
 
-  /**
-   * 최초 진입 랜덤 랜딩용 — 최근 이야기 풀 중 무작위 1개
-   * (개발기획서 §4, §5 / 디자인 스펙 §4.1)
-   */
+  getDailyPrompt() {
+    const seed = new Date().toISOString().split("T")[0];
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) % DAILY_PROMPTS.length;
+    }
+    return DAILY_PROMPTS[Math.abs(hash) % DAILY_PROMPTS.length];
+  },
+
   getRandomRecentStory() {
     const visible = this.getVisibleStories();
     if (visible.length === 0) return null;
@@ -206,10 +254,6 @@ const Storage = {
     return visible[Math.floor(Math.random() * visible.length)];
   },
 
-  /**
-   * 사람이 읽기 좋은 짧은 Public ID 생성 (예: A8FD72KC)
-   * 실제 서비스에서는 서버에서 충돌 검사와 함께 생성해야 합니다.
-   */
   generatePublicId() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let id = "";
@@ -228,14 +272,16 @@ const Storage = {
         publicId: this.generatePublicId(),
         lat: 37.5274,
         lng: 127.0286,
-        placeName: "압구정현대아파트",
         placeId: null,
-        content: "학교가 끝나면 아무 이유 없이 이 앞을 몇 번씩 지나갔다. 그 애가 혹시 나올까 봐. #첫사랑 #그리움",
+        officialPlaceName: null,
+        address: "서울특별시 강남구 압구정로 111",
+        customName: "노을바위",
+        content: "학교가 끝나면 아무 이유 없이 이 앞을 몇 번씩 지나갔다. 그 애가 혹시 나올까 봐.",
         hashtags: ["#첫사랑", "#그리움"],
         authorMode: "anonymous",
         displayAuthorName: "익명",
         dateMode: "past",
-        referenceDate: "1995-05-01",
+        referenceDate: "1995-05",
         createdAt: new Date().toISOString(),
         reportCount: 0,
         status: "ACTIVE",
@@ -247,14 +293,16 @@ const Storage = {
         publicId: this.generatePublicId(),
         lat: 37.5665,
         lng: 126.978,
-        placeName: "서울시청 앞",
-        placeId: null,
-        content: "이십 년 전 여기서 첫 회사 면접을 봤다. 그날 비가 많이 왔었지. #이직 #추억",
+        placeId: "kakao-seoul-cityhall",
+        officialPlaceName: "서울시청",
+        address: "서울특별시 중구 세종대로 110",
+        customName: null,
+        content: "이십 년 전 여기서 첫 회사 면접을 봤다. 그날 비가 많이 왔었지.",
         hashtags: ["#이직", "#추억"],
         authorMode: "custom",
         displayAuthorName: "콘크리트사피엔스",
         dateMode: "past",
-        referenceDate: "2004-11-03",
+        referenceDate: "2004-11",
         createdAt: new Date().toISOString(),
         reportCount: 0,
         status: "ACTIVE",
@@ -266,9 +314,11 @@ const Storage = {
         publicId: this.generatePublicId(),
         lat: 35.1595,
         lng: 129.0756,
-        placeName: "부산 해운대",
         placeId: null,
-        content: "고향을 떠나기 전 마지막으로 걸었던 해변. #고향 #이사",
+        officialPlaceName: null,
+        address: "부산광역시 해운대구 해운대해변로 264",
+        customName: null,
+        content: "고향을 떠나기 전 마지막으로 걸었던 해변.",
         hashtags: ["#고향", "#이사"],
         authorMode: "anonymous",
         displayAuthorName: "익명",
