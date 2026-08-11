@@ -11,35 +11,39 @@
     <div id="map"></div>
     <div class="map-dim-layer"></div>
 
-    <!-- 상단: 워드마크 + 검색 -->
-    <div class="top-bar">
-      <div class="wordmark">
-        CONCRETE SAPIENS
-        <small>MEMORY MAP</small>
-      </div>
-      <div class="search-box">
-        <div class="search-input-row">
-          <input type="text" id="search-input" placeholder="장소 검색" />
-          <button id="search-btn">검색</button>
+    <!-- 상단 오버레이 (워드마크/검색/해시태그/배너) — 세로로 자연스럽게
+         쌓이는 구조라, 해시태그가 여러 줄로 내려가도 아래 요소들이
+         알아서 밀려난다 -->
+    <div class="map-overlay-top" id="map-overlay-top">
+      <div class="top-bar">
+        <div class="wordmark">
+          CONCRETE SAPIENS
+          <small>MEMORY MAP</small>
         </div>
-        <ul class="search-results hidden" id="search-results"></ul>
+        <div class="search-box">
+          <div class="search-input-row">
+            <input type="text" id="search-input" placeholder="장소 검색" />
+            <button id="search-btn">검색</button>
+          </div>
+          <ul class="search-results hidden" id="search-results"></ul>
+        </div>
       </div>
-    </div>
 
-    <!-- 해시태그 칩 -->
-    <div class="hashtag-bar" id="hashtag-chips"></div>
-    <!-- 전체 등록된 기억 수 ("오늘의 기억" 칩 아래) -->
-    <div class="total-count-banner hidden" id="total-count-banner"></div>
-    <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
-    <div class="filter-banner hidden" id="filter-banner"></div>
+      <!-- 해시태그 칩 (많이 쓰인 순 상위 30개, 화면 폭에 맞춰 줄바꿈) -->
+      <div class="hashtag-bar" id="hashtag-chips"></div>
+      <!-- 전체 등록된 기억 수 ("오늘의 기억" 칩 아래) -->
+      <div class="total-count-banner hidden" id="total-count-banner"></div>
+      <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
+      <div class="filter-banner hidden" id="filter-banner"></div>
 
-    <!-- 시간 슬라이더 (누적 보기) -->
-    <div class="time-slider-panel hidden" id="time-slider-panel">
-      <div class="time-slider-label">
-        <span id="time-slider-year-label"></span>
-        <button class="time-slider-close" id="time-slider-close">✕</button>
+      <!-- 시간 슬라이더 (누적 보기) -->
+      <div class="time-slider-panel hidden" id="time-slider-panel">
+        <div class="time-slider-label">
+          <span id="time-slider-year-label"></span>
+          <button class="time-slider-close" id="time-slider-close">✕</button>
+        </div>
+        <input type="range" id="time-slider-input" class="time-slider-input" />
       </div>
-      <input type="range" id="time-slider-input" class="time-slider-input" />
     </div>
 
     <!-- 최초 진입 안내 토스트 -->
