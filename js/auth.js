@@ -86,7 +86,7 @@ const Auth = {
   mapError(e) {
     const known = {
       UsernameExistsException: "이미 존재하는 계정입니다. 로그인할까요?",
-      InvalidPasswordException: "비밀번호는 최소 8자 이상이어야 합니다.",
+      InvalidPasswordException: "비밀번호는 영문 대/소문자·숫자·특수문자를 모두 포함해 8자 이상이어야 합니다.",
       InvalidParameterException: "이메일 형식을 확인해주세요.",
       CodeMismatchException: "인증 코드가 올바르지 않습니다.",
       ExpiredCodeException: "인증 코드가 만료되었습니다. 다시 보내기를 눌러주세요.",
@@ -151,6 +151,20 @@ function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+// Cognito User Pool 기본 비밀번호 정책(최소 8자 + 대/소문자·숫자·특수문자
+// 모두 포함)을 그대로 미러링한다. amplify/auth/resource.ts에 별도 설정이
+// 없어 Amplify Gen2 기본값이 적용된 상태 — 서버까지 왕복하지 않고 미리
+// 걸러서 "왜 막히는지" 바로 알려주기 위한 클라이언트 측 사전 검증이다.
+function isValidPassword(v) {
+  return (
+    v.length >= 8 &&
+    /[a-z]/.test(v) &&
+    /[A-Z]/.test(v) &&
+    /[0-9]/.test(v) &&
+    /[^A-Za-z0-9]/.test(v)
+  );
+}
+
 function renderAuthPanel() {
   const panel = document.getElementById("auth-panel");
   const errorHtml = authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : "";
@@ -161,7 +175,8 @@ function renderAuthPanel() {
       <label class="field-label">이메일</label>
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>
-      <input type="password" id="auth-password" class="input-field" placeholder="최소 8자" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
+      <input type="password" id="auth-password" class="input-field" placeholder="8자 이상" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
+      <p class="field-hint">영문 대/소문자, 숫자, 특수문자를 모두 포함해 8자 이상으로 만들어주세요.</p>
       ${errorHtml}
       <button class="btn-primary" id="auth-submit">계정 만들기</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
@@ -226,8 +241,8 @@ async function handleSignupSubmit() {
     renderAuthPanel();
     return;
   }
-  if (password.length < 8) {
-    authError = "비밀번호는 최소 8자 이상이어야 합니다.";
+  if (!isValidPassword(password)) {
+    authError = "비밀번호는 영문 대/소문자, 숫자, 특수문자를 모두 포함해 8자 이상이어야 합니다.";
     renderAuthPanel();
     return;
   }
