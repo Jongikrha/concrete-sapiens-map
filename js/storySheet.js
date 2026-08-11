@@ -267,10 +267,12 @@ function wrapCanvasText(ctx, text, maxWidth) {
   return lines;
 }
 
+// 인스타그램 스토리에 그대로 채워지는 9:16 세로 카드. 연도·장소·인용구는
+// 콘텐츠 길이에 따라 세로 위치가 밀리고, CTA/로고는 항상 하단에 고정한다.
 function generateShareCard(story) {
   const canvas = document.createElement("canvas");
-  canvas.width = 1200;
-  canvas.height = 630;
+  canvas.width = 1080;
+  canvas.height = 1920;
   const ctx = canvas.getContext("2d");
 
   ctx.fillStyle = "#2F3031";
@@ -278,31 +280,70 @@ function generateShareCard(story) {
 
   ctx.fillStyle = "#FF5A36";
   ctx.beginPath();
-  ctx.arc(90, 90, 10, 0, Math.PI * 2);
+  ctx.arc(96, 140, 12, 0, Math.PI * 2);
   ctx.fill();
 
   const year = Storage.getStoryYear(story);
-  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, address: story.address });
+  const groupLike = {
+    placeId: story.placeId,
+    officialPlaceName: story.officialPlaceName,
+    customName: story.customName,
+    address: story.address,
+  };
+  const title = Storage.getGroupTitle(groupLike);
+  const addressCaption = Storage.getGroupAddressCaption(groupLike);
+
+  const marginX = 96;
+  const maxWidth = canvas.width - marginX * 2;
+  let cursorY = 340;
 
   ctx.fillStyle = "#F4F3EF";
-  ctx.font = "700 96px sans-serif";
-  ctx.fillText(year !== null ? String(year) : "· · ·", 80, 220);
+  ctx.font = "700 168px sans-serif";
+  ctx.fillText(year !== null ? String(year) : "· · ·", marginX, cursorY);
+  cursorY += 100;
 
-  ctx.font = "400 32px sans-serif";
+  ctx.font = "700 56px sans-serif";
+  ctx.fillStyle = "#F4F3EF";
+  const titleLines = wrapCanvasText(ctx, title, maxWidth).slice(0, 2);
+  titleLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 68));
+  cursorY += titleLines.length * 68 + 8;
+
+  // 작성자가 붙인 지역명(title)만으로는 실제 위치를 모를 수 있어
+  // 지번 주소를 옆에(작은 글씨로) 항상 함께 보여준다.
+  if (addressCaption) {
+    ctx.font = "400 30px sans-serif";
+    ctx.fillStyle = "#B9B9B5";
+    const addrLines = wrapCanvasText(ctx, addressCaption, maxWidth).slice(0, 2);
+    addrLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 40));
+    cursorY += addrLines.length * 40;
+  }
+  cursorY += 100;
+
+  const footerY = canvas.height - 200;
+  const lineHeight = 76;
+  const maxQuoteLines = Math.max(3, Math.floor((footerY - 40 - cursorY) / lineHeight));
+
+  ctx.font = "400 52px serif";
+  ctx.fillStyle = "#F4F3EF";
+  let quoteLines = wrapCanvasText(ctx, `"${story.content}"`, maxWidth);
+  if (quoteLines.length > maxQuoteLines) {
+    quoteLines = quoteLines.slice(0, maxQuoteLines);
+    const last = quoteLines[quoteLines.length - 1];
+    quoteLines[quoteLines.length - 1] = last.slice(0, Math.max(0, last.length - 1)) + "…";
+  }
+  quoteLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * lineHeight));
+
+  ctx.font = "700 38px sans-serif";
+  ctx.fillStyle = "#F4F3EF";
+  ctx.fillText("이 기억의 장소를 지도에서", marginX, footerY);
+  ctx.fillText("열어보세요 →", marginX, footerY + 52);
+
+  ctx.font = "700 30px sans-serif";
+  ctx.fillStyle = "#FF5A36";
+  ctx.fillText("CONCRETE SAPIENS", marginX, footerY + 120);
+  ctx.font = "400 24px sans-serif";
   ctx.fillStyle = "#B9B9B5";
-  ctx.fillText(title, 84, 270);
-
-  ctx.font = "400 34px serif";
-  ctx.fillStyle = "#F4F3EF";
-  const lines = wrapCanvasText(ctx, `"${story.content}"`, 1020).slice(0, 5);
-  lines.forEach((line, i) => ctx.fillText(line, 84, 360 + i * 48));
-
-  ctx.font = "700 24px sans-serif";
-  ctx.fillStyle = "#F4F3EF";
-  ctx.fillText("CONCRETE SAPIENS", 84, 560);
-  ctx.font = "400 20px sans-serif";
-  ctx.fillStyle = "#B9B9B5";
-  ctx.fillText("MEMORY MAP", 84, 588);
+  ctx.fillText("MEMORY MAP", marginX, footerY + 150);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
