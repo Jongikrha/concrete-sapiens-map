@@ -217,9 +217,9 @@ function bindUIEvents() {
   document.getElementById("recent-overlay").addEventListener("click", (e) => {
     if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
   });
-  document.getElementById("auth-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "auth-overlay") closeAuthOverlay();
-  });
+  // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
+  // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
+  // 버튼이나 ESC를 눌러야 닫힌다).
   bindAccountMenuEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;

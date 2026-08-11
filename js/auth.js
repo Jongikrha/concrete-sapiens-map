@@ -82,6 +82,18 @@ const Auth = {
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
+  async requestPasswordReset({ email }) {
+    return this._sdk.resetPassword({ username: email });
+  },
+
+  // 코드 확인 후 곧바로 새 비밀번호로 로그인까지 이어간다(가입 완료 흐름과
+  // 동일한 원칙 — 굳이 다시 로그인 폼을 거치게 하지 않는다).
+  async confirmPasswordReset({ email, code, newPassword }) {
+    await this._sdk.confirmResetPassword({ username: email, confirmationCode: code, newPassword });
+    await this._sdk.signIn({ username: email, password: newPassword });
+    await this._refreshCurrentUser();
+  },
+
   // Cognito 예외 이름을 기획서 17장 문구에 맞춰 한국어로 옮긴다.
   mapError(e) {
     const known = {
@@ -103,12 +115,13 @@ const Auth = {
 // ------------------------------------------------------------
 // 가입/인증/로그인 오버레이 UI
 // ------------------------------------------------------------
-let authMode = "signup"; // "signup" | "verify" | "login"
+let authMode = "signup"; // "signup" | "verify" | "login" | "forgot" | "reset"
 let authError = "";
 let authBusy = false;
 let pendingAuthSuccess = null;
 let pendingSignupEmail = "";
 let pendingSignupPassword = "";
+let pendingResetEmail = "";
 // authBusy/authError 갱신 시 패널 전체를 다시 그리는데(innerHTML 교체),
 // <input>에 value를 안 채워두면 사용자가 입력한 값이 그 순간 날아간다.
 // 그래서 입력값도 여기 상태로 같이 들고 있다가 렌더할 때 그대로 채운다.
@@ -143,6 +156,7 @@ function closeAuthOverlay() {
   pendingAuthSuccess = null;
   pendingSignupEmail = "";
   pendingSignupPassword = "";
+  pendingResetEmail = "";
   authEmailValue = "";
   authPasswordValue = "";
 }
@@ -193,7 +207,7 @@ function renderAuthPanel() {
   } else if (authMode === "verify") {
     panel.innerHTML = `
       <h2 class="composer-title">이메일을 확인해주세요</h2>
-      <p class="field-hint">${escapeHtml(pendingSignupEmail)}으로 인증 코드를 보냈습니다.</p>
+      <p class="field-hint">${escapeHtml(pendingSignupEmail)}으로 인증 코드를 보냈습니다. 메일이 안 보이면 스팸함도 확인해주세요.</p>
       <label class="field-label">인증 코드</label>
       <input type="text" id="auth-code" class="input-field" placeholder="6자리 코드" inputmode="numeric" maxlength="6" />
       ${errorHtml}
@@ -204,7 +218,7 @@ function renderAuthPanel() {
     panel.querySelector("#auth-submit").onclick = handleVerifySubmit;
     panel.querySelector("#auth-resend").onclick = handleResendCode;
     panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
-  } else {
+  } else if (authMode === "login") {
     panel.innerHTML = `
       <h2 class="composer-title">다시 만난 기억들</h2>
       <label class="field-label">이메일</label>
@@ -214,15 +228,59 @@ function renderAuthPanel() {
       ${errorHtml}
       <button class="btn-primary" id="auth-submit">로그인</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
+      <p class="auth-switch">
+        <button class="auth-switch-link" id="auth-goto-forgot">비밀번호를 잊으셨나요?</button>
+      </p>
       <p class="auth-switch">처음이신가요? <button class="auth-switch-link" id="auth-goto-signup">계정 만들기</button></p>
     `;
     panel.querySelector("#auth-submit").onclick = handleLoginSubmit;
+    panel.querySelector("#auth-goto-forgot").onclick = () => {
+      authMode = "forgot";
+      authError = "";
+      authPasswordValue = "";
+      renderAuthPanel();
+    };
     panel.querySelector("#auth-goto-signup").onclick = () => {
       authMode = "signup";
       authError = "";
       authPasswordValue = "";
       renderAuthPanel();
     };
+    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+  } else if (authMode === "forgot") {
+    panel.innerHTML = `
+      <h2 class="composer-title">비밀번호를 잊으셨나요?</h2>
+      <p class="field-hint">가입한 이메일로 재설정 코드를 보내드릴게요.</p>
+      <label class="field-label">이메일</label>
+      <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
+      ${errorHtml}
+      <button class="btn-primary" id="auth-submit">재설정 코드 받기</button>
+      <button class="btn-secondary" id="auth-cancel">취소</button>
+      <p class="auth-switch">로그인으로 돌아가기 <button class="auth-switch-link" id="auth-goto-login">로그인</button></p>
+    `;
+    panel.querySelector("#auth-submit").onclick = handleForgotSubmit;
+    panel.querySelector("#auth-goto-login").onclick = () => {
+      authMode = "login";
+      authError = "";
+      renderAuthPanel();
+    };
+    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+  } else if (authMode === "reset") {
+    panel.innerHTML = `
+      <h2 class="composer-title">새 비밀번호를 설정해주세요</h2>
+      <p class="field-hint">${escapeHtml(pendingResetEmail)}으로 재설정 코드를 보냈습니다(계정이 있는 경우). 메일이 안 보이면 스팸함도 확인해주세요.</p>
+      <label class="field-label">인증 코드</label>
+      <input type="text" id="auth-code" class="input-field" placeholder="6자리 코드" inputmode="numeric" maxlength="6" />
+      <label class="field-label">새 비밀번호</label>
+      <input type="password" id="auth-password" class="input-field" placeholder="8자 이상" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
+      <p class="field-hint">영문 대/소문자, 숫자, 특수문자를 모두 포함해 8자 이상으로 만들어주세요.</p>
+      ${errorHtml}
+      <button class="btn-primary" id="auth-submit">비밀번호 변경</button>
+      <button class="btn-secondary" id="auth-cancel">취소</button>
+      <p class="auth-switch">코드를 받지 못했나요? <button class="auth-switch-link" id="auth-resend">다시 보내기</button></p>
+    `;
+    panel.querySelector("#auth-submit").onclick = handleResetSubmit;
+    panel.querySelector("#auth-resend").onclick = handleForgotResend;
     panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
   }
 
@@ -341,6 +399,88 @@ async function handleLoginSubmit() {
       renderAuthPanel();
       return;
     }
+    authError = Auth.mapError(e);
+    renderAuthPanel();
+  }
+}
+
+async function handleForgotSubmit() {
+  const email = document.getElementById("auth-email").value.trim();
+  authEmailValue = email;
+
+  if (!isValidEmail(email)) {
+    authError = "이메일 형식을 확인해주세요.";
+    renderAuthPanel();
+    return;
+  }
+
+  authBusy = true;
+  authError = "";
+  renderAuthPanel();
+
+  try {
+    await Auth.requestPasswordReset({ email });
+    moveToResetScreen(email);
+  } catch (e) {
+    authBusy = false;
+    // 존재하지 않는 이메일이어도 "코드를 보냈다"고만 안내한다 — 계정 존재
+    // 여부가 드러나면 이메일 목록을 훑어보는 공격에 악용될 수 있다
+    // (기획서 7장 "계정 존재 여부를 과도하게 노출하지 않는다").
+    if (e?.name === "UserNotFoundException") {
+      moveToResetScreen(email);
+      return;
+    }
+    authError = Auth.mapError(e);
+    renderAuthPanel();
+  }
+}
+
+function moveToResetScreen(email) {
+  pendingResetEmail = email;
+  authMode = "reset";
+  authBusy = false;
+  authError = "";
+  authPasswordValue = "";
+  renderAuthPanel();
+}
+
+async function handleForgotResend() {
+  try {
+    await Auth.requestPasswordReset({ email: pendingResetEmail });
+    authError = "재설정 코드를 다시 보냈습니다.";
+  } catch (e) {
+    authError = e?.name === "UserNotFoundException" ? "재설정 코드를 다시 보냈습니다." : Auth.mapError(e);
+  }
+  renderAuthPanel();
+}
+
+async function handleResetSubmit() {
+  const code = document.getElementById("auth-code").value.trim();
+  const newPassword = document.getElementById("auth-password").value;
+  authPasswordValue = newPassword;
+
+  if (!code) {
+    authError = "인증 코드를 입력해주세요.";
+    renderAuthPanel();
+    return;
+  }
+  if (!isValidPassword(newPassword)) {
+    authError = "비밀번호는 영문 대/소문자, 숫자, 특수문자를 모두 포함해 8자 이상이어야 합니다.";
+    renderAuthPanel();
+    return;
+  }
+
+  authBusy = true;
+  authError = "";
+  renderAuthPanel();
+
+  try {
+    await Auth.confirmPasswordReset({ email: pendingResetEmail, code, newPassword });
+    const onSuccess = pendingAuthSuccess;
+    closeAuthOverlay();
+    if (onSuccess) onSuccess();
+  } catch (e) {
+    authBusy = false;
     authError = Auth.mapError(e);
     renderAuthPanel();
   }

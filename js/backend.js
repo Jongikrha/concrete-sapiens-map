@@ -18,6 +18,8 @@ import {
   signOut,
   getCurrentUser,
   fetchAuthSession,
+  resetPassword,
+  confirmResetPassword,
 } from "https://esm.sh/aws-amplify@6.20.0/auth";
 
 // localhost에서는 별도 dev sandbox(amplify_outputs.local.json, gitignore
@@ -43,6 +45,8 @@ fetch(OUTPUTS_FILE)
       signOut,
       getCurrentUser,
       fetchAuthSession,
+      resetPassword,
+      confirmResetPassword,
     });
   })
   .catch((e) => {
