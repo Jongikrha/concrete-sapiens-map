@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>콘크리트 사피엔스 지도 — 어드민</title>
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div id="login-view" class="login-view">
+    <form id="login-form" class="login-card">
+      <h1>어드민 로그인</h1>
+      <input type="email" id="login-email" placeholder="이메일" autocomplete="username" required />
+      <input type="password" id="login-password" placeholder="비밀번호" autocomplete="current-password" required />
+      <button type="submit" class="btn-primary">로그인</button>
+      <p class="login-error hidden" id="login-error"></p>
+    </form>
+  </div>
+
+  <div id="dashboard-view" class="dashboard-view hidden">
+    <header class="admin-header">
+      <h1>콘크리트 사피엔스 지도 — 어드민</h1>
+      <button id="btn-logout" class="btn-secondary">로그아웃</button>
+    </header>
+
+    <nav class="admin-tabs" id="admin-tabs">
+      <button class="tab-btn tab-btn--active" data-tab="queue">신고 검토 큐</button>
+      <button class="tab-btn" data-tab="all">전체 콘텐츠</button>
+      <button class="tab-btn" data-tab="words">금칙어 관리</button>
+      <button class="tab-btn" data-tab="visits">방문 현황</button>
+    </nav>
+
+    <div class="device-filter-banner hidden" id="device-filter-banner">
+      <span id="device-filter-label"></span>
+      <button id="device-filter-clear">필터 해제 ✕</button>
+    </div>
+
+    <main id="admin-content"></main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+:root {
+  --cs-black: #2F3031;
+  --cs-paper: #F4F3EF;
+  --cs-gray: #B9B9B5;
+  --cs-map-gray: #E5E4DF;
+  --cs-orange: #FF5A36;
+  --cs-text-main: #2F3031;
+  --cs-text-muted: #777875;
+  --cs-radius-card: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: var(--cs-paper);
+  color: var(--cs-text-main);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 로그인 */
+.login-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px;
+  background: #fff;
+  border-radius: var(--cs-radius-card);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.login-card h1 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.login-card input {
+  padding: 10px 12px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  font-size: 14px;
+}
+
+.login-error {
+  color: var(--cs-orange);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* 대시보드 */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--cs-map-gray);
+}
+
+.admin-header h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: var(--cs-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn--active {
+  color: var(--cs-black);
+  border-bottom-color: var(--cs-orange);
+  font-weight: 600;
+}
+
+.device-filter-banner {
+  margin: 12px 24px 0;
+  padding: 8px 12px;
+  background: var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.device-filter-banner button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--cs-text-muted);
+}
+
+#admin-content {
+  padding: 16px 24px 64px;
+  max-width: 900px;
+}
+
+.admin-section-title {
+  font-size: 14px;
+  color: var(--cs-text-muted);
+  margin: 20px 0 10px;
+}
+
+.admin-card {
+  background: #fff;
+  border-radius: var(--cs-radius-card);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid var(--cs-map-gray);
+}
+
+.admin-card-content {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.admin-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+  margin-bottom: 10px;
+}
+
+.device-badge {
+  border: none;
+  background: var(--cs-map-gray);
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--cs-text-main);
+}
+
+.admin-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-card-actions button {
+  border: none;
+  border-radius: var(--cs-radius-card);
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-restore {
+  background: var(--cs-black);
+  color: #fff;
+}
+
+.btn-delete {
+  background: #fff;
+  color: var(--cs-orange);
+  border: 1px solid var(--cs-orange) !important;
+}
+
+.btn-primary {
+  background: var(--cs-black);
+  color: #fff;
+  border: none;
+  border-radius: var(--cs-radius-card);
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: none;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.empty-state {
+  color: var(--cs-text-muted);
+  font-size: 14px;
+  padding: 24px 0;
+}
+
+/* 금칙어 관리 */
+.banned-word-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.banned-word-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+}
+
+.banned-word-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  margin: 0 8px 8px 0;
+  font-size: 13px;
+}
+
+.banned-word-chip button {
+  border: none;
+  background: none;
+  color: var(--cs-orange);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* 방문 현황 */
+.stat-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-tile {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  padding: 16px;
+}
+
+.stat-tile .num {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stat-tile .label {
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
+.top-story-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cs-map-gray);
+  font-size: 14px;
+}
+
+/* 검색 */
+.search-row {
+  margin-bottom: 12px;
+}
+
+.search-row input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+}
