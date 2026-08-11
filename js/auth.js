@@ -36,6 +36,10 @@ const Auth = {
     } catch (e) {
       this._currentUser = null;
     }
+    // GNB 아바타(js/mymemory.js)에 로그인 상태 변화를 알려준다. 이 상태가
+    // 바뀌는 지점은 init/signIn/confirmSignUp뿐이라 여기 한 곳에서만
+    // 갱신하면 충분하다(signOut은 별도로 직접 호출).
+    if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
   isLoggedIn() {
@@ -75,6 +79,7 @@ const Auth = {
   async signOut() {
     await this._sdk.signOut();
     this._currentUser = null;
+    if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
   // Cognito 예외 이름을 기획서 17장 문구에 맞춰 한국어로 옮긴다.

@@ -221,6 +221,73 @@ body {
 }
 
 /* ------------------------------------------------------------
+   계정 아바타 / GNB
+   ------------------------------------------------------------ */
+.account-menu-wrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.account-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgb(48, 47, 49);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 30;
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--cs-text-main);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.account-menu-item:hover {
+  background: var(--cs-map-gray);
+}
+
+.account-menu-item--danger {
+  color: var(--cs-orange);
+}
+
+.account-menu-divider {
+  height: 1px;
+  background: var(--cs-map-gray);
+  margin: 6px 4px;
+}
+
+/* ------------------------------------------------------------
    해시태그 칩
    ------------------------------------------------------------ */
 .hashtag-bar {

@@ -27,6 +27,18 @@
           </div>
           <ul class="search-results hidden" id="search-results"></ul>
         </div>
+
+        <!-- 계정 아바타(GNB) — 로그인 상태일 때만 표시 -->
+        <div class="account-menu-wrap hidden" id="account-menu-wrap">
+          <button class="account-avatar" id="account-avatar" title="내 계정" aria-label="내 계정"></button>
+          <div class="account-menu hidden" id="account-menu">
+            <button class="account-menu-item" id="menu-posted">내가 남긴 기억</button>
+            <button class="account-menu-item" id="menu-reacted">내가 떠올린 기억</button>
+            <button class="account-menu-item" id="menu-shared">전달한 기억</button>
+            <div class="account-menu-divider"></div>
+            <button class="account-menu-item account-menu-item--danger" id="menu-logout">로그아웃</button>
+          </div>
+        </div>
       </div>
 
       <!-- 해시태그 칩 (많이 쓰인 순 상위 30개, 화면 폭에 맞춰 줄바꿈) -->
@@ -83,6 +95,11 @@
     <div class="overlay hidden" id="auth-overlay">
       <div class="composer-card" id="auth-panel"></div>
     </div>
+
+    <!-- GNB — 내가 남긴/떠올린/전달한 기억 목록 -->
+    <div class="overlay hidden" id="mymemory-overlay">
+      <div class="composer-card" id="mymemory-panel"></div>
+    </div>
   </div>
 
   <!-- API 키 미설정 시 안내 -->
@@ -126,6 +143,7 @@
   <script src="js/storySheet.js"></script>
   <script src="js/filters.js"></script>
   <script src="js/search.js"></script>
+  <script src="js/mymemory.js"></script>
   <script>
     if (
       !CONFIG.KAKAO_APP_KEY ||

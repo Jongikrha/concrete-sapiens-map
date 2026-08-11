@@ -317,6 +317,7 @@ async function handleShare(storyId) {
   const shareText = `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`;
 
   Storage.incrementShareCount(storyId);
+  Storage.markShared(storyId);
 
   try {
     const blob = await generateShareCard(story);

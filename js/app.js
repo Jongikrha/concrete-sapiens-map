@@ -220,6 +220,7 @@ function bindUIEvents() {
   document.getElementById("auth-overlay").addEventListener("click", (e) => {
     if (e.target.id === "auth-overlay") closeAuthOverlay();
   });
+  bindAccountMenuEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
@@ -244,8 +245,10 @@ function bindUIEvents() {
     if (e.key === "Escape") {
       if (sheetOpen) closeSheetToUnfiltered();
       else if (!document.getElementById("auth-overlay").classList.contains("hidden")) closeAuthOverlay();
+      else if (!document.getElementById("mymemory-overlay").classList.contains("hidden")) closeMyMemoryList();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
+      else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
     }
   });
 

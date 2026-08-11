@@ -20,6 +20,8 @@
 // ============================================================
 
 const REACTED_KEY = "concrete_sapiens_reacted_v1";
+const SHARED_KEY = "concrete_sapiens_shared_v1";
+const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 
 // 오늘의 질문 프롬프트 목록 (매일 하나씩 결정론적으로 노출) — 데이터 의존 없음
 const DAILY_PROMPTS = [
@@ -165,6 +167,47 @@ const Storage = {
 
   _saveReactedSet(set) {
     localStorage.setItem(REACTED_KEY, JSON.stringify([...set]));
+  },
+
+  hasShared(storyId) {
+    return this._getSharedSet().has(storyId);
+  },
+
+  // "내가 전달했는지"도 반응과 같은 이유로 브라우저 로컬에만 둔다 —
+  // shareCount는 이미 서버의 공유 진실이고, "누가" 전달했는지 목록은
+  // MY MEMORY(GNB)의 "전달한 기억"에서만 개인 참고용으로 쓴다.
+  markShared(storyId) {
+    const set = this._getSharedSet();
+    set.add(storyId);
+    this._saveSharedSet(set);
+  },
+
+  _getSharedSet() {
+    const raw = localStorage.getItem(SHARED_KEY);
+    try {
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch (e) {
+      return new Set();
+    }
+  },
+
+  _saveSharedSet(set) {
+    localStorage.setItem(SHARED_KEY, JSON.stringify([...set]));
+  },
+
+  /**
+   * 실계정 없이 브라우저 단위로 "내가 쓴 글"을 상관관계로 묶기 위한
+   * 비식별 ID(진짜 신원 아님 — 브라우저 데이터를 지우거나 다른 브라우저를
+   * 쓰면 새 ID가 생긴다). 어드민 화면과 GNB의 "내가 남긴 기억"이 공유해서
+   * 쓴다(composer.js에서 이동).
+   */
+  getDeviceId() {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
   },
 
   incrementShareCount(storyId) {

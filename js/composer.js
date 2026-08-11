@@ -4,21 +4,8 @@
 
 let pendingPin = null;
 
-const DEVICE_ID_KEY = "concrete_sapiens_device_id";
-
-/**
- * 실계정 없이 어드민 화면에서만 "이 브라우저가 쓴 기억들"을 묶어보기 위한
- * 비식별 상관관계 ID. 공개 화면에는 절대 노출하지 않는다(진짜 신원 아님 —
- * 브라우저 데이터를 지우거나 다른 브라우저를 쓰면 새 ID가 생긴다).
- */
-function getDeviceId() {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
-}
+// getDeviceId()는 storage.js(Storage.getDeviceId)로 이동 — 어드민 화면과
+// GNB의 "내가 남긴 기억"이 같은 비식별 상관관계 ID를 공유해서 쓴다.
 
 // ------------------------------------------------------------
 // 자유 핀 작성 시작 — 주소를 먼저 조회한 뒤 작성 화면을 연다
@@ -195,7 +182,7 @@ function openComposer(pin) {
       reactionCount: 0,
       shareCount: 0,
       viewCount: 0,
-      authorDeviceId: getDeviceId(),
+      authorDeviceId: Storage.getDeviceId(),
     };
 
     Storage.saveStory(story);
