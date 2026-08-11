@@ -229,10 +229,36 @@ function renderWordsTab() {
   });
 }
 
+/**
+ * 최근 14일 방문 수를 날짜별로 묶는다. 데이터 없는 날도 0으로 채워서
+ * 빈 날짜가 조용히 사라지지 않게 한다(추세를 한눈에 보려면 빠진 날도 보여야 함).
+ */
+function buildDailyVisitCounts(pageViews, days = 14) {
+  const counts = {};
+  pageViews.forEach((pv) => {
+    const day = (pv.createdAt || "").slice(0, 10);
+    if (!day) return;
+    counts[day] = (counts[day] || 0) + 1;
+  });
+
+  const result = [];
+  const today = new Date();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    result.push({ date: key, count: counts[key] || 0 });
+  }
+  return result; // 오늘이 맨 앞
+}
+
 async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
   const pageViews = await Storage.listPageViews();
+  const dailyCounts = buildDailyVisitCounts(pageViews);
+  const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
+
   const topStories = [...Storage.getAllStories()]
     .filter((s) => (s.viewCount || 0) > 0)
     .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
@@ -242,12 +268,27 @@ async function renderVisitsTab() {
     ? topStories.map((s) => `<div class="top-story-row"><span>${escapeHtml(s.content.slice(0, 40))}</span><span>${s.viewCount}회</span></div>`).join("")
     : `<p class="empty-state">아직 조회된 기억이 없습니다.</p>`;
 
+  const dailyHtml = dailyCounts
+    .map(
+      (d) => `
+        <div class="daily-visit-row">
+          <span class="daily-visit-date">${d.date.slice(5)}</span>
+          <div class="daily-visit-bar-track"><div class="daily-visit-bar" style="width:${(d.count / maxCount) * 100}%"></div></div>
+          <span class="daily-visit-count">${d.count}</span>
+        </div>
+      `
+    )
+    .join("");
+
   document.getElementById("admin-content").innerHTML = `
     <div class="admin-section-title">방문 현황</div>
     <div class="stat-row">
       <div class="stat-tile"><div class="num">${pageViews.length}</div><div class="label">전체 방문 수</div></div>
+      <div class="stat-tile"><div class="num">${dailyCounts[0].count}</div><div class="label">오늘 방문 수</div></div>
       <div class="stat-tile"><div class="num">${Storage.getAllStories().length}</div><div class="label">전체 기억 수</div></div>
     </div>
+    <div class="admin-section-title">최근 14일 방문 추이</div>
+    <div class="daily-visit-chart">${dailyHtml}</div>
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
   `;
