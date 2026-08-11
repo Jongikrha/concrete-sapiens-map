@@ -381,6 +381,28 @@ function setYearFilter(year) {
   renderMarkers();
 }
 
+/**
+ * "N년의 다른 기억 둘러보기" — 전국 필터를 걸어두는 데서 그치지 않고,
+ * 같은 해의 다른 기억으로 바로 날아가 카드를 열어준다 (같은 스팟에
+ * 여러 개면 지금 보고 있는 이야기는 제외하고 고른다).
+ */
+function exploreSameYear(year, excludeStoryId) {
+  closeSheet();
+  activeYearFilter = year;
+  activeHashtagFilter = null;
+  closeSlider();
+  renderHashtagChips();
+  renderMarkers();
+
+  const sameYear = Storage.getStoriesByYear(year);
+  const candidates = sameYear.filter((s) => s.id !== excludeStoryId);
+  const pool = candidates.length > 0 ? candidates : sameYear;
+  if (pool.length === 0) return;
+
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  flyToStory(target, true);
+}
+
 function clearFilters() {
   activeHashtagFilter = null;
   activeYearFilter = null;
@@ -547,7 +569,7 @@ function renderSheetContent(group) {
   });
 
   content.querySelectorAll(".year-explore-link").forEach((link) => {
-    link.onclick = () => { closeSheet(); setYearFilter(parseInt(link.dataset.year, 10)); };
+    link.onclick = () => exploreSameYear(parseInt(link.dataset.year, 10), link.dataset.storyId);
   });
 
   content.querySelectorAll(".reaction-btn").forEach((btn) => {
@@ -646,7 +668,7 @@ function renderStoryItem(story) {
         <button class="share-btn" data-id="${story.id}">↗ 기억 전하기</button>
       </div>
 
-      ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
+      ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}" data-story-id="${story.id}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
     </div>
   `;
 }
