@@ -1171,50 +1171,24 @@ body {
    ------------------------------------------------------------ */
 @media (min-width: 768px) {
   .sheet-backdrop:not(.hidden) {
-    background: rgba(47, 48, 49, 0.25);
+    background: rgba(47, 48, 49, 0.35);
   }
 
-  /* 데스크톱: 중앙 모달 대신 우측에서 슬라이드 인하는 아카이브 카드
-     서랍(sidebar) 형태. 지도가 항상 함께 보이도록 전체 폭을 덮지 않고,
-     왼쪽 모서리에 Signal Orange 라인을 넣어 "지도에서 뜯어낸 기록"
-     같은 느낌을 준다. */
   .bottom-sheet {
-    left: auto;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: min(430px, 92vw);
-    max-height: none;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    width: min(420px, 90vw);
+    max-height: 72vh;
     min-height: 0;
-    height: 100vh;
-    border-radius: 0;
-    border-left: 3px solid var(--cs-orange);
-    box-shadow: -18px 0 44px rgba(47, 48, 49, 0.16);
-    transform: translateX(0);
-    transition: transform var(--cs-transition-normal) ease;
+    border-radius: var(--cs-radius-sheet);
+    transform: translate(-50%, -50%);
   }
 
   .bottom-sheet.hidden {
-    transform: translateX(100%);
-    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0;
     pointer-events: none;
-  }
-
-  .sheet-handle-row {
-    justify-content: flex-end;
-    padding: 18px 18px 4px;
-  }
-
-  .sheet-handle {
-    display: none;
-  }
-
-  .sheet-close {
-    position: static;
-    margin: 0;
-  }
-
-  .sheet-scroll {
-    padding: 4px 28px 32px;
   }
 }
