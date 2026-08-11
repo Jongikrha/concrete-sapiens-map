@@ -1,3 +1,12 @@
 .DS_Store
 node_modules/
 *.log
+
+# amplify (샌드박스 로컬 상태만 무시 — amplify_outputs.json은 공개 설정값이라
+# 카카오 키와 같은 이유로 커밋한다: 배포된 라이브 사이트가 백엔드에
+# 연결되려면 필요하다)
+.amplify
+amplifyconfiguration*
+# 로컬 개발 전용 sandbox(dev) 설정 — main에서 쓰는 prod 백엔드와 분리해서
+# 로컬 테스트가 실제 배포 리소스를 안 건드리게 한다.
+amplify_outputs.local.json
