@@ -1100,6 +1100,12 @@ function openComposer(pin) {
       alert("기억의 연도와 월을 선택해주세요.");
       return;
     }
+    if (dateMode === "unknown") {
+      const confirmed = confirm(
+        "정말 시점을 남기지 않을까요?\n\n연도를 남기면 나중에 \"같은 해의 다른 기억\"이나 시간여행 기능으로 이 기억을 다시 만날 수 있어요."
+      );
+      if (!confirmed) return;
+    }
     if (authorMode === "custom" && !authorInput) {
       alert("이름 또는 닉네임을 입력해주세요.");
       return;
@@ -1135,7 +1141,7 @@ function openComposer(pin) {
     Storage.saveStory(story);
     closeComposer();
     renderMarkers();
-    renderTotalCountBanner();
+    renderHashtagChips();
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
