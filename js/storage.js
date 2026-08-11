@@ -150,6 +150,41 @@ const Storage = {
       .map(([tag]) => tag);
   },
 
+  getHashtagCount(tag) {
+    return this.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag)).length;
+  },
+
+  getStoryYear(story) {
+    if (story.dateMode === "past" && story.referenceDate) {
+      return new Date(story.referenceDate).getFullYear();
+    }
+    if (story.dateMode === "now") {
+      return new Date(story.createdAt).getFullYear();
+    }
+    return null;
+  },
+
+  getStoriesByYear(year) {
+    return this.getVisibleStories().filter((s) => this.getStoryYear(s) === year);
+  },
+
+  /**
+   * 오늘의 기억 — 매일 하나, 날짜를 시드로 결정론적 선정
+   * (같은 날 접속한 모든 사람에게 동일한 이야기가 노출됨)
+   */
+  getDailyFeaturedStory() {
+    const visible = this.getVisibleStories();
+    if (visible.length === 0) return null;
+
+    const sorted = [...visible].sort((a, b) => a.id.localeCompare(b.id));
+    const seed = new Date().toISOString().split("T")[0];
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) % sorted.length;
+    }
+    return sorted[Math.abs(hash) % sorted.length];
+  },
+
   /**
    * 최초 진입 랜덤 랜딩용 — 최근 이야기 풀 중 무작위 1개
    * (개발기획서 §4, §5 / 디자인 스펙 §4.1)
