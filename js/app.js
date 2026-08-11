@@ -14,6 +14,7 @@
 let map;
 let clusterer;
 let placesService;
+let geocoderService;
 let markers = []; // { marker, group }
 let activeHashtagFilter = null;
 let pendingPin = null;
@@ -25,11 +26,11 @@ let sheetOpen = false;
 // Memory Dot 이미지 (핀 대신 점)
 // ------------------------------------------------------------
 function makeDotImage(selected) {
-  const size = selected ? 18 : 13;
-  const fill = selected ? "#FF5A36" : "#F4F3EF";
-  const stroke = selected ? "#FF5A36" : "#2F3031";
-  const r = size / 2 - 1.5;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/></svg>`;
+  const size = selected ? 20 : 15;
+  const fill = selected ? "#FF5A36" : "#2F3031";
+  const stroke = "#F4F3EF";
+  const r = size / 2 - 1.8;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/></svg>`;
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   return new kakao.maps.MarkerImage(
     url,
@@ -82,24 +83,81 @@ function initMap() {
   });
 
   placesService = new kakao.maps.services.Places();
+  geocoderService = new kakao.maps.services.Geocoder();
 
   // 지도 클릭:
   // - Bottom Sheet가 열려 있으면 지도 빈 공간 클릭으로 우선 닫기
-  // - 닫혀 있으면 자유 핀 작성 플로우 시작
+  // - 닫혀 있으면 자유 핀 작성 플로우 시작 (클릭 지점에 스탬프 효과 + 주소 조회)
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
     if (sheetOpen) {
       closeSheet();
       return;
     }
     const latlng = mouseEvent.latLng;
-    openComposer({
-      lat: latlng.getLat(),
-      lng: latlng.getLng(),
-      placeName: null,
-      placeId: null,
-    });
+    spawnClickStamp(mouseEvent);
+    startFreePinComposer(latlng.getLat(), latlng.getLng());
   });
 }
+
+// ------------------------------------------------------------
+// 클릭 스탬프 효과 (지도를 찍었다는 시각적 피드백)
+// ------------------------------------------------------------
+function spawnClickStamp(mouseEvent) {
+  const mapEl = document.getElementById("map");
+  const rect = mapEl.getBoundingClientRect();
+  const px = rect.left + mouseEvent.point.x;
+  const py = rect.top + mouseEvent.point.y;
+
+  const stamp = document.createElement("div");
+  stamp.className = "click-stamp";
+  stamp.style.left = `${px}px`;
+  stamp.style.top = `${py}px`;
+  document.body.appendChild(stamp);
+  setTimeout(() => stamp.remove(), 500);
+}
+
+// ------------------------------------------------------------
+// 자유 핀 작성 시작 — 주소를 먼저 조회한 뒤 작성 화면을 연다
+// ------------------------------------------------------------
+function startFreePinComposer(lat, lng) {
+  openComposer({
+    lat,
+    lng,
+    placeName: null,
+    placeId: null,
+    address: "주소 확인 중...",
+    isFreePin: true,
+  });
+
+  reverseGeocode(lat, lng).then((address) => {
+    const addrEl = document.getElementById("composer-address-value");
+    if (addrEl) {
+      addrEl.textContent = address || "주소를 확인할 수 없습니다";
+    }
+    if (pendingPin) pendingPin.address = address || null;
+  });
+}
+
+function reverseGeocode(lat, lng) {
+  return new Promise((resolve) => {
+    if (!geocoderService) {
+      resolve(null);
+      return;
+    }
+    geocoderService.coord2Address(lng, lat, (result, status) => {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        const road = result[0].road_address;
+        const jibun = result[0].address;
+        resolve(
+          (road && road.address_name) ||
+            (jibun && jibun.address_name) ||
+            null
+        );
+      } else {
+        resolve(null);
+      }
+    });
+  });
 
 // ------------------------------------------------------------
 // 최초 진입: 최근 이야기 랜덤 랜딩 (개발기획서 §4~5 / 디자인 스펙 §4)
@@ -298,7 +356,10 @@ function renderSheetContent(group) {
 
   content.innerHTML = `
     <div class="story-spot-header">
-      <span class="story-spot-name">${escapeHtml(group.placeName || "이름 없는 곳")}</span>
+      <div>
+        <div class="story-spot-name">${escapeHtml(group.placeName || "이름 없는 곳")}</div>
+        ${group.address ? `<div class="story-spot-address">${escapeHtml(group.address)}</div>` : ""}
+      </div>
       <span class="story-spot-count">${sorted.length}개의 기억</span>
     </div>
     <div class="sort-toggle">
@@ -458,11 +519,21 @@ function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
 
+  const whereHtml = pin.isFreePin
+    ? `
+      <input type="text" id="input-place-name" class="input-field" placeholder="이 장소에 이름을 붙여주세요 (선택)" maxlength="40" />
+      <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
+    `
+    : `
+      <div class="field-value">${escapeHtml(pin.placeName || "이름 없는 장소")}</div>
+      ${pin.address ? `<div class="field-address">${escapeHtml(pin.address)}</div>` : ""}
+    `;
+
   panel.innerHTML = `
     <h2 class="composer-title">기억 남기기</h2>
 
     <label class="field-label">WHERE</label>
-    <div class="field-value">${escapeHtml(pin.placeName || "이름 없는 장소")}</div>
+    ${whereHtml}
 
     <label class="field-label">WHEN</label>
     <div class="date-mode-toggle">
@@ -512,6 +583,15 @@ function openComposer(pin) {
     };
   });
 
+  function resolvePlaceName() {
+    if (pendingPin.isFreePin) {
+      const nameInput = document.getElementById("input-place-name");
+      const custom = nameInput ? nameInput.value.trim() : "";
+      return custom || pendingPin.address || "이름 없는 곳";
+    }
+    return pendingPin.placeName || "이름 없는 곳";
+  }
+
   document.getElementById("btn-cancel").onclick = closeComposer;
 
   document.getElementById("btn-submit").onclick = () => {
@@ -537,8 +617,9 @@ function openComposer(pin) {
       publicId: Storage.generatePublicId(),
       lat: pendingPin.lat,
       lng: pendingPin.lng,
-      placeName: pendingPin.placeName || "이름 없는 곳",
+      placeName: resolvePlaceName(),
       placeId: pendingPin.placeId,
+      address: pendingPin.address || null,
       content,
       hashtags: extractHashtags(content),
       authorMode,
@@ -581,6 +662,7 @@ function extractHashtags(text) {
 // ------------------------------------------------------------
 function bindUIEvents() {
   document.getElementById("sheet-close").onclick = closeSheet;
+  document.getElementById("sheet-backdrop").addEventListener("click", closeSheet);
   document.getElementById("composer-overlay").addEventListener("click", (e) => {
     if (e.target.id === "composer-overlay") closeComposer();
   });
@@ -589,7 +671,7 @@ function bindUIEvents() {
   document.getElementById("btn-random").onclick = goToRandomStory;
   document.getElementById("fab-add").onclick = () => {
     const center = map.getCenter();
-    openComposer({ lat: center.getLat(), lng: center.getLng(), placeName: null, placeId: null });
+    startFreePinComposer(center.getLat(), center.getLng());
   };
 
   // ESC로 Bottom Sheet 닫기 (Desktop)
@@ -636,7 +718,7 @@ function bindUIEvents() {
         .slice(0, 6)
         .map(
           (place) => `
-        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}">
+        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}" data-address="${escapeHtml(place.road_address_name || place.address_name || "")}">
           <strong>${escapeHtml(place.place_name)}</strong>
           <span>${escapeHtml(place.road_address_name || place.address_name)}</span>
         </li>
@@ -659,6 +741,8 @@ function bindUIEvents() {
             lng,
             placeName: item.dataset.name,
             placeId: item.dataset.id,
+            address: item.dataset.address || null,
+            isFreePin: false,
           });
         };
       });

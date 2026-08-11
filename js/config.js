@@ -6,7 +6,7 @@
 // ============================================================
 
 const CONFIG = {
-  KAKAO_APP_KEY: "2d563828a521e193fd6b06393f010fa2",
+  KAKAO_APP_KEY: "YOUR_KAKAO_JAVASCRIPT_KEY_HERE",
 
   DEFAULT_CENTER: { lat: 36.3504, lng: 127.3845 },
   DEFAULT_LEVEL: 13,

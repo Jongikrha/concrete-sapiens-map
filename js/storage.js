@@ -127,6 +127,7 @@ const Storage = {
           lat: story.lat,
           lng: story.lng,
           placeName: story.placeName,
+          address: story.address || null,
           stories: [],
         };
       }
