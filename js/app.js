@@ -51,7 +51,15 @@ function initApp() {
   bindUIEvents();
   renderHashtagChips();
   renderMarkers();
+  updateTotalCountDisplay();
   handleInitialEntry();
+}
+
+function updateTotalCountDisplay() {
+  const el = document.getElementById("wordmark-count");
+  if (!el) return;
+  const count = Storage.getVisibleStories().length;
+  el.textContent = count > 0 ? `${count.toLocaleString()}개의 기억이 남아 있습니다` : "";
 }
 
 // ------------------------------------------------------------
@@ -599,7 +607,6 @@ function renderStoryItem(story) {
   const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
   const yearMain = numericYear !== null ? numericYear : "· · ·";
-  const yearSuffix = numericYear !== null ? `년${month ? ` ${month}월` : ""}` : "";
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
   const duration = estimateDurationSeconds(story.content);
@@ -607,9 +614,9 @@ function renderStoryItem(story) {
   return `
     <div class="story-item">
       <div class="story-item-top">
-        <div class="story-year-row">
-          <span class="story-year">${yearMain}</span>
-          ${yearSuffix ? `<span class="story-year-suffix">${yearSuffix}</span>` : ""}
+        <div class="story-date-block">
+          <p class="story-year">${yearMain}</p>
+          ${month ? `<p class="story-month">${month}월</p>` : ""}
         </div>
         <div class="story-item-menu">
           <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
@@ -1014,6 +1021,7 @@ function openComposer(pin) {
     Storage.saveStory(story);
     closeComposer();
     renderMarkers();
+    updateTotalCountDisplay();
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);

@@ -126,6 +126,12 @@ body {
   margin-top: 1px;
 }
 
+.wordmark-count {
+  color: var(--cs-gray) !important;
+  letter-spacing: 0.04em !important;
+  margin-top: 3px !important;
+}
+
 .search-box {
   flex: 1;
   max-width: 380px;
@@ -551,12 +557,6 @@ body {
   margin-top: 4px;
 }
 
-.story-month {
-  font-size: 13px;
-  color: var(--cs-text-muted);
-  margin: 6px 0 16px;
-}
-
 .story-custom-name {
   font-size: 12.5px;
   color: var(--cs-text-muted);
@@ -767,28 +767,37 @@ body {
   color: var(--cs-orange);
 }
 
-.story-year-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 0 0 22px;
-  flex-wrap: wrap;
+/* ------------------------------------------------------------
+   날짜 블록 — 연도는 "정보"가 아니라 이 기억의 표지(cover) 역할을
+   하는 시각적 오브젝트다. YYYY년 MM월 형식의 일반적인 날짜 UI로
+   디자인하지 않는다. "년"은 표기하지 않으며, 연도(76px)와
+   월(20px)은 약 4배 크기 차이를 둔 좌측 정렬 2단 구조로 배치한다.
+   연도-월 간격은 2~4px로 밀착, 날짜 블록과 본문 사이는 28~32px로
+   분리해 "날짜 덩어리"와 "이야기"를 시각적으로 확실히 나눈다.
+   ------------------------------------------------------------ */
+.story-date-block {
+  margin: 0 0 30px;
+  text-align: left;
 }
 
 .story-year {
   font-family: var(--font-sans);
   font-weight: 400;
-  font-size: clamp(38px, 11vw, 56px);
-  letter-spacing: -0.04em;
-  line-height: 1;
+  font-size: clamp(46px, 17vw, 76px);
+  line-height: 0.95;
+  letter-spacing: -3px;
   color: var(--cs-black);
   margin: 0;
 }
 
-.story-year-suffix {
-  font-size: 19px;
+.story-month {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: clamp(16px, 5vw, 20px);
+  line-height: 1.2;
+  letter-spacing: -0.5px;
   color: var(--cs-text-muted);
-  font-weight: 400;
+  margin: 3px 0 0;
 }
 
 .story-eyebrow {
