@@ -2,21 +2,20 @@
 // 데이터 저장 계층 (Storage Layer)
 // ============================================================
 // 지금은 localStorage로 동작하는 MVP 데모용 구현입니다.
-// 나중에 AWS Amplify + DynamoDB로 붙일 때는 이 파일의 함수들만
-// 동일한 시그니처(입출력 형태)로 API 호출로 바꿔주면 나머지 코드는
-// 수정할 필요가 없도록 설계했습니다.
+// 나중에 AWS Amplify + DynamoDB(+ Cognito 인증)로 붙일 때는 이 파일의
+// 함수들만 동일한 시그니처(입출력 형태)로 API 호출로 바꿔주면 나머지
+// 코드는 수정할 필요가 없도록 설계했습니다.
 //
-// 예: getAllStories() 는 로컬에선 localStorage.getItem, 나중엔
-//     fetch('/api/stories') 로 바뀌면 됩니다.
+// 주의: 회원가입/로그인/관리자 기능(개발기획서 §30~§52)은 이 파일에
+// 아직 반영되지 않았습니다. 실제 서비스에는 Cognito 인증과 서버 측
+// userId 연결이 반드시 필요합니다. 지금은 프론트엔드 프로토타입 단계로,
+// authorMode/displayAuthorName만 저장하고 실제 계정 시스템은 없습니다.
 // ============================================================
 
-const STORAGE_KEY = "concrete_sapiens_stories_v1";
+const STORAGE_KEY = "concrete_sapiens_stories_v2";
+const REACTED_KEY = "concrete_sapiens_reacted_v1";
 
 const Storage = {
-  /**
-   * 모든 이야기를 불러옵니다.
-   * @returns {Array<Story>}
-   */
   getAllStories() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -28,66 +27,68 @@ const Storage = {
     }
   },
 
-  /**
-   * 이야기 하나를 저장합니다.
-   * @param {Story} story
-   */
+  saveAll(stories) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+  },
+
   saveStory(story) {
     const stories = this.getAllStories();
     stories.push(story);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+    this.saveAll(stories);
     return story;
   },
 
-  /**
-   * 특정 이야기를 신고 처리합니다.
-   * @param {string} storyId
-   */
+  getVisibleStories() {
+    return this.getAllStories().filter((s) => s.status !== "HIDDEN");
+  },
+
+  getStoryByPublicId(publicId) {
+    return this.getAllStories().find((s) => s.publicId === publicId) || null;
+  },
+
   reportStory(storyId) {
     const stories = this.getAllStories();
     const target = stories.find((s) => s.id === storyId);
     if (!target) return null;
     target.reportCount = (target.reportCount || 0) + 1;
     if (target.reportCount >= CONFIG.REPORT_HIDE_THRESHOLD) {
-      target.isHidden = true;
+      target.status = "HIDDEN";
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+    this.saveAll(stories);
     return target;
   },
 
   /**
-   * 좋아요 토글 (누르면 +1, 다시 누르면 -1). 브라우저 단위로 who-liked를 기억해
-   * 같은 사람이 여러 번 누르는 걸 막습니다. (로그인이 없는 MVP 특성상 완벽한
-   * 중복 방지는 아니며, 추후 서버 연동 시 유저 단위로 교체 필요)
-   * @param {string} storyId
+   * 반응 토글: "나도 이 기억이 떠올랐어요"
+   * 좋아요가 아니라 서비스만의 반응 시스템 (design spec §19~§21)
    */
-  toggleLike(storyId) {
+  toggleReaction(storyId) {
     const stories = this.getAllStories();
     const target = stories.find((s) => s.id === storyId);
     if (!target) return null;
 
-    const likedSet = this._getLikedSet();
-    target.likes = target.likes || 0;
+    const reactedSet = this._getReactedSet();
+    target.reactionCount = target.reactionCount || 0;
 
-    if (likedSet.has(storyId)) {
-      target.likes = Math.max(0, target.likes - 1);
-      likedSet.delete(storyId);
+    if (reactedSet.has(storyId)) {
+      target.reactionCount = Math.max(0, target.reactionCount - 1);
+      reactedSet.delete(storyId);
     } else {
-      target.likes += 1;
-      likedSet.add(storyId);
+      target.reactionCount += 1;
+      reactedSet.add(storyId);
     }
 
-    this._saveLikedSet(likedSet);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+    this._saveReactedSet(reactedSet);
+    this.saveAll(stories);
     return target;
   },
 
-  isLikedByMe(storyId) {
-    return this._getLikedSet().has(storyId);
+  hasReacted(storyId) {
+    return this._getReactedSet().has(storyId);
   },
 
-  _getLikedSet() {
-    const raw = localStorage.getItem("concrete_sapiens_liked_v1");
+  _getReactedSet() {
+    const raw = localStorage.getItem(REACTED_KEY);
     try {
       return new Set(raw ? JSON.parse(raw) : []);
     } catch (e) {
@@ -95,60 +96,21 @@ const Storage = {
     }
   },
 
-  _saveLikedSet(set) {
-    localStorage.setItem("concrete_sapiens_liked_v1", JSON.stringify([...set]));
+  _saveReactedSet(set) {
+    localStorage.setItem(REACTED_KEY, JSON.stringify([...set]));
   },
 
-  /**
-   * 댓글을 추가합니다.
-   * @param {string} storyId
-   * @param {{authorName: string, content: string}} comment
-   */
-  addComment(storyId, comment) {
+  incrementShareCount(storyId) {
     const stories = this.getAllStories();
     const target = stories.find((s) => s.id === storyId);
     if (!target) return null;
-
-    target.comments = target.comments || [];
-    target.comments.push({
-      id: crypto.randomUUID(),
-      authorName: comment.authorName || "익명",
-      content: comment.content,
-      createdAt: new Date().toISOString(),
-    });
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+    target.shareCount = (target.shareCount || 0) + 1;
+    this.saveAll(stories);
     return target;
   },
 
   /**
-   * 전체 이야기에서 해시태그 빈도를 집계해 상위 N개를 반환합니다.
-   * (많이 쓰인 순 정렬)
-   * @param {number} limit
-   */
-  getTopHashtags(limit = 30) {
-    const counts = {};
-    this.getVisibleStories().forEach((s) => {
-      (s.hashtags || []).forEach((tag) => {
-        counts[tag] = (counts[tag] || 0) + 1;
-      });
-    });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([tag]) => tag);
-  },
-
-  /**
-   * 비노출 처리되지 않은 이야기만 반환
-   */
-  getVisibleStories() {
-    return this.getAllStories().filter((s) => !s.isHidden);
-  },
-
-  /**
    * 좌표 근처(같은 장소)의 이야기를 그룹핑합니다.
-   * placeId가 있으면 placeId 기준, 없으면 좌표를 반올림해 근접 좌표를 하나의 스팟으로 취급합니다.
    */
   getGroupedByPlace() {
     const stories = this.getVisibleStories();
@@ -174,68 +136,116 @@ const Storage = {
     return Object.values(groups);
   },
 
+  getTopHashtags(limit = 30) {
+    const counts = {};
+    this.getVisibleStories().forEach((s) => {
+      (s.hashtags || []).forEach((tag) => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([tag]) => tag);
+  },
+
   /**
-   * 개발용: 초기 시드 데이터가 없으면 예시 몇 개를 심어둡니다.
+   * 최초 진입 랜덤 랜딩용 — 최근 이야기 풀 중 무작위 1개
+   * (개발기획서 §4, §5 / 디자인 스펙 §4.1)
    */
+  getRandomRecentStory() {
+    const visible = this.getVisibleStories();
+    if (visible.length === 0) return null;
+
+    const sorted = [...visible].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    const pool = sorted.slice(0, CONFIG.RECENT_STORY_POOL_SIZE);
+    return pool[Math.floor(Math.random() * pool.length)];
+  },
+
+  getRandomStory() {
+    const visible = this.getVisibleStories();
+    if (visible.length === 0) return null;
+    return visible[Math.floor(Math.random() * visible.length)];
+  },
+
+  /**
+   * 사람이 읽기 좋은 짧은 Public ID 생성 (예: A8FD72KC)
+   * 실제 서비스에서는 서버에서 충돌 검사와 함께 생성해야 합니다.
+   */
+  generatePublicId() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let id = "";
+    for (let i = 0; i < 8; i++) {
+      id += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return id;
+  },
+
   seedIfEmpty() {
     if (this.getAllStories().length > 0) return;
 
     const seeds = [
       {
         id: crypto.randomUUID(),
+        publicId: this.generatePublicId(),
         lat: 37.5274,
         lng: 127.0286,
         placeName: "압구정현대아파트",
         placeId: null,
-        content: "여기 첫사랑이 살았다. 아직도 그 창문을 올려다보게 된다. #첫사랑 #그리움",
+        content: "학교가 끝나면 아무 이유 없이 이 앞을 몇 번씩 지나갔다. 그 애가 혹시 나올까 봐. #첫사랑 #그리움",
         hashtags: ["#첫사랑", "#그리움"],
-        authorName: "익명",
+        authorMode: "anonymous",
+        displayAuthorName: "익명",
         dateMode: "past",
         referenceDate: "1995-05-01",
         createdAt: new Date().toISOString(),
         reportCount: 0,
-        isHidden: false,
-        likes: 12,
-        comments: [
-          { id: crypto.randomUUID(), authorName: "지나가던사람", content: "저도 이 동네였는데 반가워요", createdAt: new Date().toISOString() },
-        ],
+        status: "ACTIVE",
+        reactionCount: 12,
+        shareCount: 3,
       },
       {
         id: crypto.randomUUID(),
+        publicId: this.generatePublicId(),
         lat: 37.5665,
         lng: 126.978,
         placeName: "서울시청 앞",
         placeId: null,
         content: "이십 년 전 여기서 첫 회사 면접을 봤다. 그날 비가 많이 왔었지. #이직 #추억",
         hashtags: ["#이직", "#추억"],
-        authorName: "콘크리트사피엔스",
+        authorMode: "custom",
+        displayAuthorName: "콘크리트사피엔스",
         dateMode: "past",
         referenceDate: "2004-11-03",
         createdAt: new Date().toISOString(),
         reportCount: 0,
-        isHidden: false,
-        likes: 3,
-        comments: [],
+        status: "ACTIVE",
+        reactionCount: 3,
+        shareCount: 0,
       },
       {
         id: crypto.randomUUID(),
+        publicId: this.generatePublicId(),
         lat: 35.1595,
         lng: 129.0756,
-        placeName: "부산 haeundae",
+        placeName: "부산 해운대",
         placeId: null,
         content: "고향을 떠나기 전 마지막으로 걸었던 해변. #고향 #이사",
         hashtags: ["#고향", "#이사"],
-        authorName: "익명",
-        dateMode: "none",
+        authorMode: "anonymous",
+        displayAuthorName: "익명",
+        dateMode: "unknown",
         referenceDate: null,
         createdAt: new Date().toISOString(),
         reportCount: 0,
-        isHidden: false,
-        likes: 0,
-        comments: [],
+        status: "ACTIVE",
+        reactionCount: 0,
+        shareCount: 0,
       },
     ];
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seeds));
+    this.saveAll(seeds);
   },
 };

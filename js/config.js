@@ -3,29 +3,32 @@
 // ============================================================
 // 카카오 개발자 사이트(https://developers.kakao.com)에서
 // 애플리케이션을 등록하고 아래 JavaScript 키를 발급받아 입력하세요.
-// (map.todoc.us 만들 때 이미 발급받은 키가 있다면 그대로 재사용 가능하지만,
-//  플랫폼 등록 도메인에 concretesapiens.com을 추가로 등록해야 합니다.)
-//
-// 카카오 개발자 콘솔 > 내 애플리케이션 > 앱 설정 > 플랫폼 > Web
-// 사이트 도메인에 다음을 등록:
-//   - http://localhost:5500 (로컬 테스트용, 사용 중인 로컬 서버 포트에 맞게)
-//   - https://concretesapiens.com
-//   - https://www.concretesapiens.com
 // ============================================================
 
 const CONFIG = {
   KAKAO_APP_KEY: "YOUR_KAKAO_JAVASCRIPT_KEY_HERE",
 
-  // 지도 초기 중심 좌표 (대한민국 중심부 근처, 대전시청)
   DEFAULT_CENTER: { lat: 36.3504, lng: 127.3845 },
-  DEFAULT_LEVEL: 13, // 전국이 보이는 정도의 줌 레벨
+  DEFAULT_LEVEL: 13,
 
-  // 본문 글자수 제한
   MAX_CONTENT_LENGTH: 200,
 
-  // 해시태그 바에 노출할 개수 (전체 이야기에서 많이 쓰인 순 상위 N개)
+  // 상단 해시태그 바에 노출할 개수 (많이 쓰인 순 상위 N개)
   TOP_HASHTAG_LIMIT: 30,
 
-  // 신고 누적 시 자동 비노출 기준
+  // 신고 누적 시 자동 숨김(HIDDEN) 처리 기준
   REPORT_HIDE_THRESHOLD: 5,
+
+  // 최초 진입 시 랜덤 랜딩에 사용할 최근 이야기 풀 크기
+  RECENT_STORY_POOL_SIZE: 100,
+
+  // 반응 수 공개 표시 기준 (design spec §21, §25)
+  // 정확한 숫자를 노출하지 않고 뭉뚱그려 표시한다.
+  REACTION_DISPLAY_TIERS: [
+    { min: 10000, label: "10K+" },
+    { min: 1000, label: "1K+" },
+    { min: 100, label: "100+" },
+    { min: 10, label: "10+" },
+    { min: 1, label: "온기가 닿았습니다" },
+  ],
 };

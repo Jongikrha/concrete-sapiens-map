@@ -1,13 +1,42 @@
 // ============================================================
-// 콘크리트 사피엔스 지도 - 메인 앱 로직
+// 콘크리트 사피엔스 지도 — 메인 앱 로직
+// Concrete Archive 디자인 스펙 v1.0 / 통합 개발기획서 v1.0 반영
+//
+// ⚠️ 아직 반영되지 않은 것 (별도 백엔드 필요, 프론트 프로토타입 한계):
+//   - 회원가입/로그인/이메일 인증 (Cognito 등 실제 인증 서비스 필요)
+//   - 관리자 시스템(/admin), 신고 검토 큐, 금칙어 관리
+//   - Story별 영구 공유 URL의 실제 서버 조회 (지금은 같은 브라우저의
+//     localStorage에만 저장되므로, 다른 사람에게 링크를 보내도 그
+//     사람 브라우저에는 데이터가 없어 정상 동작하지 않습니다)
+//   - OG 이미지 자동 생성 (서버 렌더링 필요)
 // ============================================================
 
 let map;
 let clusterer;
 let placesService;
-let markers = [];
+let markers = []; // { marker, group }
 let activeHashtagFilter = null;
-let pendingPin = null; // 새 이야기를 작성 중인 좌표/장소 정보
+let pendingPin = null;
+let currentSort = "latest";
+let highlightedMarker = null;
+let sheetOpen = false;
+
+// ------------------------------------------------------------
+// Memory Dot 이미지 (핀 대신 점)
+// ------------------------------------------------------------
+function makeDotImage(selected) {
+  const size = selected ? 18 : 13;
+  const fill = selected ? "#FF5A36" : "#F4F3EF";
+  const stroke = selected ? "#FF5A36" : "#2F3031";
+  const r = size / 2 - 1.5;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/></svg>`;
+  const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  return new kakao.maps.MarkerImage(
+    url,
+    new kakao.maps.Size(size, size),
+    { offset: new kakao.maps.Point(size / 2, size / 2) }
+  );
+}
 
 function initApp() {
   Storage.seedIfEmpty();
@@ -15,6 +44,7 @@ function initApp() {
   bindUIEvents();
   renderHashtagChips();
   renderMarkers();
+  handleInitialEntry();
 }
 
 // ------------------------------------------------------------
@@ -36,30 +66,121 @@ function initMap() {
     averageCenter: true,
     minLevel: 8,
     disableClickZoom: false,
+    styles: [
+      {
+        width: "30px",
+        height: "30px",
+        background: "rgba(47,48,49,0.92)",
+        borderRadius: "50%",
+        color: "#F4F3EF",
+        textAlign: "center",
+        lineHeight: "30px",
+        fontSize: "12px",
+        fontWeight: "500",
+      },
+    ],
   });
 
   placesService = new kakao.maps.services.Places();
 
-  // 지도 클릭 시 자유 핀 작성 플로우 시작
+  // 지도 클릭:
+  // - Bottom Sheet가 열려 있으면 지도 빈 공간 클릭으로 우선 닫기
+  // - 닫혀 있으면 자유 핀 작성 플로우 시작
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
+    if (sheetOpen) {
+      closeSheet();
+      return;
+    }
     const latlng = mouseEvent.latLng;
     openComposer({
       lat: latlng.getLat(),
       lng: latlng.getLng(),
       placeName: null,
       placeId: null,
-      isFreePin: true,
     });
   });
 }
 
 // ------------------------------------------------------------
-// 마커 렌더링 (스팟 단위로 그룹핑)
+// 최초 진입: 최근 이야기 랜덤 랜딩 (개발기획서 §4~5 / 디자인 스펙 §4)
+// ------------------------------------------------------------
+function handleInitialEntry() {
+  const params = new URLSearchParams(window.location.search);
+  const storyPublicId = params.get("story");
+
+  if (storyPublicId) {
+    const story = Storage.getStoryByPublicId(storyPublicId);
+    if (story) {
+      flyToStory(story, true);
+      return;
+    }
+    // 삭제되었거나 존재하지 않는 Story
+    showGoneState();
+    return;
+  }
+
+  // fallback 체인: 최근 이야기 풀 랜덤 → 전체 ACTIVE 랜덤 → 기본 지도
+  const recent = Storage.getRandomRecentStory();
+  const fallback = recent || Storage.getRandomStory();
+
+  if (!fallback) {
+    return; // Story가 하나도 없으면 기본 대한민국 지도 그대로 둠
+  }
+
+  flyToStory(fallback, false);
+  showEntryToast("오늘 올라온 기억에서 시작했습니다");
+}
+
+function flyToStory(story, openSheetAfter) {
+  map.setLevel(4);
+  map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
+  highlightMarkerForStory(story);
+
+  if (openSheetAfter) {
+    const group = Storage.getGroupedByPlace().find((g) =>
+      g.stories.some((s) => s.id === story.id)
+    );
+    if (group) {
+      setTimeout(() => openSheet(group), 250);
+    }
+  }
+}
+
+function highlightMarkerForStory(story) {
+  const entry = markers.find((m) =>
+    m.group.stories.some((s) => s.id === story.id)
+  );
+  if (!entry) return;
+
+  if (highlightedMarker && highlightedMarker !== entry.marker) {
+    highlightedMarker.setImage(makeDotImage(false));
+  }
+  entry.marker.setImage(makeDotImage(true));
+  highlightedMarker = entry.marker;
+}
+
+function showEntryToast(text) {
+  const el = document.getElementById("entry-toast");
+  el.textContent = text;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3500);
+}
+
+function showShareToast(text) {
+  const el = document.getElementById("share-toast");
+  el.textContent = text;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2000);
+}
+
+// ------------------------------------------------------------
+// 마커 렌더링 (스팟 단위로 그룹핑, Memory Dot 사용)
 // ------------------------------------------------------------
 function renderMarkers() {
   clusterer.clear();
-  markers.forEach((m) => kakao.maps.event.removeListener(m, "click"));
+  markers.forEach((m) => kakao.maps.event.removeListener(m.marker, "click"));
   markers = [];
+  highlightedMarker = null;
 
   let groups = Storage.getGroupedByPlace();
 
@@ -74,22 +195,26 @@ function renderMarkers() {
       .filter((g) => g.stories.length > 0);
   }
 
+  const kakaoMarkers = [];
+
   groups.forEach((group) => {
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: group.placeName,
+      image: makeDotImage(false),
     });
     kakao.maps.event.addListener(marker, "click", () => {
-      openStoryListPopup(group);
+      openSheet(group);
     });
-    markers.push(marker);
+    markers.push({ marker, group });
+    kakaoMarkers.push(marker);
   });
 
-  clusterer.addMarkers(markers);
+  clusterer.addMarkers(kakaoMarkers);
 }
 
 // ------------------------------------------------------------
-// 해시태그 칩 렌더링 (전체 이야기에서 많이 쓰인 순 상위 30개)
+// 해시태그 칩 렌더링 (많이 쓰인 순 상위 N개)
 // ------------------------------------------------------------
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
@@ -109,7 +234,6 @@ function renderHashtagChips() {
   }
 
   const topTags = Storage.getTopHashtags(CONFIG.TOP_HASHTAG_LIMIT);
-
   if (topTags.length === 0) return;
 
   topTags.forEach((tag) => {
@@ -126,240 +250,265 @@ function renderHashtagChips() {
 }
 
 // ------------------------------------------------------------
-// 이야기 리스트 팝업 (한 스팟에 여러 이야기)
+// Bottom Sheet — 이야기 열람
 // ------------------------------------------------------------
-let currentSort = "latest"; // "latest" | "timetravel"
-const expandedComments = new Set(); // 댓글 펼침 상태 (story.id 목록)
-
-function openStoryListPopup(group) {
+function openSheet(group) {
   currentSort = "latest";
-  renderStoryListPopup(group);
-  document.getElementById("popup-overlay").classList.remove("hidden");
+  renderSheetContent(group);
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  sheetOpen = true;
 }
 
-function renderStoryListPopup(group) {
-  const panel = document.getElementById("popup-panel");
+function closeSheet() {
+  document.getElementById("sheet-backdrop").classList.add("hidden");
+  document.getElementById("bottom-sheet").classList.add("hidden");
+  sheetOpen = false;
+}
+
+function showGoneState() {
+  const content = document.getElementById("sheet-content");
+  content.innerHTML = `
+    <div class="gone-state-content">
+      <p>이 기억은 더 이상<br />지도에 남아 있지 않습니다.</p>
+      <button class="btn-primary" id="btn-find-another">어딘가의 기억 발견하기</button>
+    </div>
+  `;
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  sheetOpen = true;
+
+  content.querySelector("#btn-find-another").onclick = () => {
+    closeSheet();
+    goToRandomStory();
+  };
+}
+
+function renderSheetContent(group) {
+  const content = document.getElementById("sheet-content");
 
   const sorted = [...group.stories].sort((a, b) => {
     if (currentSort === "latest") {
       return new Date(b.createdAt) - new Date(a.createdAt);
     }
-    // timetravel: referenceDate 있는 것 오래된 순, 없는 것은 뒤로
     const da = a.referenceDate ? new Date(a.referenceDate) : new Date(8640000000000000);
     const db = b.referenceDate ? new Date(b.referenceDate) : new Date(8640000000000000);
     return da - db;
   });
 
-  panel.innerHTML = `
-    <div class="plaque-header">
-      <div class="plaque-eyebrow">SPOT · ${sorted.length}개의 기록</div>
-      <h2 class="plaque-title">${escapeHtml(group.placeName || "이름 없는 곳")}</h2>
-      <div class="sort-toggle">
-        <button class="sort-btn ${currentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
-        <button class="sort-btn ${currentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
-      </div>
+  content.innerHTML = `
+    <div class="story-spot-header">
+      <span class="story-spot-name">${escapeHtml(group.placeName || "이름 없는 곳")}</span>
+      <span class="story-spot-count">${sorted.length}개의 기억</span>
+    </div>
+    <div class="sort-toggle">
+      <button class="sort-btn ${currentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
+      <button class="sort-btn ${currentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
     </div>
     <div class="story-list">
       ${sorted.map(renderStoryItem).join("")}
     </div>
-    <button class="btn-primary btn-add-story" id="btn-add-story">+ 나도 이야기 남기기</button>
+    <button class="btn-primary btn-add-story" id="btn-add-story">기억 남기기</button>
   `;
 
-  panel.querySelectorAll(".sort-btn").forEach((btn) => {
+  content.querySelectorAll(".sort-btn").forEach((btn) => {
     btn.onclick = () => {
       currentSort = btn.dataset.sort;
-      renderStoryListPopup(group);
+      renderSheetContent(group);
     };
   });
 
-  panel.querySelectorAll(".report-btn").forEach((btn) => {
-    btn.onclick = () => {
-      if (confirm("이 기록을 신고하시겠습니까?")) {
-        Storage.reportStory(btn.dataset.id);
-        alert("신고가 접수되었습니다.");
-        const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
-        if (refreshed) renderStoryListPopup(refreshed);
-        renderMarkers();
-      }
-    };
-  });
-
-  panel.querySelectorAll(".hashtag-link").forEach((link) => {
+  content.querySelectorAll(".hashtag-link").forEach((link) => {
     link.onclick = () => {
       activeHashtagFilter = link.dataset.tag;
-      closePopup();
+      closeSheet();
       renderHashtagChips();
       renderMarkers();
     };
   });
 
-  panel.querySelectorAll(".like-btn").forEach((btn) => {
+  content.querySelectorAll(".reaction-btn").forEach((btn) => {
     btn.onclick = () => {
-      Storage.toggleLike(btn.dataset.id);
-      const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
-      if (refreshed) renderStoryListPopup(refreshed);
-      renderMarkers();
+      Storage.toggleReaction(btn.dataset.id);
+      renderSheetContent(group);
     };
   });
 
-  panel.querySelectorAll(".comment-toggle-btn").forEach((btn) => {
+  content.querySelectorAll(".share-btn").forEach((btn) => {
+    btn.onclick = () => handleShare(btn.dataset.id, btn.dataset.publicid, btn.dataset.place);
+  });
+
+  content.querySelectorAll(".report-link").forEach((btn) => {
     btn.onclick = () => {
-      const id = btn.dataset.id;
-      if (expandedComments.has(id)) {
-        expandedComments.delete(id);
-      } else {
-        expandedComments.add(id);
+      if (confirm("이 기록을 신고하시겠습니까?")) {
+        Storage.reportStory(btn.dataset.id);
+        alert("신고가 접수되었습니다.");
+        const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
+        if (refreshed && refreshed.stories.length > 0) {
+          renderSheetContent(refreshed);
+        } else {
+          closeSheet();
+        }
+        renderMarkers();
       }
-      renderStoryListPopup(group);
     };
   });
 
-  panel.querySelectorAll(".comment-submit-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const storyId = btn.dataset.id;
-      const input = panel.querySelector(`.comment-input[data-id="${storyId}"]`);
-      const authorInput = panel.querySelector(`.comment-author[data-id="${storyId}"]`);
-      const content = input.value.trim();
-      if (!content) return;
-      Storage.addComment(storyId, {
-        authorName: authorInput.value.trim() || "익명",
-        content,
-      });
-      const refreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
-      if (refreshed) renderStoryListPopup(refreshed);
-    };
-  });
-
-  document.getElementById("btn-add-story").onclick = () => {
-    closePopup();
+  content.querySelector("#btn-add-story").onclick = () => {
+    closeSheet();
     openComposer({
       lat: group.lat,
       lng: group.lng,
       placeName: group.placeName,
       placeId: group.stories[0]?.placeId || null,
-      isFreePin: !group.stories[0]?.placeId,
     });
   };
 }
 
 function renderStoryItem(story) {
-  const dateLabel = formatDateLabel(story);
+  const year = getStoryYear(story);
+  const eyebrow = getStoryEyebrow(story, year);
   const tagsHtml = story.hashtags
     .map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`)
     .join(" ");
-
-  const likes = story.likes || 0;
-  const liked = Storage.isLikedByMe(story.id);
-  const comments = story.comments || [];
-  const isExpanded = expandedComments.has(story.id);
-
-  const commentsHtml = isExpanded
-    ? `
-      <div class="comment-section">
-        ${comments
-          .map(
-            (c) => `
-          <div class="comment-item">
-            <span class="comment-author">${escapeHtml(c.authorName)}</span>
-            <span class="comment-content">${escapeHtml(c.content)}</span>
-          </div>
-        `
-          )
-          .join("") || `<p class="comment-empty">아직 댓글이 없어요. 첫 댓글을 남겨보세요.</p>`}
-        <div class="comment-form">
-          <input type="text" class="comment-author input-field" data-id="${story.id}" placeholder="이름 (선택)" maxlength="20" />
-          <input type="text" class="comment-input input-field" data-id="${story.id}" placeholder="댓글을 남겨보세요" maxlength="100" />
-          <button class="comment-submit-btn" data-id="${story.id}">등록</button>
-        </div>
-      </div>
-    `
-    : "";
+  const reacted = Storage.hasReacted(story.id);
+  const shareUrl = buildStoryUrl(story.publicId);
 
   return `
     <div class="story-item">
+      <p class="story-year">${year}</p>
+      <p class="story-eyebrow">${eyebrow}</p>
       <p class="story-content">${escapeHtml(story.content)}</p>
-      <div class="story-meta">
-        <span class="story-tags">${tagsHtml}</span>
-        <span class="story-date">${dateLabel}</span>
+      ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
+      <p class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</p>
+      <div class="story-actions">
+        <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
+          <span class="dot-icon">${reacted ? "●" : "○"}</span>
+          나도 이 기억이 떠올랐어요
+        </button>
+        <button class="share-btn" data-id="${story.id}" data-publicid="${story.publicId}" data-place="${escapeHtml(story.placeName || "")}">
+          ↗ 기억 전달하기
+        </button>
+        <button class="report-link" data-id="${story.id}">이 기록 신고하기</button>
       </div>
-      <div class="story-footer">
-        <span class="story-author">${escapeHtml(story.authorName || "익명")}</span>
-        <div class="story-actions">
-          <button class="like-btn ${liked ? "like-btn--active" : ""}" data-id="${story.id}">
-            ${liked ? "♥" : "♡"} ${likes}
-          </button>
-          <button class="comment-toggle-btn" data-id="${story.id}">💬 ${comments.length}</button>
-          <button class="report-btn" data-id="${story.id}">신고</button>
-        </div>
-      </div>
-      ${commentsHtml}
     </div>
   `;
 }
 
-function formatDateLabel(story) {
+function getStoryYear(story) {
   if (story.dateMode === "past" && story.referenceDate) {
-    return `${story.referenceDate} 회상`;
+    return new Date(story.referenceDate).getFullYear();
   }
   if (story.dateMode === "now") {
-    return `${formatKoreanDate(story.createdAt)} 작성`;
+    return new Date(story.createdAt).getFullYear();
   }
-  return `${relativeTime(story.createdAt)}`;
+  return "· · ·"; // 기억나지 않음
 }
 
-function closePopup() {
-  document.getElementById("popup-overlay").classList.add("hidden");
+function getStoryEyebrow(story, year) {
+  const place = (story.placeName || "").toUpperCase();
+  if (story.dateMode === "past" && story.referenceDate) {
+    return `${year} · ${place}`.trim();
+  }
+  if (story.dateMode === "now") {
+    return `NOW · ${place}`.trim();
+  }
+  return `기억나지 않음 · ${place}`.trim();
 }
 
 // ------------------------------------------------------------
-// 작성 화면 (Composer)
+// 기억 전달하기 (공유)
+// ------------------------------------------------------------
+function buildStoryUrl(publicId) {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}?story=${publicId}`;
+}
+
+async function handleShare(storyId, publicId, placeName) {
+  const url = buildStoryUrl(publicId);
+  const shareData = {
+    title: "콘크리트 사피엔스 지도",
+    text: `여기 이런 기억이 남아 있었어. ${placeName ? placeName + " · " : ""}`,
+    url,
+  };
+
+  Storage.incrementShareCount(storyId);
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (e) {
+      // 사용자가 공유를 취소한 경우 등 - 무시
+    }
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showShareToast("링크가 복사되었습니다.");
+  } catch (e) {
+    showShareToast("링크 복사에 실패했습니다.");
+  }
+}
+
+// ------------------------------------------------------------
+// 기억 남기기 (작성 화면)
 // ------------------------------------------------------------
 function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
 
   panel.innerHTML = `
-    <div class="plaque-header">
-      <div class="plaque-eyebrow">NEW RECORD</div>
-      <h2 class="plaque-title">${escapeHtml(pin.placeName || "이름 없는 장소")}</h2>
+    <h2 class="composer-title">기억 남기기</h2>
+
+    <label class="field-label">WHERE</label>
+    <div class="field-value">${escapeHtml(pin.placeName || "이름 없는 장소")}</div>
+
+    <label class="field-label">WHEN</label>
+    <div class="date-mode-toggle">
+      <button class="mode-btn" data-mode="now">지금</button>
+      <button class="mode-btn" data-mode="past">과거</button>
+      <button class="mode-btn mode-btn--active" data-mode="unknown">기억나지 않음</button>
     </div>
+    <input type="date" id="input-refdate" class="input-field hidden" style="margin-top:8px;" max="${todayStr()}" />
 
-    <label class="field-label">작성자</label>
-    <input type="text" id="input-author" class="input-field" placeholder="실명, 자유 아이디, 또는 비워두면 익명" maxlength="30" />
-
-    <label class="field-label">기록 (해시태그는 본문 안에 #이렇게 작성하세요)</label>
-    <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="이 장소에 얽힌 기억을 남겨보세요..."></textarea>
+    <label class="field-label">MEMORY</label>
+    <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="이곳에 남아 있는 기억을 적어주세요."></textarea>
     <div class="char-count"><span id="char-count-num">0</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
 
-    <label class="field-label">시점</label>
-    <div class="date-mode-toggle">
-      <button class="mode-btn mode-btn--active" data-mode="none">미지정</button>
-      <button class="mode-btn" data-mode="now">지금</button>
-      <button class="mode-btn" data-mode="past">과거 회상</button>
+    <label class="field-label">NAME</label>
+    <div class="author-mode-toggle">
+      <button class="mode-btn mode-btn--active" data-author-mode="anonymous">익명</button>
+      <button class="mode-btn" data-author-mode="custom">이름 또는 닉네임</button>
     </div>
-    <input type="date" id="input-refdate" class="input-field hidden" max="${todayStr()}" />
+    <input type="text" id="input-author" class="input-field hidden" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" />
 
-    <button class="btn-primary btn-submit" id="btn-submit">게시하기</button>
+    <button class="btn-primary" id="btn-submit">기억 남기기</button>
     <button class="btn-secondary" id="btn-cancel">취소</button>
   `;
 
-  let dateMode = "none";
+  let dateMode = "unknown";
+  let authorMode = "anonymous";
 
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
   });
 
-  panel.querySelectorAll(".mode-btn").forEach((btn) => {
+  panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((btn) => {
     btn.onclick = () => {
       dateMode = btn.dataset.mode;
-      panel.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
+      panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
       btn.classList.add("mode-btn--active");
-      const dateInput = document.getElementById("input-refdate");
-      if (dateMode === "past") {
-        dateInput.classList.remove("hidden");
-      } else {
-        dateInput.classList.add("hidden");
-      }
+      document.getElementById("input-refdate").classList.toggle("hidden", dateMode !== "past");
+    };
+  });
+
+  panel.querySelectorAll(".author-mode-toggle .mode-btn").forEach((btn) => {
+    btn.onclick = () => {
+      authorMode = btn.dataset.authorMode;
+      panel.querySelectorAll(".author-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
+      btn.classList.add("mode-btn--active");
+      document.getElementById("input-author").classList.toggle("hidden", authorMode !== "custom");
     };
   });
 
@@ -371,30 +520,36 @@ function openComposer(pin) {
     const refDateInput = document.getElementById("input-refdate").value;
 
     if (!content) {
-      alert("기록 내용을 입력해주세요.");
+      alert("기억을 적어주세요.");
       return;
     }
     if (dateMode === "past" && !refDateInput) {
-      alert("회상할 날짜를 선택해주세요.");
+      alert("기억의 시점을 선택해주세요.");
+      return;
+    }
+    if (authorMode === "custom" && !authorInput) {
+      alert("이름 또는 닉네임을 입력해주세요.");
       return;
     }
 
     const story = {
       id: crypto.randomUUID(),
+      publicId: Storage.generatePublicId(),
       lat: pendingPin.lat,
       lng: pendingPin.lng,
       placeName: pendingPin.placeName || "이름 없는 곳",
       placeId: pendingPin.placeId,
       content,
       hashtags: extractHashtags(content),
-      authorName: authorInput || "익명",
+      authorMode,
+      displayAuthorName: authorMode === "custom" ? authorInput : "익명",
       dateMode,
       referenceDate: dateMode === "past" ? refDateInput : null,
       createdAt: new Date().toISOString(),
       reportCount: 0,
-      isHidden: false,
-      likes: 0,
-      comments: [],
+      status: "ACTIVE",
+      reactionCount: 0,
+      shareCount: 0,
     };
 
     Storage.saveStory(story);
@@ -405,7 +560,7 @@ function openComposer(pin) {
     const group = Storage.getGroupedByPlace().find(
       (g) => g.lat === story.lat && g.lng === story.lng
     );
-    if (group) openStoryListPopup(group);
+    if (group) openSheet(group);
   };
 
   document.getElementById("composer-overlay").classList.remove("hidden");
@@ -425,11 +580,38 @@ function extractHashtags(text) {
 // 상단 검색 (카카오 장소 검색)
 // ------------------------------------------------------------
 function bindUIEvents() {
-  document.getElementById("popup-close").onclick = closePopup;
-  document.getElementById("composer-close").onclick = closeComposer;
+  document.getElementById("sheet-close").onclick = closeSheet;
+  document.getElementById("composer-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "composer-overlay") closeComposer();
+  });
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
+  document.getElementById("fab-add").onclick = () => {
+    const center = map.getCenter();
+    openComposer({ lat: center.getLat(), lng: center.getLng(), placeName: null, placeId: null });
+  };
+
+  // ESC로 Bottom Sheet 닫기 (Desktop)
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (sheetOpen) closeSheet();
+      else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
+    }
+  });
+
+  // Swipe Down으로 Bottom Sheet 닫기 (Mobile)
+  let touchStartY = null;
+  const handleRow = document.getElementById("sheet-handle-row");
+  handleRow.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+  });
+  handleRow.addEventListener("touchend", (e) => {
+    if (touchStartY === null) return;
+    const diff = e.changedTouches[0].clientY - touchStartY;
+    if (diff > 50) closeSheet();
+    touchStartY = null;
+  });
 
   const searchInput = document.getElementById("search-input");
   const searchResults = document.getElementById("search-results");
@@ -477,7 +659,6 @@ function bindUIEvents() {
             lng,
             placeName: item.dataset.name,
             placeId: item.dataset.id,
-            isFreePin: false,
           });
         };
       });
@@ -501,14 +682,14 @@ function goToMyLocation() {
 }
 
 function goToRandomStory() {
-  const stories = Storage.getVisibleStories();
-  if (stories.length === 0) {
-    alert("아직 등록된 기록이 없습니다.");
+  const story = Storage.getRandomStory();
+  if (!story) {
+    alert("아직 등록된 기억이 없습니다.");
     return;
   }
-  const random = stories[Math.floor(Math.random() * stories.length)];
   map.setLevel(5);
-  map.panTo(new kakao.maps.LatLng(random.lat, random.lng));
+  map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
+  highlightMarkerForStory(story);
 }
 
 // ------------------------------------------------------------
@@ -524,29 +705,6 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
-function formatKoreanDate(iso) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function relativeTime(iso) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "방금 전";
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}시간 전`;
-  const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay}일 전`;
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  if (
-    !CONFIG.KAKAO_APP_KEY ||
-    CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
-  ) {
-    document.getElementById("key-warning").classList.remove("hidden");
-    return;
-  }
+window.startConcreteSapiensApp = function () {
   kakao.maps.load(initApp);
-});
+};

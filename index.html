@@ -9,16 +9,17 @@
 <body>
   <div id="app">
     <div id="map"></div>
+    <div class="map-dim-layer"></div>
 
     <!-- 상단: 워드마크 + 검색 -->
     <div class="top-bar">
       <div class="wordmark">
-        콘크리트 사피엔스
+        CONCRETE SAPIENS
         <small>MEMORY MAP</small>
       </div>
       <div class="search-box">
         <div class="search-input-row">
-          <input type="text" id="search-input" placeholder="장소 검색 (예: 압구정현대아파트)" />
+          <input type="text" id="search-input" placeholder="장소 검색" />
           <button id="search-btn">검색</button>
         </div>
         <ul class="search-results hidden" id="search-results"></ul>
@@ -28,28 +29,31 @@
     <!-- 해시태그 칩 -->
     <div class="hashtag-bar" id="hashtag-chips"></div>
 
-    <!-- 하단 툴바 -->
+    <!-- 최초 진입 안내 토스트 -->
+    <div class="entry-toast" id="entry-toast"></div>
+    <!-- 기억 전달하기(공유) 완료 토스트 -->
+    <div class="share-toast" id="share-toast"></div>
+
+    <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
-      <button class="tool-btn" id="btn-my-location">📍 내 위치</button>
-      <button class="tool-btn tool-btn--accent" id="btn-random">🎲 랜덤 발견</button>
+      <button class="tool-btn" id="btn-my-location">내 주변</button>
+      <button class="tool-btn tool-btn--accent" id="btn-random">어딘가의 기억</button>
     </div>
+    <button class="fab-add" id="fab-add" title="기억 남기기" aria-label="기억 남기기">＋</button>
 
-    <!-- 이야기 리스트 팝업 -->
-    <div class="overlay hidden" id="popup-overlay">
-      <div class="plaque-card">
-        <div class="plaque-card__inner" id="popup-panel">
-          <button class="plaque-close" id="popup-close">✕</button>
-        </div>
+    <!-- Story Bottom Sheet -->
+    <div class="sheet-backdrop hidden" id="sheet-backdrop"></div>
+    <div class="bottom-sheet hidden" id="bottom-sheet">
+      <div class="sheet-handle-row" id="sheet-handle-row">
+        <div class="sheet-handle"></div>
+        <button class="sheet-close" id="sheet-close" aria-label="닫기">✕</button>
       </div>
+      <div class="sheet-scroll" id="sheet-content"></div>
     </div>
 
-    <!-- 작성 폼 -->
+    <!-- 기억 남기기 작성 폼 -->
     <div class="overlay hidden" id="composer-overlay">
-      <div class="plaque-card">
-        <div class="plaque-card__inner" id="composer-panel">
-          <button class="plaque-close" id="composer-close">✕</button>
-        </div>
-      </div>
+      <div class="composer-card" id="composer-panel"></div>
     </div>
   </div>
 
@@ -70,11 +74,21 @@
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script>
-    // 카카오맵 SDK를 config.js 로드 이후 동적으로 삽입
-    // (autoload=false로 불러온 뒤 app.js에서 kakao.maps.load 호출)
-    const kakaoScript = document.createElement("script");
-    kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
-    document.head.appendChild(kakaoScript);
+    if (
+      !CONFIG.KAKAO_APP_KEY ||
+      CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
+    ) {
+      document.getElementById("key-warning").classList.remove("hidden");
+    } else {
+      const kakaoScript = document.createElement("script");
+      kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
+      kakaoScript.onload = () => {
+        if (window.startConcreteSapiensApp) {
+          window.startConcreteSapiensApp();
+        }
+      };
+      document.head.appendChild(kakaoScript);
+    }
   </script>
   <script src="js/app.js"></script>
 </body>
