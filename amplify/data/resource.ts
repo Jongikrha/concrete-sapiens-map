@@ -31,7 +31,12 @@ const schema = a.schema({
       viewCount: a.integer(),
     })
     .authorization((allow) => [
+      // identityPool 인증모드에서 "로그인한 사용자"는 guest와 다른 IAM
+      // 역할(authenticated)로 평가된다 — allow.guest()만 있으면 회원가입
+      // 도입 이후 로그인한 사용자의 쓰기/읽기가 전부 거부된다. 게스트와
+      // 동일한 권한을 authenticated에도 그대로 미러링한다.
       allow.guest().to(['create', 'read', 'update']),
+      allow.authenticated().to(['create', 'read', 'update']),
       allow.group('Admins'),
     ]),
 
@@ -49,14 +54,22 @@ const schema = a.schema({
       userId: a.string().required(),
       email: a.string().required(),
     })
-    .authorization((allow) => [allow.guest().to(['create']), allow.group('Admins').to(['read'])]),
+    .authorization((allow) => [
+      allow.guest().to(['create']),
+      allow.authenticated().to(['create']),
+      allow.group('Admins').to(['read']),
+    ]),
 
   // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
   BannedWord: a
     .model({
       word: a.string().required(),
     })
-    .authorization((allow) => [allow.group('Admins'), allow.guest().to(['read'])]),
+    .authorization((allow) => [
+      allow.group('Admins'),
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read']),
+    ]),
 
   // 방문 로그 — write-only 텔레메트리. 게스트는 쓰기만(자기가 남긴 것도 못 읽음),
   // 관리자만 읽는다.
@@ -64,7 +77,11 @@ const schema = a.schema({
     .model({
       storyId: a.string(), // ?story=로 특정 기억을 보고 들어온 경우만 채움
     })
-    .authorization((allow) => [allow.guest().to(['create']), allow.group('Admins').to(['read'])]),
+    .authorization((allow) => [
+      allow.guest().to(['create']),
+      allow.authenticated().to(['create']),
+      allow.group('Admins').to(['read']),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
