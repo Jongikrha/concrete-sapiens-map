@@ -126,12 +126,6 @@ body {
   margin-top: 1px;
 }
 
-.wordmark-count {
-  color: var(--cs-gray) !important;
-  letter-spacing: 0.04em !important;
-  margin-top: 3px !important;
-}
-
 .search-box {
   flex: 1;
   max-width: 380px;
@@ -292,6 +286,22 @@ body {
 
 .filter-banner-clear:hover {
   color: var(--cs-paper);
+}
+
+/* ------------------------------------------------------------
+   전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
+   ------------------------------------------------------------ */
+.total-count-banner {
+  position: absolute;
+  top: 92px;
+  left: 16px;
+  z-index: 19;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cs-black);
+  background: rgba(244, 243, 239, 0.92);
+  padding: 6px 13px;
+  border-radius: var(--cs-radius-chip);
 }
 
 /* ------------------------------------------------------------
@@ -662,73 +672,6 @@ body {
 .story-item-menu-dropdown .report-link:hover {
   background: var(--cs-map-gray);
   color: var(--cs-orange);
-}
-
-/* ------------------------------------------------------------
-   기억 라디오 — 미니 플레이어 형태의 행
-   ------------------------------------------------------------ */
-.radio-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--cs-gray);
-  background: #fff;
-  border-radius: var(--cs-radius-card);
-  padding: 12px 14px;
-  cursor: pointer;
-  margin-bottom: 12px;
-  transition: border-color 0.15s;
-}
-
-.radio-row:hover {
-  border-color: var(--cs-black);
-}
-
-.radio-row--playing {
-  border-color: var(--cs-orange);
-}
-
-.radio-row-icon {
-  color: var(--cs-orange);
-  font-size: 12px;
-  flex-shrink: 0;
-  width: 14px;
-}
-
-.radio-row-label {
-  flex: 1;
-  font-size: 13.5px;
-  color: var(--cs-text-main);
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.radio-row-time {
-  font-family: var(--font-mono, monospace);
-  font-size: 11.5px;
-  color: var(--cs-text-muted);
-  flex-shrink: 0;
-}
-
-.radio-progress-track {
-  flex: 1;
-  height: 3px;
-  background: var(--cs-map-gray);
-  border-radius: 2px;
-  position: relative;
-  margin: 0 4px;
-}
-
-.radio-progress-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  background: var(--cs-orange);
-  border-radius: 2px;
 }
 
 /* ------------------------------------------------------------

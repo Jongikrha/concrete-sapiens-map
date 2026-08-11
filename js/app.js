@@ -19,7 +19,6 @@ let highlightedMarker = null;
 let sheetOpen = false;
 let spotTimelineOpen = {};
 let spotTimelineFocusYear = {};
-let currentUtterance = null;
 
 // ------------------------------------------------------------
 // Memory Dot 이미지 — 기억 수에 따라 크기 차등, 선택 시 Signal Orange
@@ -51,15 +50,26 @@ function initApp() {
   bindUIEvents();
   renderHashtagChips();
   renderMarkers();
-  updateTotalCountDisplay();
+  renderTotalCountBanner();
   handleInitialEntry();
 }
 
-function updateTotalCountDisplay() {
-  const el = document.getElementById("wordmark-count");
+function renderTotalCountBanner() {
+  const el = document.getElementById("total-count-banner");
   if (!el) return;
+
+  if (activeHashtagFilter || activeYearFilter !== null || sliderActive) {
+    el.classList.add("hidden");
+    return;
+  }
+
   const count = Storage.getVisibleStories().length;
-  el.textContent = count > 0 ? `${count.toLocaleString()}개의 기억이 남아 있습니다` : "";
+  if (count === 0) {
+    el.classList.add("hidden");
+    return;
+  }
+  el.textContent = `총 ${count.toLocaleString()}개의 추억이 모였습니다.`;
+  el.classList.remove("hidden");
 }
 
 // ------------------------------------------------------------
@@ -343,6 +353,8 @@ function renderHashtagChips() {
     chip.onclick = () => setHashtagFilter(tag);
     wrap.appendChild(chip);
   });
+
+  renderTotalCountBanner();
 }
 
 function openDailyPrompt() {
@@ -414,12 +426,14 @@ function toggleSlider() {
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
+  renderTotalCountBanner();
 }
 
 function closeSlider() {
   sliderActive = false;
   sliderYear = null;
   document.getElementById("time-slider-panel").classList.add("hidden");
+  renderTotalCountBanner();
 }
 
 function updateSliderLabel() {
@@ -440,7 +454,6 @@ function openSheet(group) {
 }
 
 function closeSheet() {
-  stopRadioPlayback(radioStoryId ? document.querySelector(`.radio-row[data-id="${radioStoryId}"]`) : null);
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
@@ -545,10 +558,6 @@ function renderSheetContent(group) {
     btn.onclick = () => handleShare(btn.dataset.id);
   });
 
-  content.querySelectorAll(".radio-row").forEach((row) => {
-    row.onclick = () => handleRadioRowClick(row.dataset.id, row);
-  });
-
   content.querySelectorAll(".story-item-menu-btn").forEach((btn) => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -609,7 +618,6 @@ function renderStoryItem(story) {
   const yearMain = numericYear !== null ? numericYear : "· · ·";
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
-  const duration = estimateDurationSeconds(story.content);
 
   return `
     <div class="story-item">
@@ -630,12 +638,6 @@ function renderStoryItem(story) {
       ${story.customName ? `<p class="story-custom-name">${escapeHtml(story.displayAuthorName || "익명")}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
 
-      <button class="radio-row" data-id="${story.id}" data-duration="${duration}">
-        <span class="radio-row-icon">▶</span>
-        <span class="radio-row-label">이 기억을 라디오로 듣기</span>
-        <span class="radio-row-time">${formatTime(duration)}</span>
-      </button>
-
       <div class="action-row-split">
         <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
           <span class="dot-icon">${reacted ? "●" : "♡"}</span>
@@ -652,121 +654,6 @@ function renderStoryItem(story) {
 function getStoryYearLabel(story) {
   const y = Storage.getStoryYear(story);
   return y !== null ? y : "· · ·";
-}
-
-// ------------------------------------------------------------
-// 기억 라디오 (TTS) — 미니 플레이어
-// ------------------------------------------------------------
-let radioTimer = null;
-let radioElapsed = 0;
-let radioStoryId = null;
-let radioDuration = 0;
-
-function estimateDurationSeconds(text) {
-  // 한국어 TTS 평균 속도 추정치 (초당 약 4.5자)
-  return Math.max(2, Math.round(text.length / 4.5));
-}
-
-function formatTime(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60);
-  const s = Math.floor(totalSeconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function playStartupBeep() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.3);
-  } catch (e) {
-    // 오디오 컨텍스트 미지원 브라우저는 조용히 무시
-  }
-}
-
-function updateRadioRowUI(rowEl, playing) {
-  const total = parseFloat(rowEl.dataset.duration) || 0;
-  if (playing) {
-    const pct = total > 0 ? Math.min(100, (radioElapsed / total) * 100) : 0;
-    rowEl.innerHTML = `
-      <span class="radio-row-icon">Ⅱ</span>
-      <span class="radio-row-label">듣는 중</span>
-      <span class="radio-progress-track"><span class="radio-progress-fill" style="width:${pct}%"></span></span>
-      <span class="radio-row-time">${formatTime(radioElapsed)} / ${formatTime(total)}</span>
-    `;
-  } else {
-    rowEl.innerHTML = `
-      <span class="radio-row-icon">▶</span>
-      <span class="radio-row-label">이 기억을 라디오로 듣기</span>
-      <span class="radio-row-time">${formatTime(total)}</span>
-    `;
-  }
-}
-
-function stopRadioPlayback(rowEl) {
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
-  if (radioTimer) {
-    clearInterval(radioTimer);
-    radioTimer = null;
-  }
-  radioStoryId = null;
-  radioElapsed = 0;
-  currentUtterance = null;
-  if (rowEl) {
-    rowEl.classList.remove("radio-row--playing");
-    updateRadioRowUI(rowEl, false);
-  }
-}
-
-function handleRadioRowClick(storyId, rowEl) {
-  if (!("speechSynthesis" in window)) {
-    alert("이 브라우저에서는 음성 재생을 지원하지 않습니다.");
-    return;
-  }
-
-  if (radioStoryId === storyId) {
-    stopRadioPlayback(rowEl);
-    return;
-  }
-
-  if (radioStoryId) {
-    const prevRow = document.querySelector(`.radio-row[data-id="${radioStoryId}"]`);
-    stopRadioPlayback(prevRow);
-  }
-
-  const story = Storage.getAllStories().find((s) => s.id === storyId);
-  if (!story) return;
-
-  radioDuration = parseFloat(rowEl.dataset.duration) || estimateDurationSeconds(story.content);
-  radioElapsed = 0;
-  radioStoryId = storyId;
-
-  playStartupBeep();
-
-  const utter = new SpeechSynthesisUtterance(story.content);
-  utter.lang = "ko-KR";
-  utter.rate = 0.95;
-  utter.onend = () => stopRadioPlayback(rowEl);
-
-  currentUtterance = utter;
-  setTimeout(() => speechSynthesis.speak(utter), 220); // 효과음이 끝난 뒤 시작
-
-  rowEl.classList.add("radio-row--playing");
-  updateRadioRowUI(rowEl, true);
-
-  radioTimer = setInterval(() => {
-    radioElapsed = Math.min(radioDuration, radioElapsed + 0.2);
-    updateRadioRowUI(rowEl, true);
-  }, 200);
 }
 
 // ------------------------------------------------------------
@@ -1021,7 +908,7 @@ function openComposer(pin) {
     Storage.saveStory(story);
     closeComposer();
     renderMarkers();
-    updateTotalCountDisplay();
+    renderTotalCountBanner();
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
