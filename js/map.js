@@ -88,7 +88,7 @@ function initMap() {
     }
     const latlng = mouseEvent.latLng;
     spawnClickStamp(mouseEvent);
-    startFreePinComposer(latlng.getLat(), latlng.getLng());
+    requireLogin(() => startFreePinComposer(latlng.getLat(), latlng.getLng()));
   });
 }
 

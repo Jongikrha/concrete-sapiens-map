@@ -16,6 +16,7 @@ const OUTPUTS_FILE = isLocalDev ? "/amplify_outputs.local.json" : "/amplify_outp
 
 let activeTab = "queue";
 let activeDeviceFilter = null;
+let storyAuthorEmailById = {};
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -38,6 +39,12 @@ async function bootAdminClient() {
   const client = generateClient({ authMode: "userPool" });
   Storage._setClient(client);
   await Storage.refresh();
+
+  const authors = await Storage.listStoryAuthors();
+  storyAuthorEmailById = {};
+  authors.forEach((a) => {
+    storyAuthorEmailById[a.storyId] = a.email;
+  });
 }
 
 function showDashboard() {
@@ -142,6 +149,7 @@ function storyCardHtml(story, { showRestore }) {
         <span>신고 ${story.reportCount || 0}회</span>
         <span>조회 ${story.viewCount || 0}회</span>
         <span>상태 ${story.status}</span>
+        <span>${storyAuthorEmailById[story.id] ? `회원 ${escapeHtml(storyAuthorEmailById[story.id])}` : "계정 미연결(로그인 게이트 이전 글)"}</span>
         ${deviceBadgeHtml(story)}
       </div>
       <div class="admin-card-actions">

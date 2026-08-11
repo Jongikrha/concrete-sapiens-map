@@ -58,7 +58,7 @@ function openDailyPrompt() {
   const prompt = Storage.getDailyPrompt();
   const center = map.getCenter();
   if (confirm(`오늘의 질문\n\n"${prompt}"\n\n이 질문에 답하며 기억을 남겨볼까요?`)) {
-    startFreePinComposer(center.getLat(), center.getLng(), `${prompt}\n`);
+    requireLogin(() => startFreePinComposer(center.getLat(), center.getLng(), `${prompt}\n`));
   }
 }
 

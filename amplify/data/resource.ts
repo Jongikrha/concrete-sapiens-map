@@ -35,6 +35,22 @@ const schema = a.schema({
       allow.group('Admins'),
     ]),
 
+  // 스토리 작성자의 실계정(회원가입) 연결 — PageView와 동일한 write-only
+  // 패턴. Story 모델에 이메일을 직접 넣으면 guest read 권한 때문에 누구나
+  // 열람 가능해져(브라우저 devtools로 Storage.getAllStories() 확인 가능)
+  // 회원가입 기획서 15/18장의 "이메일은 절대 공개 노출하지 않는다" 원칙에
+  // 위배된다. 그래서 별도 모델로 분리해 게스트는 쓰기만, 관리자만 읽게
+  // 한다. 필드 단위 권한(field-level authorization)은 Gen2에서 배포 실패
+  // 사례가 보고돼 있어(필수 필드 전체에 권한을 붙여야 하는 등) 대신 이미
+  // 검증된 모델 단위 분리 패턴을 재사용한다.
+  StoryAuthor: a
+    .model({
+      storyId: a.string().required(),
+      userId: a.string().required(),
+      email: a.string().required(),
+    })
+    .authorization((allow) => [allow.guest().to(['create']), allow.group('Admins').to(['read'])]),
+
   // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
   BannedWord: a
     .model({

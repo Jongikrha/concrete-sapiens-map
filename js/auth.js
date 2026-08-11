@@ -110,6 +110,18 @@ let pendingSignupPassword = "";
 let authEmailValue = "";
 let authPasswordValue = "";
 
+// "기억 남기기"로 이어지는 모든 진입점(플로팅 버튼, 스팟 상세, 지도 클릭,
+// 오늘의 질문, 검색 결과)이 공통으로 쓰는 게이트. 로그인 상태면 바로
+// action()을 실행하고, 아니면 가입/로그인 화면을 띄운 뒤 성공 시 이어서
+// 실행한다.
+function requireLogin(action) {
+  if (Auth.isLoggedIn()) {
+    action();
+    return;
+  }
+  openAuthOverlay(action);
+}
+
 function openAuthOverlay(onSuccess) {
   pendingAuthSuccess = onSuccess || null;
   authMode = "signup";

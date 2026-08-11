@@ -37,13 +37,13 @@ function bindSearchEvents() {
           searchResults.classList.add("hidden");
           searchInput.value = "";
 
-          openComposer({
+          requireLogin(() => openComposer({
             lat, lng,
             officialPlaceName: item.dataset.name,
             placeId: item.dataset.id,
             address: item.dataset.address || null,
             isFreePin: false,
-          });
+          }));
         };
       });
     });

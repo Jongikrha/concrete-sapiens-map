@@ -209,6 +209,25 @@ const Storage = {
   },
 
   /**
+   * 로그인한 사용자가 글을 남길 때 storyId ↔ 계정(userId/email) 연결을
+   * 기록한다. PageView와 같은 write-only 텔레메트리 — 실패해도 글 작성
+   * 자체엔 영향 없으니 fire-and-forget.
+   */
+  recordStoryAuthor(storyId, userId, email) {
+    if (!client) return;
+    client.models.StoryAuthor.create({ storyId, userId, email })
+      .catch((e) => console.error("작성자 계정 연결 기록 실패", storyId, e));
+  },
+
+  /**
+   * 관리자 전용 — storyId별 작성자 계정 전체 조회. PageView와 같은 이유로
+   * refresh()에는 안 끼워넣고 admin.js가 로그인 후 명시적으로 부른다.
+   */
+  async listStoryAuthors() {
+    return fetchAll("StoryAuthor");
+  },
+
+  /**
    * 관리자 전용 — 신고 없이도 바로 숨김 처리(신고 임계치 로직인
    * reportStory와는 별개). 부적절한 글을 신고 들어오기 전에 선제 조치할 때.
    */

@@ -199,6 +199,8 @@ function openComposer(pin) {
     };
 
     Storage.saveStory(story);
+    const currentUser = Auth.getCurrentUser();
+    if (currentUser) Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
     closeComposer();
     renderMarkers();
     renderHashtagChips();

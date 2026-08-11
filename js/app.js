@@ -233,11 +233,7 @@ function bindUIEvents() {
 
   document.getElementById("fab-add").onclick = () => {
     const center = map.getCenter();
-    if (!Auth.isLoggedIn()) {
-      openAuthOverlay(() => startFreePinComposer(center.getLat(), center.getLng()));
-      return;
-    }
-    startFreePinComposer(center.getLat(), center.getLng());
+    requireLogin(() => startFreePinComposer(center.getLat(), center.getLng()));
   };
 
   document.addEventListener("click", () => {

@@ -184,7 +184,7 @@ function renderSheetContent(group) {
   });
 
   content.querySelector("#btn-add-story").onclick = () => {
-    const addStory = () => {
+    requireLogin(() => {
       closeSheet();
       openComposer({
         lat: group.lat,
@@ -194,12 +194,7 @@ function renderSheetContent(group) {
         address: group.address || null,
         isFreePin: !group.placeId,
       });
-    };
-    if (!Auth.isLoggedIn()) {
-      openAuthOverlay(addStory);
-      return;
-    }
-    addStory();
+    });
   };
 }
 
