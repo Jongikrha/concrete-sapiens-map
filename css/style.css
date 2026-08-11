@@ -226,7 +226,8 @@ body {
 .hashtag-bar {
   width: 100%;
   display: flex;
-  gap: 6px;
+  column-gap: 6px;
+  row-gap: 4px;
   flex-wrap: wrap;
   pointer-events: none;
 }
