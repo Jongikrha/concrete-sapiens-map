@@ -154,9 +154,31 @@ const Storage = {
     return Object.values(groups);
   },
 
+  /**
+   * 스팟의 대표 제목을 결정한다. 이 서비스는 지도 서비스가 아니라
+   * 기억 서비스이므로, 사람이 실제로 기억하는 이름(검색형 장소의
+   * 공식 이름, 또는 누군가 붙인 개인적 이름)을 도로명주소보다
+   * 우선한다. 주소는 항상 별도로(작게) 같이 보여줄 수 있도록
+   * getGroupAddressCaption과 짝을 이룬다.
+   */
   getGroupTitle(group) {
     if (group.placeId && group.officialPlaceName) return group.officialPlaceName;
+    if (group.stories && group.stories.length) {
+      const withCustomName = group.stories.find((s) => s.customName);
+      if (withCustomName) return withCustomName.customName;
+    }
     return group.address || "주소를 확인할 수 없는 곳";
+  },
+
+  /**
+   * 제목이 이미 주소 자체가 아닐 때만(즉 공식명/개인 이름을 제목으로
+   * 쓰고 있을 때만) 주소를 작은 캡션으로 별도 노출한다. 제목이 곧
+   * 주소인 경우(둘 다 정보가 없는 자유 핀) 중복 표시를 피한다.
+   */
+  getGroupAddressCaption(group) {
+    const title = this.getGroupTitle(group);
+    if (group.address && group.address !== title) return group.address;
+    return null;
   },
 
   getTopHashtags(limit = 30) {

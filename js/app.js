@@ -613,9 +613,12 @@ function renderSheetContent(group) {
     `
     : "";
 
+  const addressCaption = Storage.getGroupAddressCaption(group);
+
   content.innerHTML = `
     <div class="story-spot-header">
       <div class="story-spot-name">${escapeHtml(title)}</div>
+      ${addressCaption ? `<div class="story-spot-address">${escapeHtml(addressCaption)}</div>` : ""}
       <span class="story-spot-count">${group.stories.length}개의 기억</span>
     </div>
     <div class="sort-toggle">
@@ -712,11 +715,13 @@ function renderStoryItem(story) {
 
   return `
     <div class="story-item">
-      <div class="story-item-top">
-        <div class="story-date-block">
-          <p class="story-year">${yearMain}</p>
-          ${month ? `<p class="story-month">${month}월</p>` : ""}
-        </div>
+      <div class="story-date-block">
+        <p class="story-year">${yearMain}</p>
+        ${month ? `<p class="story-month">${month}월</p>` : ""}
+      </div>
+      <p class="story-content">${escapeHtml(story.content)}</p>
+      <div class="story-author-row">
+        <span class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</span>
         <div class="story-item-menu">
           <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
           <div class="story-item-menu-dropdown hidden" id="menu-${story.id}">
@@ -724,8 +729,6 @@ function renderStoryItem(story) {
           </div>
         </div>
       </div>
-      <p class="story-content">${escapeHtml(story.content)}</p>
-      <p class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</p>
       ${story.customName ? `<p class="story-custom-name">${escapeHtml(story.displayAuthorName || "익명")}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
 

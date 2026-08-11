@@ -583,7 +583,7 @@ body {
 .sort-toggle {
   display: flex;
   gap: 6px;
-  margin: 10px 0 18px;
+  margin: 10px 0 46px;
 }
 
 .sort-btn {
@@ -618,12 +618,14 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Story 아이템 상단 (연도 + ··· 메뉴)
+   Story 아이템 상단 메뉴 (··· 신고 드롭다운)
    ------------------------------------------------------------ */
-.story-item-top {
+.story-author-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .story-item-menu {
@@ -714,21 +716,23 @@ body {
    날짜 블록 — 연도는 "정보"가 아니라 이 기억의 표지(cover) 역할을
    하는 시각적 오브젝트다. YYYY년 MM월 형식의 일반적인 날짜 UI로
    디자인하지 않는다. "년"은 표기하지 않으며, 연도(76px)와
-   월(20px)은 약 4배 크기 차이를 둔 좌측 정렬 2단 구조로 배치한다.
-   연도-월 간격은 2~4px로 밀착, 날짜 블록과 본문 사이는 28~32px로
-   분리해 "날짜 덩어리"와 "이야기"를 시각적으로 확실히 나눈다.
+   월(24px)은 약 3:1 비율로 배치한 좌측 정렬 2단 구조다. 연도-월
+   간격은 6~8px로 밀착시켜 하나의 "날짜 덩어리"로 인식시키고,
+   날짜 블록과 본문 사이는 34px로 분리해 "날짜"와 "이야기"를
+   시각적으로 확실히 나눈다. ···(신고) 메뉴는 이 블록에 절대
+   두지 않는다 — 작성자 줄로 옮겨서 날짜 영역의 순수성을 지킨다.
    ------------------------------------------------------------ */
 .story-date-block {
-  margin: 0 0 30px;
+  margin: 0 0 34px;
   text-align: left;
 }
 
 .story-year {
   font-family: var(--font-sans);
   font-weight: 400;
-  font-size: clamp(46px, 17vw, 76px);
-  line-height: 0.95;
-  letter-spacing: -3px;
+  font-size: 74px;
+  line-height: 0.92;
+  letter-spacing: -2.5px;
   color: var(--cs-black);
   margin: 0;
 }
@@ -736,11 +740,21 @@ body {
 .story-month {
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: clamp(16px, 5vw, 20px);
+  font-size: 23px;
   line-height: 1.2;
-  letter-spacing: -0.5px;
-  color: var(--cs-text-muted);
-  margin: 3px 0 0;
+  letter-spacing: -0.3px;
+  color: #777775;
+  margin: 7px 0 0;
+}
+
+@media (max-width: 420px) {
+  .story-year {
+    font-size: 58px;
+    letter-spacing: -2px;
+  }
+  .story-month {
+    font-size: 18px;
+  }
 }
 
 .story-eyebrow {
@@ -789,7 +803,7 @@ body {
 .story-author {
   font-size: 12px;
   color: var(--cs-text-muted);
-  margin-bottom: 16px;
+  margin: 0;
 }
 
 .story-actions {
