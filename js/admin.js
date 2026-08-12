@@ -21,6 +21,7 @@ let storyCountByUserId = {};
 let client = null;
 let currentUsername = null;
 let members = null; // 회원관리 탭에서만 필요해서 첫 진입 때 로드(지연 로딩)
+let flagsByUserId = {}; // userId -> UserFlag 레코드(id, note) — 있으면 깃발 켜짐
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -320,6 +321,16 @@ async function loadMembers() {
     console.error("회원 목록 조회 실패", errors);
     return [];
   }
+
+  const { data: flags, errors: flagErrors } = await client.models.UserFlag.list();
+  if (flagErrors) {
+    console.error("회원 깃발 조회 실패", flagErrors);
+  }
+  flagsByUserId = {};
+  (flags || []).forEach((f) => {
+    flagsByUserId[f.userId] = f;
+  });
+
   return [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -327,6 +338,7 @@ function memberRowHtml(member) {
   const isSelf = member.username === currentUsername;
   const joinedDate = member.createdAt ? member.createdAt.slice(0, 10) : "-";
   const storyCount = storyCountByUserId[member.userId] || 0;
+  const flag = flagsByUserId[member.userId];
 
   return `
     <div class="admin-card" data-username="${escapeHtml(member.username)}">
@@ -337,8 +349,12 @@ function memberRowHtml(member) {
         <span>${member.enabled ? "정상" : "정지됨"}</span>
         <span>${member.isAdmin ? "관리자" : "일반회원"}</span>
         ${isSelf ? '<span class="admin-self-badge">나</span>' : ""}
+        ${flag ? `<span class="admin-flag-badge">🚩 ${escapeHtml(flag.note || "깃발")}</span>` : ""}
       </div>
       <div class="admin-card-actions">
+        <button class="btn-restore" data-action="toggle-flag" data-username="${escapeHtml(member.username)}" data-user-id="${escapeHtml(member.userId)}" data-flagged="${!!flag}">
+          ${flag ? "깃발 해제" : "깃발 달기"}
+        </button>
         ${isSelf
           ? ""
           : `
@@ -378,7 +394,16 @@ async function renderMembersTab() {
 }
 
 async function handleMemberAction(action, username, dataset) {
-  if (action === "toggle-enabled") {
+  if (action === "toggle-flag") {
+    const flagged = dataset.flagged === "true";
+    if (flagged) {
+      if (!confirm(`${username} 깃발을 해제할까요?`)) return;
+      await client.models.UserFlag.delete({ userId: dataset.userId });
+    } else {
+      const note = prompt("깃발 메모(선택, 비워도 됨):", "") || "";
+      await client.models.UserFlag.create({ userId: dataset.userId, note: note || null });
+    }
+  } else if (action === "toggle-enabled") {
     const enabled = dataset.enabled === "true";
     const verb = enabled ? "정지" : "정지 해제";
     if (!confirm(`${username} 계정을 ${verb}할까요?`)) return;

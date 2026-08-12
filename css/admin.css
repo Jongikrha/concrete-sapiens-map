@@ -157,6 +157,15 @@ body {
   font-size: 12px;
 }
 
+.admin-flag-badge {
+  background: #fff3e0;
+  color: #b45309;
+  border: 1px solid #b45309;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
 .device-badge {
   border: none;
   background: var(--cs-map-gray);

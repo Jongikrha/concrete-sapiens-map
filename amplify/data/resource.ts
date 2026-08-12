@@ -84,6 +84,19 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 회원 깃발(어드민 전용 메모/표시) — userId를 기본키로 써서 회원 한 명당
+  // 레코드 하나(있으면 깃발 켜짐, 없으면 꺼짐)로 단순하게 다룬다. Cognito
+  // 커스텀 속성으로는 못 만든다 — UserPool Schema는 생성 후 CDK로 업데이트가
+  // 안 되는 구조적 제약이 있어(backend.ts의 addPropertyDeletionOverride
+  // 참고) DynamoDB 쪽에 별도 모델로 분리했다.
+  UserFlag: a
+    .model({
+      userId: a.string().required(),
+      note: a.string(),
+    })
+    .identifier(['userId'])
+    .authorization((allow) => [allow.group('Admins')]),
+
   // 회원관리(어드민 전용) — Cognito Admin API(ListUsers/AdminDisableUser 등)는
   // IAM 관리자 권한이 필요해 브라우저에서 직접 호출할 수 없다. adminUsersFn
   // 하나가 fieldName으로 분기해서 처리한다(amplify/functions/admin-users).
