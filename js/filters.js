@@ -8,9 +8,12 @@ let sliderActive = false;
 let sliderYear = null;
 
 // ------------------------------------------------------------
-// 해시태그 칩 렌더링 ("오늘의 기억" + "오늘의 질문" + 상위 N개)
+// 해시태그 칩 렌더링 ("오늘의 기억" + 상위 N개 + 더보기)
+// "오늘의 질문"은 칩 사이에 묻히지 않도록 renderDailyPromptBanner로 분리.
 // ------------------------------------------------------------
 function renderHashtagChips() {
+  renderDailyPromptBanner();
+
   const wrap = document.getElementById("hashtag-chips");
   wrap.innerHTML = "";
 
@@ -36,12 +39,6 @@ function renderHashtagChips() {
     wrap.appendChild(todayChip);
   }
 
-  const promptChip = document.createElement("button");
-  promptChip.className = "chip chip--prompt";
-  promptChip.textContent = "오늘의 질문 ✉";
-  promptChip.onclick = openDailyPrompt;
-  wrap.appendChild(promptChip);
-
   const allTags = Storage.getAllHashtagsWithCounts();
   const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
   topTags.forEach(({ tag }) => {
@@ -61,6 +58,29 @@ function renderHashtagChips() {
   }
 
   renderTotalCountBanner();
+}
+
+/**
+ * 오늘의 질문 배너 — 해시태그 칩(작은 라벨) 대신 실제 질문 문구를 그대로
+ * 노출해서(더 감성적이고, 클릭 없이도 바로 읽힌다) 눈에 띄게 만든다.
+ * 필터/시간슬라이더가 걸려 있을 땐 다른 오버레이 요소들과 마찬가지로 숨긴다.
+ */
+function renderDailyPromptBanner() {
+  const el = document.getElementById("daily-prompt-banner");
+  if (!el) return;
+
+  if (activeHashtagFilter || activeYearFilter !== null || sliderActive) {
+    el.classList.add("hidden");
+    return;
+  }
+
+  const prompt = Storage.getDailyPrompt();
+  el.innerHTML = `
+    <span class="daily-prompt-eyebrow">오늘의 질문 ✉</span>
+    <p class="daily-prompt-text">${escapeHtml(prompt)}</p>
+  `;
+  el.onclick = openDailyPrompt;
+  el.classList.remove("hidden");
 }
 
 function openDailyPrompt() {
@@ -160,6 +180,7 @@ function toggleSlider() {
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
   renderTotalCountBanner();
+  renderDailyPromptBanner();
 }
 
 function closeSlider() {
@@ -167,6 +188,7 @@ function closeSlider() {
   sliderYear = null;
   document.getElementById("time-slider-panel").classList.add("hidden");
   renderTotalCountBanner();
+  renderDailyPromptBanner();
 }
 
 function updateSliderLabel() {

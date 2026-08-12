@@ -41,7 +41,11 @@
         </div>
       </div>
 
-      <!-- 해시태그 칩 (많이 쓰인 순 상위 30개, 화면 폭에 맞춰 줄바꿈) -->
+      <!-- 오늘의 질문 — 매일 하나씩 결정론적으로 노출되는 감성 프롬프트.
+           해시태그 칩 사이에 묻히지 않도록 별도 카드로 분리 -->
+      <div class="daily-prompt-banner hidden" id="daily-prompt-banner"></div>
+
+      <!-- 해시태그 칩 (많이 쓰인 순 상위 20개 + 더보기, 화면 폭에 맞춰 줄바꿈) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
       <!-- 전체 등록된 기억 수 ("오늘의 기억" 칩 아래) -->
       <div class="total-count-banner hidden" id="total-count-banner"></div>
