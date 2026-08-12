@@ -746,7 +746,19 @@ body {
   display: none;
 }
 
-.story-item-menu-dropdown .report-link {
+.story-item-menu-dropdown .edit-link,
+.story-item-menu-dropdown .delete-link {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.story-item-menu-dropdown .report-link,
+.story-item-menu-dropdown .edit-link,
+.story-item-menu-dropdown .delete-link {
   display: block;
   padding: 11px 16px;
   font-size: 12.5px;
@@ -754,8 +766,14 @@ body {
   color: var(--cs-text-muted);
 }
 
-.story-item-menu-dropdown .report-link:hover {
+.story-item-menu-dropdown .report-link:hover,
+.story-item-menu-dropdown .edit-link:hover,
+.story-item-menu-dropdown .delete-link:hover {
   background: var(--cs-map-gray);
+  color: var(--cs-orange);
+}
+
+.story-item-menu-dropdown .delete-link {
   color: var(--cs-orange);
 }
 

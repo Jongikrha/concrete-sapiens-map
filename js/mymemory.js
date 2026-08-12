@@ -47,7 +47,7 @@ function closeAccountMenu() {
 
 function buildMyMemoryList(kind) {
   const all = Storage.getAllStories();
-  if (kind === "posted") return all.filter((s) => s.authorDeviceId === Storage.getDeviceId());
+  if (kind === "posted") return all.filter((s) => s.authorDeviceId === Storage.getDeviceId() && s.status !== "DELETED");
   if (kind === "reacted") return all.filter((s) => Storage.hasReacted(s.id));
   if (kind === "shared") return all.filter((s) => Storage.hasShared(s.id));
   return [];

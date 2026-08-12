@@ -47,14 +47,34 @@ function buildMonthOptions(selectedMonth) {
   return opts;
 }
 
+/**
+ * 내가 남긴 기억 수정 — storySheet.js의 "수정하기"에서 진입한다.
+ * 기존 story를 pin 모양으로 감싸 openComposer를 그대로 재사용하고,
+ * pin.editingStory가 있으면 openComposer가 수정 모드로 렌더링한다.
+ */
+function startEditComposer(story) {
+  openComposer({
+    lat: story.lat,
+    lng: story.lng,
+    officialPlaceName: story.officialPlaceName,
+    placeId: story.placeId,
+    address: story.address,
+    customName: story.customName,
+    isFreePin: !story.placeId,
+    prefillContent: story.content,
+    editingStory: story,
+  });
+}
+
 function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
+  const editing = pin.editingStory || null;
 
   const namePlaceholder = pin.isFreePin
     ? "이 장소를 뭐라고 부르시나요?"
     : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
-  const nameValue = pin.isFreePin ? "" : (pin.officialPlaceName || "");
+  const nameValue = pin.isFreePin ? (pin.customName || "") : (pin.officialPlaceName || "");
   const nameHint = pin.isFreePin
     ? `<div class="field-hint">지번 주소만으로는 다른 사람이 어딘지 알아보기 어려워요. 자유롭게 붙여주세요. 예) 서울역, 창천동 첫집</div>`
     : "";
@@ -65,21 +85,29 @@ function openComposer(pin) {
     <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
   `;
 
+  let dateMode = editing ? editing.dateMode : "unknown";
+  let authorMode = editing ? editing.authorMode : "anonymous";
+  const [initialYear, initialMonth] = editing && editing.dateMode === "past" && editing.referenceDate
+    ? editing.referenceDate.split("-")
+    : ["", ""];
+  const initialTags = editing ? (editing.hashtags || []).join(" ") : "";
+  const initialAuthorName = editing && editing.authorMode === "custom" ? (editing.displayAuthorName || "") : "";
+
   panel.innerHTML = `
-    <h2 class="composer-title">기억 남기기</h2>
+    <h2 class="composer-title">${editing ? "기억 수정하기" : "기억 남기기"}</h2>
 
     <label class="field-label">WHERE</label>
     ${whereHtml}
 
     <label class="field-label">WHEN</label>
     <div class="date-mode-toggle">
-      <button class="mode-btn" data-mode="now">지금</button>
-      <button class="mode-btn" data-mode="past">과거</button>
-      <button class="mode-btn mode-btn--active" data-mode="unknown">기억나지 않음</button>
+      <button class="mode-btn ${dateMode === "now" ? "mode-btn--active" : ""}" data-mode="now">지금</button>
+      <button class="mode-btn ${dateMode === "past" ? "mode-btn--active" : ""}" data-mode="past">과거</button>
+      <button class="mode-btn ${dateMode === "unknown" ? "mode-btn--active" : ""}" data-mode="unknown">기억나지 않음</button>
     </div>
-    <div class="year-month-row hidden" id="year-month-row">
-      <select id="input-year">${buildYearOptions()}</select>
-      <select id="input-month">${buildMonthOptions()}</select>
+    <div class="year-month-row ${dateMode !== "past" ? "hidden" : ""}" id="year-month-row">
+      <select id="input-year">${buildYearOptions(initialYear)}</select>
+      <select id="input-month">${buildMonthOptions(initialMonth)}</select>
     </div>
 
     <label class="field-label">MEMORY</label>
@@ -87,22 +115,19 @@ function openComposer(pin) {
     <div class="char-count"><span id="char-count-num">${(pin.prefillContent || "").length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
 
     <label class="field-label">TAGS</label>
-    <input type="text" id="input-tags" class="input-field" placeholder="첫사랑 그리움" />
+    <input type="text" id="input-tags" class="input-field" placeholder="첫사랑 그리움" value="${escapeHtml(initialTags)}" />
     <div class="field-hint">띄어쓰기로 구분해서 여러 개 입력할 수 있어요. 예) 첫사랑 그리움 이사 — # 없이 단어만 적어도 자동으로 붙어요.</div>
 
     <label class="field-label">NAME</label>
     <div class="author-mode-toggle">
-      <button class="mode-btn mode-btn--active" data-author-mode="anonymous">익명</button>
-      <button class="mode-btn" data-author-mode="custom">이름 또는 닉네임</button>
+      <button class="mode-btn ${authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">익명</button>
+      <button class="mode-btn ${authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">이름 또는 닉네임</button>
     </div>
-    <input type="text" id="input-author" class="input-field hidden" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" />
+    <input type="text" id="input-author" class="input-field ${authorMode !== "custom" ? "hidden" : ""}" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" value="${escapeHtml(initialAuthorName)}" />
 
-    <button class="btn-primary" id="btn-submit">기억 남기기</button>
+    <button class="btn-primary" id="btn-submit">${editing ? "수정 완료" : "기억 남기기"}</button>
     <button class="btn-secondary" id="btn-cancel">취소</button>
   `;
-
-  let dateMode = "unknown";
-  let authorMode = "anonymous";
 
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
@@ -170,9 +195,7 @@ function openComposer(pin) {
       : [];
     const hashtags = [...new Set([...extractHashtags(content), ...tagsFromField])];
 
-    const story = {
-      id: crypto.randomUUID(),
-      publicId: Storage.generatePublicId(),
+    const sharedFields = {
       lat: pendingPin.lat,
       lng: pendingPin.lng,
       placeId: pendingPin.placeId,
@@ -185,18 +208,29 @@ function openComposer(pin) {
       displayAuthorName: authorMode === "custom" ? authorInput : "익명",
       dateMode,
       referenceDate: dateMode === "past" ? `${yearInput}-${String(monthInput).padStart(2, "0")}` : null,
-      createdAt: new Date().toISOString(),
-      reportCount: 0,
-      status: "ACTIVE",
-      reactionCount: 0,
-      shareCount: 0,
-      viewCount: 0,
-      authorDeviceId: Storage.getDeviceId(),
     };
 
-    Storage.saveStory(story);
-    const currentUser = Auth.getCurrentUser();
-    if (currentUser) Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
+    let story;
+    if (editing) {
+      story = Storage.updateStory(editing.id, sharedFields);
+    } else {
+      story = {
+        id: crypto.randomUUID(),
+        publicId: Storage.generatePublicId(),
+        ...sharedFields,
+        createdAt: new Date().toISOString(),
+        reportCount: 0,
+        status: "ACTIVE",
+        reactionCount: 0,
+        shareCount: 0,
+        viewCount: 0,
+        authorDeviceId: Storage.getDeviceId(),
+      };
+      Storage.saveStory(story);
+      const currentUser = Auth.getCurrentUser();
+      if (currentUser) Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
+    }
+
     closeComposer();
     renderMarkers();
     renderHashtagChips();

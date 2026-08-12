@@ -165,11 +165,37 @@ test("saveStory는 캐시에 즉시 반영되고 저장한 값을 그대로 반�
   assert.equal(Storage.getAllStories()[0].id, "s1");
 });
 
-test("getVisibleStories는 status가 HIDDEN인 스토리를 제외한다", () => {
-  Storage._setCache([createStory({ id: "visible", status: "ACTIVE" }), createStory({ id: "hidden", status: "HIDDEN" })]);
+test("updateStory는 캐시를 즉시 반영하고 넘기지 않은 필드는 그대로 유지한다", () => {
+  Storage._setCache([createStory({ id: "s1", content: "원본", reportCount: 3 })]);
+  const updated = Storage.updateStory("s1", { content: "수정됨" });
+  assert.equal(updated.content, "수정됨");
+  assert.equal(updated.reportCount, 3);
+  assert.equal(Storage.getAllStories()[0].content, "수정됨");
+});
+
+test("updateStory는 존재하지 않는 id면 null을 반환한다", () => {
+  Storage._setCache([createStory({ id: "s1" })]);
+  const updated = Storage.updateStory("no-such-id", { content: "x" });
+  assert.equal(updated, null);
+});
+
+test("getVisibleStories는 status가 HIDDEN 또는 DELETED인 스토리를 제외한다", () => {
+  Storage._setCache([
+    createStory({ id: "visible", status: "ACTIVE" }),
+    createStory({ id: "hidden", status: "HIDDEN" }),
+    createStory({ id: "deleted", status: "DELETED" }),
+  ]);
   const visible = Storage.getVisibleStories();
   assert.equal(visible.length, 1);
   assert.equal(visible[0].id, "visible");
+});
+
+test("softDeleteStory는 status를 DELETED로 바꿔 캐시에서 즉시 안 보이게 한다", async () => {
+  Storage._setCache([createStory({ id: "s1", status: "ACTIVE" })]);
+  const updated = await Storage.softDeleteStory("s1");
+  assert.equal(updated.status, "DELETED");
+  assert.equal(Storage.getVisibleStories().length, 0);
+  assert.equal(Storage.getAllStories().length, 1);
 });
 
 test("reportStory는 신고 누적이 REPORT_HIDE_THRESHOLD에 도달하면 status를 HIDDEN으로 바꾼다", () => {

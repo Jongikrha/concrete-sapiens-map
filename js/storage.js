@@ -90,8 +90,25 @@ const Storage = {
     return story;
   },
 
+  /**
+   * 작성자 본인이 자기 글을 고칠 때 쓴다(js/composer.js 수정 모드).
+   * saveStory와 같은 낙관적 업데이트 패턴 — 캐시를 먼저 바꾸고 서버 반영은
+   * 백그라운드로 보낸다. id/publicId/createdAt/작성 통계(reportCount 등)는
+   * fields에 안 담아 보내면 그대로 유지된다.
+   */
+  updateStory(storyId, fields) {
+    const target = _cache.find((s) => s.id === storyId);
+    if (!target) return null;
+    Object.assign(target, fields);
+    if (client) {
+      client.models.Story.update({ id: storyId, ...fields })
+        .catch((e) => console.error("스토리 수정 실패(백그라운드)", storyId, e));
+    }
+    return target;
+  },
+
   getVisibleStories() {
-    return this.getAllStories().filter((s) => s.status !== "HIDDEN");
+    return this.getAllStories().filter((s) => s.status !== "HIDDEN" && s.status !== "DELETED");
   },
 
   getStoryByPublicId(publicId) {
@@ -275,6 +292,25 @@ const Storage = {
   async deleteStory(storyId) {
     await client.models.Story.delete({ id: storyId });
     _cache = _cache.filter((s) => s.id !== storyId);
+  },
+
+  /**
+   * 작성자 본인이 자기 글을 지울 때 쓴다(js/storySheet.js "삭제하기").
+   * 서버 delete 권한은 관리자에게만 있어(deleteStory 참고) 게스트/로그인
+   * 사용자는 진짜 delete를 호출할 수 없다 — 그래서 이미 열려 있는 update
+   * 권한으로 status를 DELETED로 바꿔 모든 화면에서 안 보이게 한다(레코드
+   * 자체는 서버에 남는 소프트 삭제). status는 자유 문자열이라 스키마
+   * 변경/백엔드 재배포 없이 바로 동작한다. 신고 누적/관리자 숨김이 쓰는
+   * HIDDEN과 값을 분리해서 관리자 신고 검토 큐(admin.js)에 안 섞인다.
+   * "자기 글만" 제약은 update/report 등 기존 패턴과 동일하게 UI 노출
+   * 여부로만 건다(서버가 소유자 단위로 막지는 않는다).
+   */
+  async softDeleteStory(storyId) {
+    const target = _cache.find((s) => s.id === storyId);
+    if (!target) return null;
+    target.status = "DELETED";
+    await client.models.Story.update({ id: storyId, status: "DELETED" });
+    return target;
   },
 
   /**

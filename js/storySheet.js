@@ -129,7 +129,7 @@ function renderSheetContent(group) {
 
   bindStoryItemEvents(content, {
     onChange: () => renderSheetContent(group),
-    onReport: () => {
+    onRemove: () => {
       const rawRefreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
       const refreshed = rawRefreshed ? applyActiveFilterToGroup(rawRefreshed) : null;
       if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
@@ -169,12 +169,12 @@ function renderSheetContent(group) {
 }
 
 /**
- * story-item 내부 공통 인터랙션(해시태그/연도 이동, 장소 이동, 공감, 전달, 신고
- * 메뉴)을 한 곳에서 바인딩한다. renderSheetContent(단일 스팟)와
+ * story-item 내부 공통 인터랙션(해시태그/연도 이동, 장소 이동, 공감, 전달, 신고/
+ * 수정/삭제 메뉴)을 한 곳에서 바인딩한다. renderSheetContent(단일 스팟)와
  * renderHashtagSheetContent(태그 전체 목록)가 같이 쓴다 — 정렬 갱신처럼
- * 컨텍스트별로 달라지는 부분만 onChange/onReport로 호출부에서 넘겨준다.
+ * 컨텍스트별로 달라지는 부분만 onChange/onRemove로 호출부에서 넘겨준다.
  */
-function bindStoryItemEvents(content, { onChange, onReport }) {
+function bindStoryItemEvents(content, { onChange, onRemove }) {
   content.querySelectorAll(".hashtag-link").forEach((link) => {
     link.onclick = () => exploreHashtag(link.dataset.tag);
   });
@@ -219,8 +219,34 @@ function bindStoryItemEvents(content, { onChange, onReport }) {
       if (confirm("이 기록을 신고하시겠습니까?")) {
         Storage.reportStory(btn.dataset.id);
         alert("신고가 접수되었습니다.");
-        onReport();
+        onRemove();
         renderMarkers();
+      }
+    };
+  });
+
+  content.querySelectorAll(".edit-link").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const story = Storage.getAllStories().find((s) => s.id === btn.dataset.id);
+      if (!story) return;
+      closeSheet();
+      startEditComposer(story);
+    };
+  });
+
+  content.querySelectorAll(".delete-link").forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm("이 기억을 삭제하시겠습니까?\n삭제하면 되돌릴 수 없습니다.")) return;
+      try {
+        await Storage.softDeleteStory(btn.dataset.id);
+        onRemove();
+        renderMarkers();
+        renderHashtagChips();
+      } catch (err) {
+        console.error("스토리 삭제 실패", btn.dataset.id, err);
+        alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     };
   });
@@ -326,7 +352,7 @@ function renderHashtagSheetContent() {
 
   bindStoryItemEvents(content, {
     onChange: renderHashtagSheetContent,
-    onReport: renderHashtagSheetContent,
+    onRemove: renderHashtagSheetContent,
   });
 }
 
@@ -339,6 +365,15 @@ function renderStoryItem(story, options = {}) {
   const locationHtml = options.showLocation
     ? `<button class="story-place-line" data-story-id="${story.id}">${escapeHtml(Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address }))}</button>`
     : "";
+
+  // "내가 쓴 글"은 실계정이 아니라 authorDeviceId(브라우저 단위 비식별
+  // 상관관계, mymemory.js의 "내가 남긴 기억"과 동일 기준)로 판단한다.
+  // 내 글이면 수정/삭제, 남의 글이면 신고만 노출한다.
+  const isMine = !!story.authorDeviceId && story.authorDeviceId === Storage.getDeviceId();
+  const menuItemsHtml = isMine
+    ? `<button class="edit-link" data-id="${story.id}">수정하기</button>
+       <button class="delete-link" data-id="${story.id}">삭제하기</button>`
+    : `<button class="report-link" data-id="${story.id}">이 기록 신고하기</button>`;
 
   return `
     <div class="story-item">
@@ -353,7 +388,7 @@ function renderStoryItem(story, options = {}) {
         <div class="story-item-menu">
           <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
           <div class="story-item-menu-dropdown hidden" id="menu-${story.id}">
-            <button class="report-link" data-id="${story.id}">이 기록 신고하기</button>
+            ${menuItemsHtml}
           </div>
         </div>
       </div>
