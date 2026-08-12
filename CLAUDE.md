@@ -56,6 +56,24 @@ push가 들어올 수 있으므로, 저(Claude)와 함께하는 작업은 아래
   `amplify_outputs.local.json`(gitignore 대상)을 쓴다 — prod 리소스를
   건드리지 않기 위함.
 
+### 담당자별로 다르게 진행된다 — jongik.rha vs AWS 접근 권한자
+
+- jongik.rha는 비개발자(바이브코딩)라 `npm run deploy`도, AWS CLI도 없다.
+  `.git/hooks/pre-push` 경고 훅도 로컬 clone 전용이라 그의 환경에는 애초에
+  설치돼 있지 않다 — **그의 push를 배포 여부로 막거나 되돌리려 하지 않는다.**
+  `amplify/*.ts`를 건드린 채 배포 없이 push하는 게 정상적으로 발생하는
+  상황이라고 전제한다(2026-08-12 확인 — 실제로 이 패턴으로 라이브가 두 번
+  깨졌었음).
+- 대신 **AWS 접근 권한이 있는 쪽(Claude 세션)이 매 작업 시작 시 드리프트를
+  선제적으로 확인**한다. `git fetch` + `git status` 확인 직후, 아래로
+  `amplify/`가 배포보다 앞서 있는지 같이 확인하는 걸 루틴으로 삼는다:
+  ```
+  git log -1 --format=%ct -- amplify/auth/resource.ts amplify/data/resource.ts amplify/backend.ts
+  git log -1 --format=%ct -- amplify_outputs.json
+  ```
+  앞의 값이 더 크면(=스키마가 더 최근에 바뀌었으면) 다른 작업을 시작하기
+  전에 `npm run deploy`부터 실행해 배포와 소스를 맞춘다.
+
 ## 커밋
 
 - 사용자가 명시적으로 지시하지 않으면 커밋하지 않는다 (전역 규칙과 동일, 여기서 재확인).
