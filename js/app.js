@@ -36,10 +36,12 @@ function renderTotalCountBanner() {
 }
 
 // ------------------------------------------------------------
-// 최근 기억 목록 모달 — 배너 클릭 시 최신순으로 쭉 훑어볼 수 있고,
-// "위치로 가기"를 눌러도 목록 모달은 닫히지 않는다 (연속 탐색용)
+// 최근 기억 목록 모달 — 배너 클릭 시 최신순으로 쭉 훑어볼 수 있다.
+// 항목을 누르면 목록은 닫히고 지도 이동 + 기억 카드가 바로 열리며,
+// 카드의 뒤로가기(←)를 누르면 스크롤 위치까지 복원해서 이 목록으로
+// 돌아온다 (opts.scrollTop, goBackFromSheet 참고).
 // ------------------------------------------------------------
-function openRecentMemoriesModal() {
+function openRecentMemoriesModal(opts = {}) {
   const panel = document.getElementById("recent-panel");
   const recent = [...Storage.getVisibleStories()]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -55,11 +57,10 @@ function openRecentMemoriesModal() {
           address: story.address,
         });
         return `
-          <div class="recent-item">
+          <div class="recent-item" data-id="${story.id}">
             <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
             <p class="recent-item-content">${escapeHtml(story.content)}</p>
             <p class="recent-item-place">${escapeHtml(title)}</p>
-            <button class="recent-goto-btn" data-id="${story.id}">위치로 가기 →</button>
           </div>
         `;
       }).join("")
@@ -85,24 +86,49 @@ function openRecentMemoriesModal() {
   };
   panel.querySelector("#import-file-input").addEventListener("change", handleImportFile);
 
-  panel.querySelectorAll(".recent-goto-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const story = Storage.getAllStories().find((s) => s.id === btn.dataset.id);
-      if (!story) return;
-      map.setLevel(4);
-      map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
-      highlightMarkerForStory(story);
-      btn.textContent = "이동함 ✓";
-      btn.classList.add("recent-goto-btn--visited");
-      // 목록 모달은 그대로 열어둔 채 지도만 이동한다.
+  panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
+    item.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      closeRecentMemoriesModal();
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop });
     };
   });
 
   document.getElementById("recent-overlay").classList.remove("hidden");
+  if (opts.scrollTop) panel.scrollTop = opts.scrollTop;
 }
 
 function closeRecentMemoriesModal() {
   document.getElementById("recent-overlay").classList.add("hidden");
+}
+
+// ------------------------------------------------------------
+// 목록(최근 기억 / 내 기억)에서 항목을 눌러 지도 이동 + 카드 오픈까지
+// 한번에 처리하는 공용 흐름. returnTo는 카드의 뒤로가기(←)가 어느
+// 목록을 어떤 스크롤 위치로 다시 열어야 하는지를 담는다 —
+// { kind: "recent" } 또는 { kind: "mymemory", listKind: "posted"|"reacted"|"shared" }.
+// ------------------------------------------------------------
+function navigateToStoryFromList(storyId, returnTo) {
+  const story = Storage.getAllStories().find((s) => s.id === storyId);
+  if (!story) return;
+  map.setLevel(4);
+  map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
+  highlightMarkerForStory(story);
+  const group = buildFilteredGroupContainingStory(story.id);
+  if (group && group.stories.length > 0) {
+    openSheet(group, { returnTo, highlightStoryId: story.id });
+  }
+}
+
+function goBackFromSheet() {
+  const returnTo = sheetReturnTo;
+  closeSheet();
+  if (!returnTo) return;
+  if (returnTo.kind === "recent") {
+    openRecentMemoriesModal({ scrollTop: returnTo.scrollTop });
+  } else if (returnTo.kind === "mymemory") {
+    openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
+  }
 }
 
 // 데이터 백업(내보내기/가져오기)은 js/backup.js로 분리됨 (exportBackup, handleImportFile)
@@ -211,11 +237,12 @@ function goToRandomStory() {
 // ------------------------------------------------------------
 function bindUIEvents() {
   document.getElementById("sheet-close").onclick = closeSheetToUnfiltered;
+  document.getElementById("sheet-back").onclick = goBackFromSheet;
   document.getElementById("sheet-backdrop").addEventListener("click", closeSheetToUnfiltered);
   document.getElementById("composer-overlay").addEventListener("click", (e) => {
     if (e.target.id === "composer-overlay") closeComposer();
   });
-  document.getElementById("total-count-banner").onclick = openRecentMemoriesModal;
+  document.getElementById("total-count-banner").onclick = () => openRecentMemoriesModal();
   document.getElementById("recent-overlay").addEventListener("click", (e) => {
     if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
   });

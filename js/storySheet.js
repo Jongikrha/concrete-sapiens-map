@@ -8,14 +8,27 @@ let spotTimelineFocusYear = {};
 let currentSort = "latest";
 let hashtagSheetTag = null;
 let hashtagSheetSort = "latest";
+// 목록(최근 기억/내 기억)에서 항목을 눌러 들어온 경우, 뒤로가기(←)로 그
+// 목록으로 복귀하기 위해 어디서 왔는지를 기억해둔다. 마커를 직접 눌러
+// 들어온 경우엔 null이라 뒤로가기 버튼 자체가 숨겨진다.
+let sheetReturnTo = null;
+// 목록에서 클릭한 그 기억을 카드 안에서 스크롤+하이라이트로 짚어주기
+// 위한 1회성 상태 — 렌더 후 바로 소비하고 비운다.
+let sheetHighlightStoryId = null;
 
-function openSheet(group) {
+function openSheet(group, options = {}) {
   currentSort = "latest";
   spotTimelineOpen[group.key] = false;
   spotTimelineFocusYear[group.key] = null;
-  renderSheetContent(group);
+  sheetReturnTo = options.returnTo || null;
+  sheetHighlightStoryId = options.highlightStoryId || null;
+  // 하이라이트 대상으로 scrollIntoView를 걸려면 시트가 먼저 화면에
+  // 붙어(display 전환) 레이아웃을 가진 상태여야 한다 — renderSheetContent
+  // (내부에서 스크롤 처리)보다 hidden 해제가 먼저 와야 한다.
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
+  document.getElementById("sheet-back").classList.toggle("hidden", !sheetReturnTo);
+  renderSheetContent(group);
   sheetOpen = true;
   group.stories.forEach((s) => Storage.incrementViewCount(s.id));
 }
@@ -166,6 +179,17 @@ function renderSheetContent(group) {
       });
     });
   };
+
+  // 목록에서 클릭해 들어온 경우, 그 기억으로 스크롤+하이라이트. 정렬/연대표
+  // 전환 등 이후 재렌더에서는 반복하지 않도록 1회 소비 후 비운다.
+  if (sheetHighlightStoryId) {
+    const target = content.querySelector(`.story-item[data-story-id="${sheetHighlightStoryId}"]`);
+    if (target) {
+      target.classList.add("story-item--highlight");
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    sheetHighlightStoryId = null;
+  }
 }
 
 /**
@@ -376,7 +400,7 @@ function renderStoryItem(story, options = {}) {
     : `<button class="report-link" data-id="${story.id}">이 기록 신고하기</button>`;
 
   return `
-    <div class="story-item">
+    <div class="story-item" data-story-id="${story.id}">
       <div class="story-date-block">
         <p class="story-year">${yearMain}</p>
         ${month ? `<p class="story-month">${month}월</p>` : ""}

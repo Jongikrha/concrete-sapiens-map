@@ -53,7 +53,11 @@ function buildMyMemoryList(kind) {
   return [];
 }
 
-function openMyMemoryList(kind) {
+// 항목을 누르면 목록이 닫히고 지도 이동 + 기억 카드가 바로 열린다.
+// 카드의 뒤로가기(←)를 누르면 opts.scrollTop으로 스크롤 위치까지
+// 복원해서 이 목록으로 돌아온다(최근 기억 목록과 동일 UX,
+// navigateToStoryFromList/goBackFromSheet 참고).
+function openMyMemoryList(kind, opts = {}) {
   closeAccountMenu();
   const panel = document.getElementById("mymemory-panel");
   const stories = [...buildMyMemoryList(kind)].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -68,11 +72,10 @@ function openMyMemoryList(kind) {
           address: story.address,
         });
         return `
-          <div class="recent-item">
+          <div class="recent-item" data-id="${story.id}">
             <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
             <p class="recent-item-content">${escapeHtml(story.content)}</p>
             <p class="recent-item-place">${escapeHtml(title)}</p>
-            <button class="recent-goto-btn" data-id="${story.id}">위치로 가기 →</button>
           </div>
         `;
       }).join("")
@@ -88,20 +91,16 @@ function openMyMemoryList(kind) {
 
   panel.querySelector("#mymemory-close").onclick = closeMyMemoryList;
 
-  panel.querySelectorAll(".recent-goto-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const story = Storage.getAllStories().find((s) => s.id === btn.dataset.id);
-      if (!story) return;
-      map.setLevel(4);
-      map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
-      highlightMarkerForStory(story);
-      btn.textContent = "이동함 ✓";
-      btn.classList.add("recent-goto-btn--visited");
-      // 목록은 그대로 열어둔 채 지도만 이동한다(최근 기억 목록과 동일 UX).
+  panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
+    item.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      closeMyMemoryList();
+      navigateToStoryFromList(item.dataset.id, { kind: "mymemory", listKind: kind, scrollTop });
     };
   });
 
   document.getElementById("mymemory-overlay").classList.remove("hidden");
+  if (opts.scrollTop) panel.scrollTop = opts.scrollTop;
 }
 
 function closeMyMemoryList() {
