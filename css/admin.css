@@ -344,3 +344,41 @@ body {
   border: 1px solid var(--cs-map-gray);
   border-radius: var(--cs-radius-card);
 }
+
+.field-hint {
+  font-size: 13px;
+  color: var(--cs-text-muted);
+  margin: 4px 0 12px;
+}
+
+/* 벌크 등록 */
+.bulk-prompt-box {
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.bulk-prompt-box pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.bulk-csv-textarea {
+  width: 100%;
+  min-height: 160px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  resize: vertical;
+}

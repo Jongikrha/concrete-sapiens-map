@@ -30,6 +30,9 @@ const schema = a.schema({
       // authorDeviceId: 실계정 없이 브라우저 단위 비식별 상관관계(진짜 신원 아님).
       authorDeviceId: a.string(),
       viewCount: a.integer(),
+      // 어드민 벌크 등록(CSV 붙여넣기)으로 만든 가라 데이터 표시용 —
+      // 실제 이용자 글과 구분해서 나중에 한 번에 골라 지울 수 있게 한다.
+      isSeed: a.boolean(),
     })
     .authorization((allow) => [
       // identityPool 인증모드에서 "로그인한 사용자"는 guest와 다른 IAM

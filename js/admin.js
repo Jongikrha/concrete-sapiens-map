@@ -29,6 +29,103 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// 벌크 등록 탭에서 "프롬프트 복사" 버튼으로 그대로 복사되는 텍스트.
+// 실제 DB에 등록된 글(2026-08-12 기준) 몇 개를 톤 예시로 넣어서, 과장되거나
+// 설명적인 문체가 아니라 절제된 1인칭 회고체로 나오게 유도한다.
+const BULK_PROMPT = `콘크리트 사피엔스 지도는 특정 장소에 얽힌 개인적인 "기억"을 짧은 글로 남기는 서비스야.
+아래는 실제로 등록된 글 3개야 — 문체와 분량, 감정의 절제 정도를 그대로 참고해서
+비슷한 느낌의 "가상의" 기억 데이터를 CSV로 20개 만들어줘.
+
+[실제 등록된 글 예시]
+1. (양화대교, 2016년 1월, #양화대교 #그리움 #첫사랑)
+첫사랑에 실패한 그해 겨울, 그 때는 이상하게 많이 걷고 싶었다.
+양화대교를 건널 때면 늘 자이언티의 「양화대교」를 들었다. 이어폰을 꽂고, 마치 내가
+자이언티라도 된 것처럼 온갖 기교를 다 부려가며 큰 소리로 따라 불렀다.
+가끔 그 시절이 그립다.
+
+2. (여의도성모병원, 2017년 9월, #할머니 #추모 #그리움)
+무더위가 조금씩 물러가고, 찬 바람과 더운 바람이 번갈아 불던 그때 할머니가 돌아가셨다.
+불행인지 다행인지, 병원에서 오래 고생하지 않으시고 일주일 만에 떠나셨다.
+시간이 꽤 흘렀는데도 그때처럼 바람이 불면 문득 할머니가 생각난다.
+보고 싶어요, 할머니.
+
+3. (신촌역, 2017년 6월, #첫사랑 #고백)
+"나 사실 너 좋아해." 수십 번 연습했다.
+결국 그날 내가 한 말은 "조심히 들어가."
+그게 끝이었다.
+
+[CSV 형식]
+첫 줄은 헤더로 아래 컬럼명을 그대로 쓰고, 그 아래 20줄에 데이터를 채워줘:
+content,lat,lng,placeName,year,month,hashtags,authorName,reactionCount,viewCount
+
+- content: 2~4문장(또는 짧게 줄바꿈되는 여러 줄)짜리 담백한 1인칭 회고. 위 예시처럼
+  설명하지 않고 장면과 감정만 남기는 절제된 톤. 과장된 수식어, 설명체 금지.
+- lat, lng: 실존하는 대한민국 내 장소의 대략적인 위도/경도(소수점 5~6자리, 정확하지
+  않아도 됨 — 그 지역 대략 좌표면 충분)
+- placeName: 장소 이름(구체적인 상호/건물/지명일수록 좋음)
+- year, month: 기억의 시점(선택 — 모르면 완전히 빈칸으로 둬서 "시점 모름"으로 처리)
+- hashtags: 세미콜론(;)으로 구분한 해시태그 2~3개, 전부 #으로 시작
+- authorName: 대부분 빈칸(빈칸이면 "익명" 처리됨), 가끔만 닉네임 하나
+- reactionCount, viewCount: 0~40 사이 임의 숫자
+
+내용(content)에 콤마(,)나 줄바꿈이 들어가면 그 필드 전체를 큰따옴표로 감싸줘.
+설명이나 코드블록 표시 없이 CSV 텍스트만 그대로 출력해줘.`;
+
+/**
+ * 최소한의 CSV 파서 — 큰따옴표로 감싼 필드 안의 콤마/줄바꿈/이스케이프된
+ * 큰따옴표("")까지 처리한다. 외부 라이브러리 없이 붙여넣기 텍스트만 다루면
+ * 되는 범위라 이 정도로 충분하다.
+ */
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(field);
+      field = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += ch;
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
+function csvRowsToObjects(rows) {
+  const header = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const obj = {};
+    header.forEach((h, i) => {
+      obj[h] = (r[i] || "").trim();
+    });
+    return obj;
+  });
+}
+
 async function isAdminSession() {
   try {
     await getCurrentUser();
@@ -421,12 +518,135 @@ async function handleMemberAction(action, username, dataset) {
   renderMembersTab();
 }
 
+function renderBulkTab() {
+  clearDeviceFilterBanner();
+  const seedCount = Storage.getAllStories().filter((s) => s.isSeed).length;
+
+  document.getElementById("admin-content").innerHTML = `
+    <div class="admin-section-title">벌크 등록 (가라 스토리 CSV 붙여넣기)</div>
+    <p class="field-hint">
+      아래 프롬프트를 복사해서 ChatGPT/Claude 등에 붙여넣고, 나온 CSV를 그 밑
+      textarea에 붙여넣은 뒤 "일괄 등록"을 누르세요.
+    </p>
+    <div class="bulk-prompt-box">
+      <pre id="bulk-prompt-text">${escapeHtml(BULK_PROMPT)}</pre>
+    </div>
+    <button class="btn-primary" id="bulk-copy-prompt">이 프롬프트를 복사해서 하단에 붙여넣으세요</button>
+    <textarea id="bulk-csv-input" class="bulk-csv-textarea" placeholder="여기에 CSV를 붙여넣으세요 (헤더 포함)"></textarea>
+    <div class="admin-card-actions">
+      <button class="btn-primary" id="bulk-submit">일괄 등록</button>
+      <button class="btn-delete" id="bulk-delete-all">가라 스토리 전체 삭제 (${seedCount}건)</button>
+    </div>
+    <p class="field-hint" id="bulk-result"></p>
+  `;
+
+  document.getElementById("bulk-copy-prompt").onclick = async (e) => {
+    await navigator.clipboard.writeText(BULK_PROMPT);
+    const btn = e.currentTarget;
+    const original = btn.textContent;
+    btn.textContent = "복사됐습니다!";
+    setTimeout(() => {
+      btn.textContent = original;
+    }, 1500);
+  };
+
+  document.getElementById("bulk-submit").onclick = handleBulkSubmit;
+  document.getElementById("bulk-delete-all").onclick = handleBulkDeleteAll;
+}
+
+async function handleBulkSubmit() {
+  const resultEl = document.getElementById("bulk-result");
+  const raw = document.getElementById("bulk-csv-input").value.trim();
+  if (!raw) {
+    resultEl.textContent = "CSV를 붙여넣어주세요.";
+    return;
+  }
+
+  const rows = parseCsv(raw);
+  if (rows.length < 2) {
+    resultEl.textContent = "헤더 + 데이터가 최소 1줄 이상 필요합니다.";
+    return;
+  }
+  const records = csvRowsToObjects(rows);
+  if (!confirm(`${records.length}개의 가라 스토리를 등록할까요?`)) return;
+
+  resultEl.textContent = "등록 중...";
+  let success = 0;
+  let failed = 0;
+
+  for (const r of records) {
+    const lat = parseFloat(r.lat);
+    const lng = parseFloat(r.lng);
+    if (!r.content || Number.isNaN(lat) || Number.isNaN(lng)) {
+      failed++;
+      continue;
+    }
+    const hashtags = r.hashtags
+      ? r.hashtags.split(";").map((t) => t.trim()).filter(Boolean).map((t) => (t.startsWith("#") ? t : `#${t}`))
+      : [];
+    const hasDate = r.year && r.month;
+
+    const story = {
+      id: crypto.randomUUID(),
+      publicId: Storage.generatePublicId(),
+      lat,
+      lng,
+      placeId: null,
+      officialPlaceName: null,
+      address: null,
+      customName: r.placeName || null,
+      content: r.content,
+      hashtags,
+      authorMode: r.authorName ? "custom" : "anonymous",
+      displayAuthorName: r.authorName || "익명",
+      dateMode: hasDate ? "past" : "unknown",
+      referenceDate: hasDate ? `${r.year}-${String(r.month).padStart(2, "0")}` : null,
+      createdAt: new Date().toISOString(),
+      reportCount: 0,
+      status: "ACTIVE",
+      reactionCount: parseInt(r.reactionCount, 10) || 0,
+      shareCount: 0,
+      viewCount: parseInt(r.viewCount, 10) || 0,
+      authorDeviceId: null,
+      isSeed: true,
+    };
+
+    const { errors } = await client.models.Story.create(story);
+    if (errors) {
+      console.error("벌크 등록 실패", errors, story);
+      failed++;
+    } else {
+      success++;
+    }
+  }
+
+  await Storage.refresh();
+  resultEl.textContent = `등록 완료 — 성공 ${success}건, 실패 ${failed}건`;
+}
+
+async function handleBulkDeleteAll() {
+  const seedStories = Storage.getAllStories().filter((s) => s.isSeed);
+  if (seedStories.length === 0) {
+    alert("삭제할 가라 스토리가 없습니다.");
+    return;
+  }
+  if (!confirm(`가라 스토리 ${seedStories.length}개를 전부 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
+
+  const resultEl = document.getElementById("bulk-result");
+  resultEl.textContent = "삭제 중...";
+  for (const s of seedStories) {
+    await Storage.deleteStory(s.id);
+  }
+  renderBulkTab();
+}
+
 function renderActiveTab() {
   if (activeTab === "queue") renderQueueTab();
   else if (activeTab === "all") renderAllTab();
   else if (activeTab === "words") renderWordsTab();
   else if (activeTab === "visits") renderVisitsTab();
   else if (activeTab === "members") renderMembersTab();
+  else if (activeTab === "bulk") renderBulkTab();
 }
 
 document.getElementById("admin-content").addEventListener("click", (e) => {
