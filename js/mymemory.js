@@ -95,7 +95,7 @@ function openMyMemoryList(kind, opts = {}) {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeMyMemoryList();
-      navigateToStoryFromList(item.dataset.id, { kind: "mymemory", listKind: kind, scrollTop });
+      navigateToStoryFromList(item.dataset.id, { kind: "mymemory", listKind: kind, scrollTop, label: MY_MEMORY_TITLES[kind] });
     };
   });
 

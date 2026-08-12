@@ -22,12 +22,11 @@ function openSheet(group, options = {}) {
   spotTimelineFocusYear[group.key] = null;
   sheetReturnTo = options.returnTo || null;
   sheetHighlightStoryId = options.highlightStoryId || null;
-  // 하이라이트 대상으로 scrollIntoView를 걸려면 시트가 먼저 화면에
-  // 붙어(display 전환) 레이아웃을 가진 상태여야 한다 — renderSheetContent
-  // (내부에서 스크롤 처리)보다 hidden 해제가 먼저 와야 한다.
+  // scrollIntoView를 걸려면 시트가 먼저 화면에 붙어(display 전환) 레이아웃을
+  // 가진 상태여야 한다 — renderSheetContent(내부에서 스크롤 처리)보다
+  // hidden 해제가 먼저 와야 한다.
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
-  document.getElementById("sheet-back").classList.toggle("hidden", !sheetReturnTo);
   renderSheetContent(group);
   sheetOpen = true;
   group.stories.forEach((s) => Storage.incrementViewCount(s.id));
@@ -121,6 +120,7 @@ function renderSheetContent(group) {
   const addressCaption = Storage.getGroupAddressCaption(group);
 
   content.innerHTML = `
+    ${sheetReturnTo ? `<button class="sheet-back-link" id="sheet-back-link">← ${escapeHtml(sheetReturnTo.label)}</button>` : ""}
     <div class="story-spot-header">
       <div class="story-spot-name">${escapeHtml(title)}</div>
       ${addressCaption ? `<div class="story-spot-address">${escapeHtml(addressCaption)}</div>` : ""}
@@ -180,12 +180,14 @@ function renderSheetContent(group) {
     });
   };
 
-  // 목록에서 클릭해 들어온 경우, 그 기억으로 스크롤+하이라이트. 정렬/연대표
-  // 전환 등 이후 재렌더에서는 반복하지 않도록 1회 소비 후 비운다.
+  const backLink = content.querySelector("#sheet-back-link");
+  if (backLink) backLink.onclick = goBackFromSheet;
+
+  // 목록에서 클릭해 들어온 경우, 그 기억으로 스크롤. 정렬/연대표 전환 등
+  // 이후 재렌더에서는 반복하지 않도록 1회 소비 후 비운다.
   if (sheetHighlightStoryId) {
     const target = content.querySelector(`.story-item[data-story-id="${sheetHighlightStoryId}"]`);
     if (target) {
-      target.classList.add("story-item--highlight");
       target.scrollIntoView({ block: "center", behavior: "smooth" });
     }
     sheetHighlightStoryId = null;
@@ -284,6 +286,9 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
 function openHashtagSheet(tag) {
   hashtagSheetTag = tag;
   hashtagSheetSort = "latest";
+  // 해시태그 목록은 스팟 상세와 다른 화면 흐름이라 이전 목록으로 돌아가는
+  // 링크(sheetReturnTo)를 물려받지 않는다 — 여기서 명시적으로 비운다.
+  sheetReturnTo = null;
   renderHashtagSheetContent();
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
@@ -296,6 +301,7 @@ function openHashtagSheet(tag) {
  * exploreHashtag로 이어져 그 태그의 기억 목록(openHashtagSheet)으로 전환된다.
  */
 function openAllTagsSheet() {
+  sheetReturnTo = null;
   renderAllTagsSheetContent();
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");

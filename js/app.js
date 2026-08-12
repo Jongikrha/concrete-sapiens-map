@@ -90,7 +90,7 @@ function openRecentMemoriesModal(opts = {}) {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeRecentMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop });
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "최근 기억" });
     };
   });
 
@@ -237,7 +237,6 @@ function goToRandomStory() {
 // ------------------------------------------------------------
 function bindUIEvents() {
   document.getElementById("sheet-close").onclick = closeSheetToUnfiltered;
-  document.getElementById("sheet-back").onclick = goBackFromSheet;
   document.getElementById("sheet-backdrop").addEventListener("click", closeSheetToUnfiltered);
   document.getElementById("composer-overlay").addEventListener("click", (e) => {
     if (e.target.id === "composer-overlay") closeComposer();
