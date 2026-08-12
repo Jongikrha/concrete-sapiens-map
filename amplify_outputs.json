@@ -223,6 +223,7 @@
                   },
                   {
                     "allow": "private",
+                    "provider": "identityPool",
                     "operations": [
                       "create",
                       "read",
@@ -321,6 +322,7 @@
                   },
                   {
                     "allow": "private",
+                    "provider": "identityPool",
                     "operations": [
                       "create"
                     ]
@@ -414,6 +416,7 @@
                   },
                   {
                     "allow": "private",
+                    "provider": "identityPool",
                     "operations": [
                       "read"
                     ]
@@ -482,6 +485,7 @@
                   },
                   {
                     "allow": "private",
+                    "provider": "identityPool",
                     "operations": [
                       "create"
                     ]
