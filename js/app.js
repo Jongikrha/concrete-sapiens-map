@@ -31,7 +31,7 @@ function renderTotalCountBanner() {
     el.classList.add("hidden");
     return;
   }
-  el.textContent = `[총 ${count.toLocaleString()}개의 추억]`;
+  el.textContent = `총 ${count.toLocaleString()}개의 추억`;
   el.classList.remove("hidden");
 }
 
