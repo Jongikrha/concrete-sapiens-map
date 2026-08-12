@@ -66,15 +66,18 @@ function initMap() {
     // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
     minLevel: 5,
     disableClickZoom: false,
+    // 뭉친 지점도 개별 Memory Dot과 같은 Signal Orange 점으로 보이도록,
+    // 숫자 배지 대신 makeDotImage의 큰 점(tier 4) 모양을 그대로 재사용한다.
     styles: [
       {
-        width: "30px",
-        height: "30px",
-        background: "rgba(47,48,49,0.92)",
+        width: "19px",
+        height: "19px",
+        background: "#FF5A36",
         borderRadius: "50%",
+        border: "2px solid #FFFFFF",
         color: "transparent",
         textAlign: "center",
-        lineHeight: "30px",
+        lineHeight: "19px",
         fontSize: "0px",
         fontWeight: "500",
       },
