@@ -1328,8 +1328,8 @@ button.story-place-line:hover {
   border: 1px dashed var(--cs-orange);
   border-radius: var(--cs-radius-card);
   background: rgba(255, 90, 54, 0.06);
-  padding: 14px 16px;
-  margin-bottom: 8px;
+  padding: 7px 12px;
+  margin-bottom: 6px;
   cursor: pointer;
   transition: background var(--cs-transition-fast);
 }
@@ -1340,20 +1340,20 @@ button.story-place-line:hover {
 
 .daily-prompt-eyebrow {
   display: block;
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
   color: var(--cs-orange);
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .daily-prompt-text {
   margin: 0;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 15.5px;
-  line-height: 1.6;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--cs-text-main);
 }
 
