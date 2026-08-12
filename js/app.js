@@ -31,7 +31,7 @@ function renderTotalCountBanner() {
     el.classList.add("hidden");
     return;
   }
-  el.textContent = `총 ${count.toLocaleString()}개의 추억`;
+  el.innerHTML = `<span class="total-count-num">${count.toLocaleString()}</span><span class="total-count-suffix">개의 기억이 쌓였습니다</span>`;
   el.classList.remove("hidden");
 }
 

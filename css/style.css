@@ -364,19 +364,32 @@ body {
    전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
    ------------------------------------------------------------ */
 .total-count-banner {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cs-black);
-  background: rgba(244, 243, 239, 0.92);
-  padding: 6px 13px;
-  border-radius: var(--cs-radius-chip);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  background: none;
   border: none;
+  padding: 0;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
 
 .total-count-banner:hover {
-  background: var(--cs-paper);
+  opacity: 0.75;
+}
+
+.total-count-num {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 18px;
+  color: #FF5A3C;
+}
+
+.total-count-suffix {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 12.5px;
+  color: #555555;
 }
 
 /* ------------------------------------------------------------
