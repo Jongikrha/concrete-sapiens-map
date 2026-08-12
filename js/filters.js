@@ -42,14 +42,23 @@ function renderHashtagChips() {
   promptChip.onclick = openDailyPrompt;
   wrap.appendChild(promptChip);
 
-  const topTags = Storage.getTopHashtags(CONFIG.TOP_HASHTAG_LIMIT);
-  topTags.forEach((tag) => {
+  const allTags = Storage.getAllHashtagsWithCounts();
+  const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
+  topTags.forEach(({ tag }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
     chip.textContent = tag;
     chip.onclick = () => exploreHashtag(tag);
     wrap.appendChild(chip);
   });
+
+  if (allTags.length > topTags.length) {
+    const moreChip = document.createElement("button");
+    moreChip.className = "chip chip--more";
+    moreChip.textContent = "더보기";
+    moreChip.onclick = openAllTagsSheet;
+    wrap.appendChild(moreChip);
+  }
 
   renderTotalCountBanner();
 }

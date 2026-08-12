@@ -410,17 +410,25 @@ const Storage = {
     return null;
   },
 
-  getTopHashtags(limit = 30) {
+  _getHashtagCounts() {
     const counts = {};
     this.getVisibleStories().forEach((s) => {
       (s.hashtags || []).forEach((tag) => {
         counts[tag] = (counts[tag] || 0) + 1;
       });
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  },
+
+  getTopHashtags(limit = 30) {
+    return this._getHashtagCounts()
       .slice(0, limit)
       .map(([tag]) => tag);
+  },
+
+  // 상단 바의 "더보기" 시트용 — 개수 제한 없이 전체 태그를 많이 쓰인 순으로.
+  getAllHashtagsWithCounts() {
+    return this._getHashtagCounts().map(([tag, count]) => ({ tag, count }));
   },
 
   getHashtagCount(tag) {

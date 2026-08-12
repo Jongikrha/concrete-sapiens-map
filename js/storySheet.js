@@ -240,6 +240,46 @@ function openHashtagSheet(tag) {
   sheetOpen = true;
 }
 
+/**
+ * 상단 바 "더보기" 칩 — 화면에 다 못 넣는 21위 이후 해시태그까지 포함해
+ * 전체 태그를 많이 쓰인 순으로 목록으로 보여준다. 태그를 고르면
+ * exploreHashtag로 이어져 그 태그의 기억 목록(openHashtagSheet)으로 전환된다.
+ */
+function openAllTagsSheet() {
+  renderAllTagsSheetContent();
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  sheetOpen = true;
+}
+
+function renderAllTagsSheetContent() {
+  const content = document.getElementById("sheet-content");
+  const tags = Storage.getAllHashtagsWithCounts();
+
+  const listHtml = tags
+    .map(
+      ({ tag, count }) => `
+        <button class="all-tags-item" data-tag="${escapeHtml(tag)}">
+          <span class="all-tags-item-name">${escapeHtml(tag)}</span>
+          <span class="all-tags-item-count">${count.toLocaleString()}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  content.innerHTML = `
+    <div class="story-spot-header">
+      <div class="story-spot-name">모든 해시태그</div>
+      <span class="story-spot-count">${tags.length}개의 태그</span>
+    </div>
+    <div class="all-tags-list">${listHtml || `<p class="story-list-empty">아직 태그가 없습니다.</p>`}</div>
+  `;
+
+  content.querySelectorAll(".all-tags-item").forEach((btn) => {
+    btn.onclick = () => exploreHashtag(btn.dataset.tag);
+  });
+}
+
 function renderHashtagSheetContent() {
   const tag = hashtagSheetTag;
   const content = document.getElementById("sheet-content");

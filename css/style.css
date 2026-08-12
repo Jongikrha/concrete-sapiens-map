@@ -326,6 +326,11 @@ body {
   font-weight: 500;
 }
 
+.chip--more {
+  color: var(--cs-text-main);
+  font-weight: 500;
+}
+
 /* ------------------------------------------------------------
    활성 필터(해시태그/연도) 집단 기억 숫자 배너
    ------------------------------------------------------------ */
@@ -1343,6 +1348,49 @@ button.story-place-line:hover {
   color: var(--cs-text-muted);
   padding: 24px 0;
   text-align: center;
+}
+
+/* ------------------------------------------------------------
+   전체 해시태그 목록 ("더보기" 시트)
+   ------------------------------------------------------------ */
+.all-tags-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.all-tags-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-top: 1px solid var(--cs-map-gray);
+  background: none;
+  padding: 16px 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.all-tags-item:first-child {
+  border-top: none;
+}
+
+.all-tags-item:hover .all-tags-item-name {
+  color: var(--cs-orange);
+}
+
+.all-tags-item-name {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--cs-text-main);
+}
+
+.all-tags-item-count {
+  font-size: 12.5px;
+  color: var(--cs-text-muted);
 }
 
 /* ------------------------------------------------------------

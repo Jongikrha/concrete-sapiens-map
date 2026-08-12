@@ -14,7 +14,7 @@ const CONFIG = {
   MAX_CONTENT_LENGTH: 200,
 
   // 상단 해시태그 바에 노출할 개수 (많이 쓰인 순 상위 N개)
-  TOP_HASHTAG_LIMIT: 30,
+  TOP_HASHTAG_LIMIT: 20,
 
   // 신고 누적 시 자동 숨김(HIDDEN) 처리 기준
   REPORT_HIDE_THRESHOLD: 5,
