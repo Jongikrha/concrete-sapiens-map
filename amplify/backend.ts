@@ -79,3 +79,16 @@ backend.auth.resources.cfnResources.cfnUserPool.addPropertyOverride(
   'EmailConfiguration.SourceArn',
   `arn:${Aws.PARTITION}:ses:${Aws.REGION}:${Aws.ACCOUNT_ID}:identity/concretesapiens.com`,
 );
+
+// defineAuth()는 비밀번호 정책을 직접 설정하는 옵션이 없어 Amplify Gen2
+// 기본값(8자+대소문자+숫자+특수문자 전부 필수)이 그대로 적용돼 있었다.
+// 가입 진입장벽을 낮추기 위해 길이 조건만 남기고 문자 조합 요구는 전부
+// 뺀다(2026-08-13). 프론트 검증(js/auth.js의 isValidPassword)도 동일하게
+// 맞춰야 한다 — 서버만 풀고 클라이언트가 더 빡빡하게 막으면 의미 없음.
+backend.auth.resources.cfnResources.cfnUserPool.addPropertyOverride('Policies.PasswordPolicy', {
+  MinimumLength: 8,
+  RequireLowercase: false,
+  RequireUppercase: false,
+  RequireNumbers: false,
+  RequireSymbols: false,
+});
