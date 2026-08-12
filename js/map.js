@@ -61,7 +61,10 @@ function initMap() {
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,
-    minLevel: 3, // 더 확대해도(1km 스케일 부근까지) 숫자 클러스터가 유지되도록 낮춤
+    // 낮을수록 더 확대해야만 클러스터가 풀린다(정확한 위치 노출을 늦추려는
+    // 의도). 3이었을 때 동네 수준으로 확대해도 계속 뭉쳐 보인다는 피드백이
+    // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
+    minLevel: 5,
     disableClickZoom: false,
     styles: [
       {
