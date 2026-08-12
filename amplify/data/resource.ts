@@ -36,7 +36,7 @@ const schema = a.schema({
       // 도입 이후 로그인한 사용자의 쓰기/읽기가 전부 거부된다. 게스트와
       // 동일한 권한을 authenticated에도 그대로 미러링한다.
       allow.guest().to(['create', 'read', 'update']),
-      allow.authenticated().to(['create', 'read', 'update']),
+      allow.authenticated('identityPool').to(['create', 'read', 'update']),
       allow.group('Admins'),
     ]),
 
@@ -56,7 +56,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
-      allow.authenticated().to(['create']),
+      allow.authenticated('identityPool').to(['create']),
       allow.group('Admins').to(['read']),
     ]),
 
@@ -68,7 +68,7 @@ const schema = a.schema({
     .authorization((allow) => [
       allow.group('Admins'),
       allow.guest().to(['read']),
-      allow.authenticated().to(['read']),
+      allow.authenticated('identityPool').to(['read']),
     ]),
 
   // 방문 로그 — write-only 텔레메트리. 게스트는 쓰기만(자기가 남긴 것도 못 읽음),
@@ -79,7 +79,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
-      allow.authenticated().to(['create']),
+      allow.authenticated('identityPool').to(['create']),
       allow.group('Admins').to(['read']),
     ]),
 });

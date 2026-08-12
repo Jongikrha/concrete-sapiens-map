@@ -9,6 +9,23 @@ const backend = defineBackend({
   data,
 });
 
+// groups: ['Admins']를 쓰면 Identity Pool의 역할 매핑이 자동으로 "Token" 방식이
+// 된다 — 로그인 토큰에 그룹 역할이 실려 있으면 IAM 인증(js/backend.js의 기본
+// 클라이언트, 메인 페이지가 씀)에서도 일반 authenticated 역할 대신 그 그룹
+// 전용 역할을 assume해버린다. Admins 그룹 역할은 기본적으로 권한이 하나도
+// 없어서(Amplify Gen2 기본 동작) 이 상태로는 그냥 401로 막히고, IAM 정책을
+// 채워줘도 @auth 트랜스포머의 allow.authenticated()/allow.group() 체크가
+// IAM 모드에서는 "이 역할이 authenticated 역할 ARN과 정확히 같은가"만
+// 보기 때문에(그룹 역할은 다른 ARN이라 항상 실패) 여전히 막힌다(2026-08-12
+// 확인 — 어드민 계정으로 로그인한 채 메인 지도를 열면 재현됨).
+// 이 그룹 전용 IAM 권한 체계는 애초에 이 앱에서 쓰지 않는다 — 어드민 권한은
+// js/admin.js가 명시하는 authMode:'userPool'(원본 JWT, cognito:groups 클레임)
+// 경로로만 검사한다. 그래서 Identity Pool 역할 매핑 자체를 지워서 IAM 인증은
+// 그룹과 무관하게 항상 authenticated/unauthenticated 역할만 쓰도록 되돌린다.
+backend.auth.resources.cfnResources.cfnIdentityPoolRoleAttachment.addPropertyDeletionOverride(
+  'RoleMappings'
+);
+
 // DynamoDB 기본값은 On-Demand(PAY_PER_REQUEST)라 무료 티어가 적용되지 않는다.
 // Provisioned 25 WCU/25 RCU는 기한 없이 무료(Always Free)이므로 여기서 강제한다.
 // 반드시 첫 배포 전에 설정해야 한다 — 테이블 생성 후 바꾸면 재생성(데이터 유실)된다.
