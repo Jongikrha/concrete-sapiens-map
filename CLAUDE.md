@@ -39,8 +39,29 @@ push가 들어올 수 있으므로, 저(Claude)와 함께하는 작업은 아래
 - `amplify/auth/resource.ts`, `amplify/data/resource.ts`(스키마/인증 규칙)는
   **`main`에 push한다고 자동 반영되지 않는다.** `amplify.yml`이 빌드를 스킵하는
   정적 배포라, 백엔드는 별도로 `npm run deploy`(`scripts/deploy-backend.sh`)를
-  실행해야 한다 — `ampx sandbox --once --identifier prod --profile todoc`로 실제
-  AWS 리소스에 배포한 뒤, 재생성된 `amplify_outputs.json`을 커밋+push까지 처리한다.
+  실행해야 한다 — `ampx sandbox --once --identifier prod --profile concrete-sapiens-deploy`로
+  실제 AWS 리소스에 배포한 뒤, 재생성된 `amplify_outputs.json`을 커밋+push까지 처리한다.
+
+### 배포 전용 IAM 사용자 — `concrete-sapiens-deploy`
+
+- `todoc` 프로필(계정 전체 관리자 권한, 다른 클라이언트 사이트까지 건드릴 수
+  있음)을 여러 작업자에게 나눠주지 않으려고 이 프로젝트 배포에만 쓰는 별도
+  IAM 사용자를 만들었다(2026-08-12). 자격증명이 새도 이 프로젝트 배포 경로
+  밖으로는 못 나간다 — `todoc`과 독립적으로 회수/재발급 가능.
+- **주의**: CDK 부트스트랩의 `cfn-exec-role`에 `AdministratorAccess`가 붙어있는
+  게 이 계정의 기본 구조라, 이 키로 `sts:AssumeRole` 체인을 타면 실질적으로는
+  계정 관리자 권한과 동급이다(진짜 최소권한을 원하면 이 프로젝트 전용 CDK
+  부트스트랩을 새로 파야 하는데, 지금 라이브 배포 경로를 건드리는 거라
+  하지 않았다). 그래도 **자격증명 자체는 `todoc`과 분리**돼 있어서 이 키만
+  회수해도 다른 사이트에는 영향 없다.
+  - 부여된 권한: CDK 부트스트랩 역할(`cdk-hnb659fds-{deploy,file-publishing,
+    lookup,image-publishing}-role`) assume, `amplify-concretesapiensmap-*`
+    스택 조회, `/amplify/concretesapiensmap/*` SSM 파라미터, 이 프로젝트의
+    Amplify codegen 자산 S3 버킷. DB 스키마(모델/필드)를 나중에 바꿔도 이
+    권한들은 전부 고정된 리소스라 추가 권한 없이 그대로 동작한다 — 실제
+    리소스 생성은 CDK 부트스트랩 역할을 통해 이뤄지기 때문.
+  - IAM 정책은 `aws iam get-user-policy --user-name concrete-sapiens-deploy
+    --policy-name cdk-deploy-assume --profile todoc`로 확인 가능.
 - **`amplify/` 아래 스키마를 바꾼 프론트 코드를 `npm run deploy` 없이 먼저
   push하면 라이브 사이트가 깨진다** (2026-08-11 확인 — `StoryAuthor` 모델 참조
   코드가 먼저 배포되어 어드민 로그인 후 `Cannot read properties of undefined

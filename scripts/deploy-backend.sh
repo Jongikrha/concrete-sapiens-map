@@ -8,6 +8,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# 이 프로젝트 배포 전용으로 발급한 최소권한 IAM 사용자(concrete-sapiens-deploy).
+# 계정 전체를 건드릴 수 있는 todoc 마스터 키 대신 쓴다 — 별도로 회수/재발급
+# 가능하고, todoc 키를 여러 작업자에게 나눠줄 필요가 없다(2026-08-12).
+# 다른 프로필을 쓰고 싶으면 AWS_PROFILE 환경변수로 덮어쓰면 된다.
+AWS_PROFILE="${AWS_PROFILE:-concrete-sapiens-deploy}"
+
 echo "[deploy] origin 최신 상태 확인..."
 git fetch origin
 LOCAL=$(git rev-parse HEAD)
@@ -17,8 +23,8 @@ if [ "$LOCAL" != "$REMOTE" ]; then
   exit 1
 fi
 
-echo "[deploy] prod 백엔드 배포 중 (ampx sandbox --once --identifier prod)..."
-npx ampx sandbox --once --identifier prod --profile todoc
+echo "[deploy] prod 백엔드 배포 중 (ampx sandbox --once --identifier prod, profile=$AWS_PROFILE)..."
+npx ampx sandbox --once --identifier prod --profile "$AWS_PROFILE"
 
 if git diff --quiet -- amplify_outputs.json; then
   echo "[deploy] 백엔드 변경 없음 — amplify_outputs.json 그대로, 커밋 안 함."
