@@ -1,13 +1,34 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { Aws } from 'aws-cdk-lib';
 import { BillingMode } from 'aws-cdk-lib/aws-dynamodb';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
+import { adminUsersFn } from './functions/admin-users/resource';
 
 const backend = defineBackend({
   auth,
   data,
+  adminUsersFn,
 });
+
+// 어드민 회원관리(adminListUsers 등)가 쓰는 Lambda — Cognito Admin API 호출용
+// 권한을 이 User Pool 하나로만 좁혀서 부여한다.
+backend.adminUsersFn.addEnvironment('USER_POOL_ID', backend.auth.resources.userPool.userPoolId);
+backend.adminUsersFn.resources.lambda.role?.addToPrincipalPolicy(
+  new PolicyStatement({
+    actions: [
+      'cognito-idp:ListUsers',
+      'cognito-idp:ListUsersInGroup',
+      'cognito-idp:AdminEnableUser',
+      'cognito-idp:AdminDisableUser',
+      'cognito-idp:AdminDeleteUser',
+      'cognito-idp:AdminAddUserToGroup',
+      'cognito-idp:AdminRemoveUserFromGroup',
+    ],
+    resources: [backend.auth.resources.userPool.userPoolArn],
+  })
+);
 
 // groups: ['Admins']를 쓰면 Identity Pool의 역할 매핑이 자동으로 "Token" 방식이
 // 된다 — 로그인 토큰에 그룹 역할이 실려 있으면 IAM 인증(js/backend.js의 기본

@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { adminUsersFn } from '../functions/admin-users/resource';
 
 // js/storage.js의 Story 객체(js/composer.js openComposer 제출 핸들러에서 생성)와
 // 필드를 그대로 맞춘다. publicId 조회는 부팅 시 가져온 캐시에서 로컬로 처리하므로
@@ -82,6 +83,46 @@ const schema = a.schema({
       allow.authenticated('identityPool').to(['create']),
       allow.group('Admins').to(['read']),
     ]),
+
+  // 회원관리(어드민 전용) — Cognito Admin API(ListUsers/AdminDisableUser 등)는
+  // IAM 관리자 권한이 필요해 브라우저에서 직접 호출할 수 없다. adminUsersFn
+  // 하나가 fieldName으로 분기해서 처리한다(amplify/functions/admin-users).
+  AdminUser: a.customType({
+    username: a.string().required(),
+    userId: a.string().required(),
+    email: a.string().required(),
+    enabled: a.boolean().required(),
+    status: a.string().required(),
+    createdAt: a.string().required(),
+    isAdmin: a.boolean().required(),
+  }),
+
+  adminListUsers: a
+    .query()
+    .returns(a.ref('AdminUser').array())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
+
+  adminSetUserEnabled: a
+    .mutation()
+    .arguments({ username: a.string().required(), enabled: a.boolean().required() })
+    .returns(a.boolean())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
+
+  adminDeleteUser: a
+    .mutation()
+    .arguments({ username: a.string().required() })
+    .returns(a.boolean())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
+
+  adminSetUserAdmin: a
+    .mutation()
+    .arguments({ username: a.string().required(), isAdmin: a.boolean().required() })
+    .returns(a.boolean())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
 });
 
 export type Schema = ClientSchema<typeof schema>;

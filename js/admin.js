@@ -17,6 +17,10 @@ const OUTPUTS_FILE = isLocalDev ? "/amplify_outputs.local.json" : "/amplify_outp
 let activeTab = "queue";
 let activeDeviceFilter = null;
 let storyAuthorEmailById = {};
+let storyCountByUserId = {};
+let client = null;
+let currentUsername = null;
+let members = null; // 회원관리 탭에서만 필요해서 첫 진입 때 로드(지연 로딩)
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -36,14 +40,18 @@ async function isAdminSession() {
 }
 
 async function bootAdminClient() {
-  const client = generateClient({ authMode: "userPool" });
+  client = generateClient({ authMode: "userPool" });
   Storage._setClient(client);
   await Storage.refresh();
 
+  currentUsername = (await getCurrentUser()).username;
+
   const authors = await Storage.listStoryAuthors();
   storyAuthorEmailById = {};
+  storyCountByUserId = {};
   authors.forEach((a) => {
     storyAuthorEmailById[a.storyId] = a.email;
+    storyCountByUserId[a.userId] = (storyCountByUserId[a.userId] || 0) + 1;
   });
 }
 
@@ -302,11 +310,98 @@ async function renderVisitsTab() {
   `;
 }
 
+/**
+ * 회원 목록은 Cognito Admin API(ListUsers)를 거쳐서 매번 새로 불러오는 게
+ * 다른 탭보다 느리다 — 탭 진입 시 한 번만 불러오고 액션 후에만 다시 부른다.
+ */
+async function loadMembers() {
+  const { data, errors } = await client.queries.adminListUsers();
+  if (errors) {
+    console.error("회원 목록 조회 실패", errors);
+    return [];
+  }
+  return [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function memberRowHtml(member) {
+  const isSelf = member.username === currentUsername;
+  const joinedDate = member.createdAt ? member.createdAt.slice(0, 10) : "-";
+  const storyCount = storyCountByUserId[member.userId] || 0;
+
+  return `
+    <div class="admin-card" data-username="${escapeHtml(member.username)}">
+      <div class="admin-card-meta">
+        <span>${escapeHtml(member.email)}</span>
+        <span>가입 ${joinedDate}</span>
+        <span>작성 ${storyCount}건</span>
+        <span>${member.enabled ? "정상" : "정지됨"}</span>
+        <span>${member.isAdmin ? "관리자" : "일반회원"}</span>
+        ${isSelf ? '<span class="admin-self-badge">나</span>' : ""}
+      </div>
+      <div class="admin-card-actions">
+        ${isSelf
+          ? ""
+          : `
+            <button class="btn-restore" data-action="toggle-enabled" data-username="${escapeHtml(member.username)}" data-enabled="${member.enabled}">
+              ${member.enabled ? "정지" : "정지 해제"}
+            </button>
+            <button class="btn-restore" data-action="toggle-admin" data-username="${escapeHtml(member.username)}" data-is-admin="${member.isAdmin}">
+              ${member.isAdmin ? "관리자 해제" : "관리자 지정"}
+            </button>
+            <button class="btn-delete" data-action="delete-member" data-username="${escapeHtml(member.username)}">계정 삭제</button>
+          `}
+      </div>
+    </div>
+  `;
+}
+
+async function renderMembersTab() {
+  clearDeviceFilterBanner();
+  if (members === null) {
+    document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+    members = await loadMembers();
+  }
+
+  const keyword = document.getElementById("member-search-input")?.value.trim() || "";
+  const filtered = keyword ? members.filter((m) => m.email.includes(keyword)) : members;
+
+  const html = filtered.length
+    ? filtered.map(memberRowHtml).join("")
+    : `<p class="empty-state">해당하는 회원이 없습니다.</p>`;
+
+  document.getElementById("admin-content").innerHTML = `
+    <div class="admin-section-title">회원관리 (${members.length}명)</div>
+    <div class="search-row"><input type="text" id="member-search-input" placeholder="이메일 검색" value="${escapeHtml(keyword)}" /></div>
+    ${html}
+  `;
+  document.getElementById("member-search-input").addEventListener("input", () => renderMembersTab());
+}
+
+async function handleMemberAction(action, username, dataset) {
+  if (action === "toggle-enabled") {
+    const enabled = dataset.enabled === "true";
+    const verb = enabled ? "정지" : "정지 해제";
+    if (!confirm(`${username} 계정을 ${verb}할까요?`)) return;
+    await client.mutations.adminSetUserEnabled({ username, enabled: !enabled });
+  } else if (action === "toggle-admin") {
+    const isAdmin = dataset.isAdmin === "true";
+    const verb = isAdmin ? "관리자 권한을 해제" : "관리자로 지정";
+    if (!confirm(`${username} 계정을 ${verb}할까요?`)) return;
+    await client.mutations.adminSetUserAdmin({ username, isAdmin: !isAdmin });
+  } else if (action === "delete-member") {
+    if (!confirm(`${username} 계정을 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    await client.mutations.adminDeleteUser({ username });
+  }
+  members = null; // 다음 렌더에서 강제로 다시 불러오게
+  renderMembersTab();
+}
+
 function renderActiveTab() {
   if (activeTab === "queue") renderQueueTab();
   else if (activeTab === "all") renderAllTab();
   else if (activeTab === "words") renderWordsTab();
   else if (activeTab === "visits") renderVisitsTab();
+  else if (activeTab === "members") renderMembersTab();
 }
 
 document.getElementById("admin-content").addEventListener("click", (e) => {
@@ -317,7 +412,11 @@ document.getElementById("admin-content").addEventListener("click", (e) => {
   }
   const actionBtn = e.target.closest("[data-action]");
   if (actionBtn) {
-    handleCardAction(actionBtn.dataset.action, actionBtn.dataset.id);
+    if (actionBtn.dataset.username) {
+      handleMemberAction(actionBtn.dataset.action, actionBtn.dataset.username, actionBtn.dataset);
+    } else {
+      handleCardAction(actionBtn.dataset.action, actionBtn.dataset.id);
+    }
   }
 });
 

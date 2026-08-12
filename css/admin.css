@@ -149,6 +149,14 @@ body {
   margin-bottom: 10px;
 }
 
+.admin-self-badge {
+  background: var(--cs-orange);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
 .device-badge {
   border: none;
   background: var(--cs-map-gray);
