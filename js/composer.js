@@ -128,6 +128,10 @@ function openComposer(pin) {
     <button class="btn-primary" id="btn-submit">${editing ? "수정 완료" : "기억 남기기"}</button>
     <button class="btn-secondary" id="btn-cancel">취소</button>
   `;
+  // innerHTML만 바꾸면 패널 자체의 스크롤 위치는 유지된다 — 직전에 폼을
+  // 스크롤해서 닫은 적이 있으면 다음에 열 때도 그 위치(아래쪽)부터
+  // 보이는 문제가 있어 새로 열 때마다 맨 위로 리셋한다.
+  panel.scrollTop = 0;
 
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
