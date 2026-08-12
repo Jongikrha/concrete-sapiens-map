@@ -3,7 +3,6 @@
 // ============================================================
 
 let map;
-let clusterer;
 let placesService;
 let geocoderService;
 let markers = []; // { marker, group }
@@ -57,32 +56,6 @@ function initMap() {
     level: CONFIG.DEFAULT_LEVEL,
   };
   map = new kakao.maps.Map(container, options);
-
-  clusterer = new kakao.maps.MarkerClusterer({
-    map,
-    averageCenter: true,
-    // 낮을수록 더 확대해야만 클러스터가 풀린다(정확한 위치 노출을 늦추려는
-    // 의도). 3이었을 때 동네 수준으로 확대해도 계속 뭉쳐 보인다는 피드백이
-    // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
-    minLevel: 5,
-    disableClickZoom: false,
-    // 뭉친 지점도 개별 Memory Dot과 같은 Signal Orange 점으로 보이도록,
-    // 숫자 배지 대신 makeDotImage의 큰 점(tier 4) 모양을 그대로 재사용한다.
-    styles: [
-      {
-        width: "19px",
-        height: "19px",
-        background: "#FF5A36",
-        borderRadius: "50%",
-        border: "2px solid #FFFFFF",
-        color: "transparent",
-        textAlign: "center",
-        lineHeight: "19px",
-        fontSize: "0px",
-        fontWeight: "500",
-      },
-    ],
-  });
 
   placesService = new kakao.maps.services.Places();
   geocoderService = new kakao.maps.services.Geocoder();
@@ -148,8 +121,10 @@ function highlightMarkerForStory(story) {
 // 마커 렌더링 (해시태그 / 연도 / 시간 슬라이더 필터 적용)
 // ------------------------------------------------------------
 function renderMarkers() {
-  clusterer.clear();
-  markers.forEach((m) => kakao.maps.event.removeListener(m.marker, "click"));
+  markers.forEach((m) => {
+    kakao.maps.event.removeListener(m.marker, "click");
+    m.marker.setMap(null);
+  });
   markers = [];
   highlightedMarker = null;
 
@@ -175,21 +150,17 @@ function renderMarkers() {
       .filter((g) => g.stories.length > 0);
   }
 
-  const kakaoMarkers = [];
-
   groups.forEach((group) => {
     const tier = tierForCount(group.stories.length);
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),
       image: makeDotImage(tier, false),
+      map,
     });
     kakao.maps.event.addListener(marker, "click", () => openSheet(group));
     markers.push({ marker, group });
-    kakaoMarkers.push(marker);
   });
-
-  clusterer.addMarkers(kakaoMarkers);
 }
 
 function goToMyLocation() {
