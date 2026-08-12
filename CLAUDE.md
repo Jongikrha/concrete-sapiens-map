@@ -56,12 +56,22 @@ push가 들어올 수 있으므로, 저(Claude)와 함께하는 작업은 아래
   회수해도 다른 사이트에는 영향 없다.
   - 부여된 권한: CDK 부트스트랩 역할(`cdk-hnb659fds-{deploy,file-publishing,
     lookup,image-publishing}-role`) assume, `amplify-concretesapiensmap-*`
-    스택 조회, `/amplify/concretesapiensmap/*` SSM 파라미터, 이 프로젝트의
-    Amplify codegen 자산 S3 버킷. DB 스키마(모델/필드)를 나중에 바꿔도 이
-    권한들은 전부 고정된 리소스라 추가 권한 없이 그대로 동작한다 — 실제
-    리소스 생성은 CDK 부트스트랩 역할을 통해 이뤄지기 때문.
+    스택(+ `CDKToolkit`)에 대한 `cloudformation:*`, `/amplify/concretesapiensmap/*`
+    SSM 파라미터, 이 프로젝트의 Amplify codegen 자산 S3 버킷.
+  - 처음엔 CloudFormation 액션을 `DescribeStacks`/`GetTemplateSummary` 등으로
+    하나씩 좁혀서 넣었다가, `ampx sandbox`가 배포 완료 후 `amplify_outputs.json`을
+    만드는 단계에서 매번 다른 액션(`GetTemplate`, `ListStackResources`, ...)에
+    걸려 여러 번 재시도하는 사고가 있었다(2026-08-12). 액션을 하나씩 알아내며
+    좁히지 말고, 처음부터 이 스택 ARN 범위 안에서는 `cloudformation:*`로
+    포괄 허용한다 — 리소스는 이미 스택 ARN 패턴으로 좁혀놨으니 액션까지
+    쪼갤 실익이 적고, 시행착오 비용이 훨씬 크다.
+  - DB 스키마(모델/필드)를 나중에 바꿔도 이 권한들은 전부 고정된 리소스라
+    추가 권한 없이 그대로 동작한다 — 실제 리소스 생성은 CDK 부트스트랩
+    역할을 통해 이뤄지기 때문.
   - IAM 정책은 `aws iam get-user-policy --user-name concrete-sapiens-deploy
-    --policy-name cdk-deploy-assume --profile todoc`로 확인 가능.
+    --policy-name cdk-deploy-assume --profile todoc`로 확인 가능. 실제로
+    `npm run deploy`가 처음부터 끝까지(`amplify_outputs.json` 생성까지)
+    성공하는 것까지 확인했다.
 - **`amplify/` 아래 스키마를 바꾼 프론트 코드를 `npm run deploy` 없이 먼저
   push하면 라이브 사이트가 깨진다** (2026-08-11 확인 — `StoryAuthor` 모델 참조
   코드가 먼저 배포되어 어드민 로그인 후 `Cannot read properties of undefined
