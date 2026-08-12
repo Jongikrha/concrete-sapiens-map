@@ -6,6 +6,8 @@ let sheetOpen = false;
 let spotTimelineOpen = {};
 let spotTimelineFocusYear = {};
 let currentSort = "latest";
+let hashtagSheetTag = null;
+let hashtagSheetSort = "latest";
 
 function openSheet(group) {
   currentSort = "latest";
@@ -80,14 +82,14 @@ function renderSheetContent(group) {
     });
     undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    listHtml = dated.map(renderStoryItem).join("");
+    listHtml = dated.map((s) => renderStoryItem(s)).join("");
     if (undated.length > 0) {
       listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
-      listHtml += undated.map(renderStoryItem).join("");
+      listHtml += undated.map((s) => renderStoryItem(s)).join("");
     }
   } else {
     const sorted = [...displayStories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    listHtml = sorted.map(renderStoryItem).join("");
+    listHtml = sorted.map((s) => renderStoryItem(s)).join("");
   }
 
   const distinctYears = [...new Set(group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null))].sort((a, b) => a - b);
@@ -125,46 +127,14 @@ function renderSheetContent(group) {
     btn.onclick = () => { currentSort = btn.dataset.sort; renderSheetContent(group); };
   });
 
-  content.querySelectorAll(".hashtag-link").forEach((link) => {
-    link.onclick = () => exploreHashtag(link.dataset.tag, link.dataset.storyId);
-  });
-
-  content.querySelectorAll(".year-explore-link").forEach((link) => {
-    link.onclick = () => exploreSameYear(parseInt(link.dataset.year, 10), link.dataset.storyId);
-  });
-
-  content.querySelectorAll(".reaction-btn").forEach((btn) => {
-    btn.onclick = () => { Storage.toggleReaction(btn.dataset.id); renderSheetContent(group); };
-  });
-
-  content.querySelectorAll(".share-btn").forEach((btn) => {
-    btn.onclick = () => handleShare(btn.dataset.id);
-  });
-
-  content.querySelectorAll(".story-item-menu-btn").forEach((btn) => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      const dropdown = document.getElementById(`menu-${btn.dataset.menuId}`);
-      document.querySelectorAll(".story-item-menu-dropdown").forEach((d) => {
-        if (d !== dropdown) d.classList.add("hidden");
-      });
-      dropdown.classList.toggle("hidden");
-    };
-  });
-
-  content.querySelectorAll(".report-link").forEach((btn) => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      if (confirm("이 기록을 신고하시겠습니까?")) {
-        Storage.reportStory(btn.dataset.id);
-        alert("신고가 접수되었습니다.");
-        const rawRefreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
-        const refreshed = rawRefreshed ? applyActiveFilterToGroup(rawRefreshed) : null;
-        if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
-        else closeSheet();
-        renderMarkers();
-      }
-    };
+  bindStoryItemEvents(content, {
+    onChange: () => renderSheetContent(group),
+    onReport: () => {
+      const rawRefreshed = Storage.getGroupedByPlace().find((g) => g.key === group.key);
+      const refreshed = rawRefreshed ? applyActiveFilterToGroup(rawRefreshed) : null;
+      if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
+      else closeSheet();
+    },
   });
 
   const timelineToggle = content.querySelector("#spot-timeline-toggle");
@@ -198,12 +168,137 @@ function renderSheetContent(group) {
   };
 }
 
-function renderStoryItem(story) {
+/**
+ * story-item 내부 공통 인터랙션(해시태그/연도 이동, 장소 이동, 공감, 전달, 신고
+ * 메뉴)을 한 곳에서 바인딩한다. renderSheetContent(단일 스팟)와
+ * renderHashtagSheetContent(태그 전체 목록)가 같이 쓴다 — 정렬 갱신처럼
+ * 컨텍스트별로 달라지는 부분만 onChange/onReport로 호출부에서 넘겨준다.
+ */
+function bindStoryItemEvents(content, { onChange, onReport }) {
+  content.querySelectorAll(".hashtag-link").forEach((link) => {
+    link.onclick = () => exploreHashtag(link.dataset.tag);
+  });
+
+  content.querySelectorAll(".year-explore-link").forEach((link) => {
+    link.onclick = () => exploreSameYear(parseInt(link.dataset.year, 10), link.dataset.storyId);
+  });
+
+  // 태그 전체 목록처럼 여러 스팟이 섞여 있는 화면에서만 렌더되는 장소 이동 링크
+  // (renderStoryItem의 showLocation 옵션). 단일 스팟 화면엔 없어서 no-op.
+  content.querySelectorAll(".story-place-line").forEach((btn) => {
+    btn.onclick = () => {
+      const story = Storage.getAllStories().find((s) => s.id === btn.dataset.storyId);
+      if (!story) return;
+      closeSheet();
+      flyToStory(story, true);
+    };
+  });
+
+  content.querySelectorAll(".reaction-btn").forEach((btn) => {
+    btn.onclick = () => { Storage.toggleReaction(btn.dataset.id); onChange(); };
+  });
+
+  content.querySelectorAll(".share-btn").forEach((btn) => {
+    btn.onclick = () => handleShare(btn.dataset.id);
+  });
+
+  content.querySelectorAll(".story-item-menu-btn").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const dropdown = document.getElementById(`menu-${btn.dataset.menuId}`);
+      document.querySelectorAll(".story-item-menu-dropdown").forEach((d) => {
+        if (d !== dropdown) d.classList.add("hidden");
+      });
+      dropdown.classList.toggle("hidden");
+    };
+  });
+
+  content.querySelectorAll(".report-link").forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm("이 기록을 신고하시겠습니까?")) {
+        Storage.reportStory(btn.dataset.id);
+        alert("신고가 접수되었습니다.");
+        onReport();
+        renderMarkers();
+      }
+    };
+  });
+}
+
+/**
+ * 해시태그 칩/링크를 누르면 그 태그를 가진 모든 기억을(스팟 하나가 아니라
+ * 전국에서) 한 목록으로 보여준다. 기본은 최신순, 시간여행순(연도·월 오름차순)
+ * 으로도 볼 수 있다 — 스팟 상세의 sort-toggle과 같은 문법을 재사용한다.
+ */
+function openHashtagSheet(tag) {
+  hashtagSheetTag = tag;
+  hashtagSheetSort = "latest";
+  renderHashtagSheetContent();
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  sheetOpen = true;
+}
+
+function renderHashtagSheetContent() {
+  const tag = hashtagSheetTag;
+  const content = document.getElementById("sheet-content");
+  const stories = Storage.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag));
+
+  let listHtml;
+  if (hashtagSheetSort === "timetravel") {
+    const dated = stories.filter((s) => Storage.getStoryYear(s) !== null);
+    const undated = stories.filter((s) => Storage.getStoryYear(s) === null);
+
+    dated.sort((a, b) => {
+      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
+      if (ay !== by) return ay - by;
+      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
+      return am - bm;
+    });
+    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    listHtml = dated.map((s) => renderStoryItem(s, { showLocation: true })).join("");
+    if (undated.length > 0) {
+      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
+      listHtml += undated.map((s) => renderStoryItem(s, { showLocation: true })).join("");
+    }
+  } else {
+    const sorted = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    listHtml = sorted.map((s) => renderStoryItem(s, { showLocation: true })).join("");
+  }
+
+  content.innerHTML = `
+    <div class="story-spot-header">
+      <div class="story-spot-name">${escapeHtml(tag)}</div>
+      <span class="story-spot-count">${stories.length}개의 기억</span>
+    </div>
+    <div class="sort-toggle">
+      <button class="sort-btn ${hashtagSheetSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
+      <button class="sort-btn ${hashtagSheetSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
+    </div>
+    <div class="story-list">${listHtml || `<p class="story-list-empty">아직 이 태그를 가진 기억이 없습니다.</p>`}</div>
+  `;
+
+  content.querySelectorAll(".sort-btn").forEach((btn) => {
+    btn.onclick = () => { hashtagSheetSort = btn.dataset.sort; renderHashtagSheetContent(); };
+  });
+
+  bindStoryItemEvents(content, {
+    onChange: renderHashtagSheetContent,
+    onReport: renderHashtagSheetContent,
+  });
+}
+
+function renderStoryItem(story, options = {}) {
   const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
   const yearMain = numericYear !== null ? numericYear : "· · ·";
-  const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}" data-story-id="${story.id}">${escapeHtml(t)}</button>`).join(" ");
+  const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
+  const locationHtml = options.showLocation
+    ? `<button class="story-place-line" data-story-id="${story.id}">${escapeHtml(Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address }))}</button>`
+    : "";
 
   return `
     <div class="story-item">
@@ -211,6 +306,7 @@ function renderStoryItem(story) {
         <p class="story-year">${yearMain}</p>
         ${month ? `<p class="story-month">${month}월</p>` : ""}
       </div>
+      ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
       <div class="story-author-row">
         <span class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</span>

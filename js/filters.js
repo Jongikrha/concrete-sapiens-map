@@ -63,25 +63,16 @@ function openDailyPrompt() {
 }
 
 /**
- * 해시태그 클릭 — 전국 필터를 걸어두는 데서 그치지 않고, 그 태그를 가진
- * 기억 중 하나로 바로 날아가 카드를 열어준다. "N년의 다른 기억
- * 둘러보기"와 동일한 문법으로, 눌렀을 때 즉각적인 보상을 준다.
+ * 해시태그 클릭 — 전국 필터를 걸어 지도 마커도 그 태그로 좁히고, 그 태그를
+ * 가진 모든 기억을 한 목록(openHashtagSheet)으로 바로 보여준다.
  */
-function exploreHashtag(tag, excludeStoryId) {
-  closeSheet();
+function exploreHashtag(tag) {
   activeHashtagFilter = tag;
   activeYearFilter = null;
   closeSlider();
   renderHashtagChips();
   renderMarkers();
-
-  const all = Storage.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag));
-  const candidates = all.filter((s) => s.id !== excludeStoryId);
-  const pool = candidates.length > 0 ? candidates : all;
-  if (pool.length === 0) return;
-
-  const target = pool[Math.floor(Math.random() * pool.length)];
-  flyToStory(target, true);
+  openHashtagSheet(tag);
 }
 
 function setYearFilter(year) {

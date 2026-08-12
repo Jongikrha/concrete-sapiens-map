@@ -837,6 +837,22 @@ body {
   margin: 4px 0 16px;
 }
 
+/* 해시태그 전체 목록처럼 여러 스팟이 섞인 화면에서만 버튼으로 쓰인다
+   (js/storySheet.js renderStoryItem의 showLocation 옵션). */
+button.story-place-line {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button.story-place-line:hover {
+  color: var(--cs-orange);
+}
+
 .story-content {
   margin: 0 0 16px;
   font-size: 15.5px;
@@ -1319,6 +1335,14 @@ body {
 .timeline-section-label:first-child {
   border-top: none;
   margin-top: 0;
+}
+
+.story-list-empty {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--cs-text-muted);
+  padding: 24px 0;
+  text-align: center;
 }
 
 /* ------------------------------------------------------------
