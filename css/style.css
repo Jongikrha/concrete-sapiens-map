@@ -1228,9 +1228,8 @@ button.story-place-line:hover {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--cs-gray);
-  background: #fff;
+  border: none;
+  background: none;
   color: var(--cs-text-muted);
   font-size: 12px;
   cursor: pointer;
@@ -1242,7 +1241,6 @@ button.story-place-line:hover {
 
 .composer-close-btn:hover {
   color: var(--cs-black);
-  border-color: var(--cs-black);
 }
 
 .composer-section-card {
