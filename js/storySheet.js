@@ -414,7 +414,10 @@ function renderStoryItem(story, options = {}) {
       ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
       <div class="story-author-row">
-        <span class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</span>
+        <div class="story-author-identity">
+          <span class="story-avatar">🙂</span>
+          <span class="story-author">${escapeHtml(story.displayAuthorName || "익명")}</span>
+        </div>
         <div class="story-item-menu">
           <button class="story-item-menu-btn" data-menu-id="${story.id}">•••</button>
           <div class="story-item-menu-dropdown hidden" id="menu-${story.id}">

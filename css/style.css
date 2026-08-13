@@ -4,6 +4,13 @@
    ============================================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap");
+/* 기억 카드(js/storySheet.js) 전용 — 제목/연도/본문은 MaruBuri(마루부리,
+   기록물 같은 차분한 분위기), 주소/버튼/태그 등 UI는 Pretendard로
+   구분해서 쓴다(2026-08-13, 폰트 지침 이미지 기준). 다른 화면(작성폼/
+   로그인 등)은 기존 Noto 조합을 그대로 유지 — 이 두 폰트는 기억 카드
+   관련 클래스에만 스코프해서 적용한다. */
+@import url("https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/MaruBuri.css");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 :root {
   --cs-black: #2F3031;
@@ -24,6 +31,8 @@
 
   --font-serif: "Noto Serif KR", serif;
   --font-sans: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  --font-maruburi: "Maru Buri", var(--font-serif);
+  --font-pretendard: "Pretendard", var(--font-sans);
 }
 
 * {
@@ -715,22 +724,36 @@ body {
 
 .story-spot-count {
   display: block;
+  font-family: var(--font-pretendard);
   font-size: 11.5px;
   color: var(--cs-text-muted);
   margin-top: 4px;
 }
 
+/* "OO이 이곳을 'XX'라고 부릅니다" — 정보 안내 박스(연한 배경 + ⓘ 아이콘) */
 .story-custom-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-pretendard);
   font-size: 12.5px;
   color: var(--cs-text-muted);
   margin: 0 0 16px;
-  font-style: italic;
+  background: var(--cs-map-gray);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.story-custom-name::before {
+  content: "ⓘ";
+  flex-shrink: 0;
+  font-size: 13px;
 }
 
 .story-spot-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-maruburi);
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .sort-toggle {
@@ -740,6 +763,7 @@ body {
 }
 
 .sort-btn {
+  font-family: var(--font-pretendard);
   font-size: 11px;
   padding: 5px 12px;
   border-radius: var(--cs-radius-chip);
@@ -779,6 +803,27 @@ body {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.story-author-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.story-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--cs-map-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  /* 이모지를 흑백 톤으로 눌러서 브랜드 톤(회색조)에 맞춘다 */
+  filter: grayscale(1) contrast(0.9) opacity(0.75);
 }
 
 .story-item-menu {
@@ -863,19 +908,17 @@ body {
   border: 1px solid var(--cs-gray);
   border-radius: var(--cs-radius-card);
   padding: 11px 0;
+  font-family: var(--font-pretendard);
   font-size: 13px;
   margin: 0;
 }
 
 .action-row-split .share-btn {
-  color: var(--cs-black);
-  font-weight: 500;
-  border-color: var(--cs-black);
+  color: var(--cs-text-main);
 }
 
 .action-row-split .share-btn:hover {
-  background: var(--cs-black);
-  color: var(--cs-paper);
+  background: var(--cs-map-gray);
 }
 
 .action-row-split .reaction-btn--active {
@@ -899,8 +942,8 @@ body {
 }
 
 .story-year {
-  font-family: var(--font-sans);
-  font-weight: 400;
+  font-family: var(--font-maruburi);
+  font-weight: 300;
   font-size: 74px;
   line-height: 0.92;
   letter-spacing: -2.5px;
@@ -909,8 +952,8 @@ body {
 }
 
 .story-month {
-  font-family: var(--font-sans);
-  font-weight: 500;
+  font-family: var(--font-maruburi);
+  font-weight: 400;
   font-size: 23px;
   line-height: 1.2;
   letter-spacing: -0.3px;
@@ -961,6 +1004,8 @@ button.story-place-line:hover {
 
 .story-content {
   margin: 0 0 16px;
+  font-family: var(--font-maruburi);
+  font-weight: 400;
   font-size: 15.5px;
   line-height: 1.85;
   color: var(--cs-text-main);
@@ -976,11 +1021,13 @@ button.story-place-line:hover {
 
 .hashtag-link {
   border: none;
-  background: none;
+  background: var(--cs-map-gray);
+  border-radius: var(--cs-radius-chip);
+  font-family: var(--font-pretendard);
   color: var(--cs-text-muted);
-  font-size: 12.5px;
+  font-size: 12px;
+  padding: 5px 12px;
   cursor: pointer;
-  padding: 0;
 }
 
 .hashtag-link:hover {
@@ -988,6 +1035,7 @@ button.story-place-line:hover {
 }
 
 .story-author {
+  font-family: var(--font-pretendard);
   font-size: 12px;
   color: var(--cs-text-muted);
   margin: 0;
@@ -1007,6 +1055,7 @@ button.story-place-line:hover {
   border: none;
   background: none;
   padding: 0;
+  font-family: var(--font-pretendard);
   font-size: 13.5px;
   color: var(--cs-text-main);
   cursor: pointer;
@@ -1059,7 +1108,7 @@ button.story-place-line:hover {
   border-radius: 0;
   outline: none;
   background: none;
-  font-family: var(--font-sans);
+  font-family: var(--font-pretendard);
   color: var(--cs-text-muted);
   font-size: 12.5px;
   cursor: pointer;
@@ -1124,6 +1173,7 @@ button.story-place-line:hover {
 .btn-add-story {
   width: 100%;
   margin-top: 20px;
+  font-family: var(--font-pretendard);
 }
 
 /* ------------------------------------------------------------
@@ -1357,9 +1407,14 @@ button.story-place-line:hover {
 }
 
 .story-spot-address {
+  font-family: var(--font-pretendard);
   font-size: 11.5px;
   color: var(--cs-text-muted);
   margin-top: 2px;
+}
+
+.story-spot-address::before {
+  content: "📍 ";
 }
 
 .input-field {
