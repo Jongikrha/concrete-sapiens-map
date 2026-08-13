@@ -1844,6 +1844,17 @@ button.story-place-line:hover {
   .search-input-row {
     border-radius: 12px;
   }
+  /* 데스크톱 패딩/폰트를 그대로 쓰면 바로 아래 해시태그 칩(padding
+     5px 12px, font-size 12px)보다 훨씬 두꺼워 보인다 — 모바일에서만
+     칩과 비슷한 높이로 맞춘다. */
+  #search-input {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  #search-btn {
+    padding: 0 12px;
+    font-size: 12px;
+  }
   .composer-card {
     max-width: 100%;
   }
