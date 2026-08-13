@@ -495,10 +495,18 @@ function shareToKakao(storyId) {
   const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address });
   const year = Storage.getStoryYear(story);
 
+  // Kakao.Share의 feed 템플릿(이미지 카드)은 imageUrl이 필수인데, 이
+  // 사이트는 백엔드가 없는 정적 SPA라 기억별로 카드 이미지를 만들어
+  // 호스팅해줄 서버가 없다 — 그래서 text 템플릿으로 연도·장소·인용구를
+  // 메시지 본문에 담아 보낸다. 링크 미리보기(제목/설명)는 index.html의
+  // 정적 OG 태그를 카카오톡이 그대로 가져와 보여준다.
+  const yearLabel = year !== null ? `${year}년 ` : "";
+  const text = `${yearLabel}${title}\n"${story.content}"`;
+
   try {
     Kakao.Share.sendDefault({
       objectType: "text",
-      text: `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`,
+      text,
       link: { mobileWebUrl: url, webUrl: url },
     });
     Storage.incrementShareCount(storyId);
