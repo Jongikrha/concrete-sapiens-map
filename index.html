@@ -126,17 +126,6 @@
   </div>
 
   <script src="js/config.js"></script>
-  <!-- 카카오톡 공유하기 전용 SDK(지도 SDK와 별개 — 지도는 kakao.maps.*,
-       이건 Kakao.Share.* 네임스페이스라 서로 안 겹친다). 공유 버튼을
-       누르기 전까지는 안 쓰이므로 지도 부팅 순서와 무관하게 독립적으로
-       로드한다. 카카오 개발자 콘솔에서 이 앱의 "카카오톡 공유" 제품이
-       활성화 + 도메인 등록돼 있어야 실제로 동작한다. -->
-  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js" integrity="sha384-zt/G7/KfaRQ9dT/QIkS0ujMtzouJqzuSJcXVQu50x0rl/+mD1dc70AeOejVbMD9E" crossorigin="anonymous"></script>
-  <script>
-    if (window.Kakao && CONFIG.KAKAO_APP_KEY && CONFIG.KAKAO_APP_KEY !== "YOUR_KAKAO_JAVASCRIPT_KEY_HERE") {
-      Kakao.init(CONFIG.KAKAO_APP_KEY);
-    }
-  </script>
   <!-- backend.js(ES 모듈)는 aws-amplify를 CDN에서 받아오는데, 이게 카카오 SDK
        로딩보다 늦게 끝날 수도 있다(네트워크 타이밍에 따라 달라짐 — 실제로
        역전되는 걸 확인함). 그래서 순서에 기대지 않고, 여기서 미리 Promise를

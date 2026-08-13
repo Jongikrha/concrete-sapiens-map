@@ -228,11 +228,11 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
     btn.onclick = () => toggleSharePanel(btn.dataset.id);
   });
 
-  content.querySelectorAll(".share-kakao-btn").forEach((btn) => {
-    btn.onclick = () => shareToKakao(btn.dataset.id);
+  content.querySelectorAll(".share-link-input").forEach((input) => {
+    input.onclick = () => input.select();
   });
 
-  content.querySelectorAll(".share-link-btn").forEach((btn) => {
+  content.querySelectorAll(".share-copy-btn").forEach((btn) => {
     btn.onclick = () => copyShareLink(btn.dataset.id);
   });
 
@@ -446,11 +446,9 @@ function renderStoryItem(story, options = {}) {
 
       <div class="share-panel-inline hidden" id="share-panel-${story.id}">
         <p class="share-panel-title">이 기억을 전할게요</p>
-        <div class="share-panel-actions">
-          <button class="share-kakao-btn" data-id="${story.id}">
-            <span class="share-kakao-badge">TALK</span> 카카오톡으로 전하기
-          </button>
-          <button class="share-link-btn" data-id="${story.id}">🔗 링크 복사</button>
+        <div class="share-link-row">
+          <input type="text" class="share-link-input" id="share-link-input-${story.id}" value="${buildStoryUrl(story.publicId)}" readonly />
+          <button class="share-copy-btn" data-id="${story.id}">복사</button>
         </div>
         <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
       </div>
@@ -466,11 +464,8 @@ function getStoryYearLabel(story) {
 }
 
 // ------------------------------------------------------------
-// 기억 전달하기 — 카드 안에서 펼쳐지는 "카카오톡으로 전하기 / 링크
-// 복사" 패널(2026-08-13, 모달 대신 인라인 방식으로 교체). 카카오톡
-// 공유는 카카오 개발자 콘솔에서 이 앱의 "카카오톡 공유" 제품이
-// 활성화돼 있어야 동작한다 — 비활성 상태거나 SDK 초기화에 실패하면
-// 자동으로 링크 복사로 대체된다.
+// 기억 전달하기 — 카드 안에서 펼쳐지는 링크 패널(2026-08-13, 카카오톡
+// 공유 버튼은 제거하고 링크 보여주기+복사로 단순화).
 // ------------------------------------------------------------
 function buildStoryUrl(publicId) {
   const base = `${window.location.origin}${window.location.pathname}`;
@@ -482,50 +477,18 @@ function toggleSharePanel(storyId) {
   if (panel) panel.classList.toggle("hidden");
 }
 
-function shareToKakao(storyId) {
-  const story = Storage.getAllStories().find((s) => s.id === storyId);
-  if (!story) return;
-
-  if (!window.Kakao || !Kakao.isInitialized()) {
-    copyShareLink(storyId);
-    return;
-  }
-
-  const url = buildStoryUrl(story.publicId);
-  const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address });
-  const year = Storage.getStoryYear(story);
-
-  // Kakao.Share의 feed 템플릿(이미지 카드)은 imageUrl이 필수인데, 이
-  // 사이트는 백엔드가 없는 정적 SPA라 기억별로 카드 이미지를 만들어
-  // 호스팅해줄 서버가 없다 — 그래서 text 템플릿으로 연도·장소·인용구를
-  // 메시지 본문에 담아 보낸다. 링크 미리보기(제목/설명)는 index.html의
-  // 정적 OG 태그를 카카오톡이 그대로 가져와 보여준다.
-  const yearLabel = year !== null ? `${year}년 ` : "";
-  const text = `${yearLabel}${title}\n"${story.content}"`;
-
-  try {
-    Kakao.Share.sendDefault({
-      objectType: "text",
-      text,
-      link: { mobileWebUrl: url, webUrl: url },
-    });
-    Storage.incrementShareCount(storyId);
-    Storage.markShared(storyId);
-  } catch (e) {
-    copyShareLink(storyId);
-  }
-}
-
 async function copyShareLink(storyId) {
   const story = Storage.getAllStories().find((s) => s.id === storyId);
   if (!story) return;
   const url = buildStoryUrl(story.publicId);
+  const linkInput = document.getElementById(`share-link-input-${storyId}`);
 
   try {
     await navigator.clipboard.writeText(url);
     showToast("share-toast", "링크가 복사되었습니다.", 2000);
   } catch (e) {
-    showToast("share-toast", "링크 복사에 실패했습니다.", 2000);
+    if (linkInput) linkInput.select();
+    showToast("share-toast", "링크를 직접 선택해 복사해주세요.", 2000);
     return;
   }
   Storage.incrementShareCount(storyId);

@@ -1580,8 +1580,8 @@ button.story-place-line:hover {
 
 /* ------------------------------------------------------------
    기억 전달하기(공유) — "기억 전하기" 버튼을 누르면 카드 안에서
-   펼쳐지는 인라인 패널(모달 아님). 카카오톡 전하기 / 링크 복사
-   두 가지를 항상 명시적으로 보여준다.
+   펼쳐지는 인라인 패널(모달 아님). 링크를 보여주고 복사만 하는
+   단순한 방식(2026-08-13, 카카오톡 공유 버튼 제거).
    ------------------------------------------------------------ */
 .share-panel-inline {
   margin: 0 0 16px;
@@ -1597,55 +1597,40 @@ button.story-place-line:hover {
   margin: 0 0 12px;
 }
 
-.share-panel-actions {
+.share-link-row {
   display: flex;
-  gap: 10px;
+  background: var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  overflow: hidden;
   margin-bottom: 12px;
 }
 
-.share-kakao-btn,
-.share-link-btn {
+.share-link-input {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: var(--cs-radius-card);
-  padding: 11px 0;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
   font-family: var(--font-pretendard);
   font-size: 13px;
-  cursor: pointer;
+  color: var(--cs-text-main);
+  outline: none;
 }
 
-.share-kakao-btn {
+.share-copy-btn {
+  flex-shrink: 0;
   border: none;
   background: var(--cs-black);
   color: var(--cs-paper);
+  font-family: var(--font-pretendard);
+  font-size: 13px;
   font-weight: 500;
+  padding: 0 16px;
+  cursor: pointer;
 }
 
-.share-kakao-btn:hover {
+.share-copy-btn:hover {
   background: #1c1d1e;
-}
-
-.share-kakao-badge {
-  background: var(--cs-paper);
-  color: var(--cs-black);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 2px 5px;
-  border-radius: 4px;
-}
-
-.share-link-btn {
-  border: 1px solid var(--cs-gray);
-  background: #fff;
-  color: var(--cs-text-main);
-}
-
-.share-link-btn:hover {
-  background: var(--cs-map-gray);
 }
 
 .share-panel-privacy {
