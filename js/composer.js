@@ -190,7 +190,6 @@ function openComposer(pin) {
     row.innerHTML = `
       ${tagChips.map((t, i) => `<span class="tag-chip">${escapeHtml(t)}<button type="button" class="tag-chip-remove" data-idx="${i}">✕</button></span>`).join("")}
       <input type="text" id="tag-entry" class="tag-entry-input" placeholder="${tagChips.length ? "" : "태그를 입력하세요"}" />
-      <button type="button" class="tag-add-btn" id="tag-add-btn">+</button>
     `;
     row.querySelectorAll(".tag-chip-remove").forEach((btn) => {
       btn.onclick = () => {
@@ -214,7 +213,6 @@ function openComposer(pin) {
         commitEntry();
       }
     });
-    document.getElementById("tag-add-btn").onclick = commitEntry;
     syncTagsHiddenInput();
   }
 

@@ -654,12 +654,14 @@ body {
 /* ------------------------------------------------------------
    커스텀 스크롤바 — 스크롤이 있는 모달/시트 공통(.composer-card,
    .sheet-scroll)에 적용. 블록 라운드형: 트랙은 거의 안 보이게, 썸만
-   살짝 두께감 있는 둥근 블록으로 표시(오렌지, 채도 낮춰 은은하게).
+   살짝 두께감 있는 둥근 블록으로 표시. 트랙에 위아래 margin을 줘서
+   썸이 박스 맨 위/아래 끝까지 닿지 않게(스크롤 가능 범위를 박스보다
+   작게) 만든다.
    ------------------------------------------------------------ */
 .composer-card,
 .sheet-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 90, 54, 0.55) transparent;
+  scrollbar-color: rgb(48, 47, 49) transparent;
 }
 
 .composer-card::-webkit-scrollbar,
@@ -670,11 +672,12 @@ body {
 .composer-card::-webkit-scrollbar-track,
 .sheet-scroll::-webkit-scrollbar-track {
   background: transparent;
+  margin: 12px 0;
 }
 
 .composer-card::-webkit-scrollbar-thumb,
 .sheet-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 90, 54, 0.55);
+  background-color: rgb(48, 47, 49);
   border-radius: var(--cs-radius-card);
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -682,7 +685,7 @@ body {
 
 .composer-card::-webkit-scrollbar-thumb:hover,
 .sheet-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 90, 54, 0.8);
+  background-color: #1c1b1d;
 }
 
 /* ------------------------------------------------------------
@@ -1297,27 +1300,6 @@ button.story-place-line:hover {
   font-size: 13px;
   padding: 4px 2px;
   background: transparent;
-}
-
-.tag-add-btn {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--cs-gray);
-  background: #fff;
-  color: var(--cs-text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.tag-add-btn:hover {
-  color: var(--cs-black);
-  border-color: var(--cs-black);
 }
 
 .field-label {
