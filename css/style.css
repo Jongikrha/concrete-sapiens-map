@@ -1400,6 +1400,29 @@ button.story-place-line:hover {
   content: "📍 ";
 }
 
+/* 주소 옆에 "N개의 기억"을 같은 줄 오른쪽에 고정한다 — 주소가 아무리
+   길어져도(줄바꿈 되더라도) 개수는 첫 줄 오른쪽에서 줄어들거나
+   밀리지 않도록 flex-shrink:0 + nowrap으로 잡아둔다. */
+.story-spot-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.story-spot-meta .story-spot-address {
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.story-spot-meta .story-spot-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
 .input-field {
   width: 100%;
   border: 1px solid var(--cs-gray);

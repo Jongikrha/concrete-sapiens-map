@@ -127,8 +127,14 @@ function renderSheetContent(group) {
     ${sheetReturnTo ? `<button class="sheet-back-link" id="sheet-back-link">← ${escapeHtml(sheetReturnTo.label)}</button>` : ""}
     <div class="story-spot-header">
       <div class="story-spot-name">${escapeHtml(title)}</div>
-      ${addressCaption ? `<div class="story-spot-address">${escapeHtml(addressCaption)}</div>` : ""}
-      <span class="story-spot-count">${group.stories.length}개의 기억</span>
+      ${addressCaption
+        ? `
+          <div class="story-spot-meta">
+            <span class="story-spot-address">${escapeHtml(addressCaption)}</span>
+            <span class="story-spot-count">${group.stories.length}개의 기억</span>
+          </div>
+        `
+        : `<span class="story-spot-count">${group.stories.length}개의 기억</span>`}
     </div>
     <div class="sort-toggle">
       <button class="sort-btn ${currentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
