@@ -480,17 +480,52 @@ const Storage = {
     return { min: Math.min(...years), max: new Date().getFullYear() };
   },
 
-  getDailyFeaturedStory() {
-    const visible = this.getVisibleStories();
-    if (visible.length === 0) return null;
+  /**
+   * "오늘의 기억" 칩용 — 오늘(로컬 기준 00:00~23:59) createdAt으로 등록된
+   * 기억 전부. 예전에는 날짜 시드로 고른 "매일 하나씩" 랜덤 추천이었는데,
+   * 실제로 오늘 올라온 글만 보고 싶다는 요청(2026-08-13)으로 바뀌었다.
+   */
+  getTodayStories() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    return this.getVisibleStories().filter((s) => {
+      const t = new Date(s.createdAt).getTime();
+      return t >= start && t <= end;
+    });
+  },
 
-    const sorted = [...visible].sort((a, b) => a.id.localeCompare(b.id));
-    const seed = new Date().toISOString().split("T")[0];
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = (hash * 31 + seed.charCodeAt(i)) % sorted.length;
+  /**
+   * 목록 정렬 공통 로직 — "최근에 쌓인 기억"/"오늘의 기억" 모달과 기억
+   * 카드(스팟/해시태그) 목록이 전부 같은 3가지 정렬을 쓴다:
+   * - "latest"(최신 등록순): createdAt 내림차순, 시점 유무 구분 없음
+   * - "timetravel"(시간여행순): 시점 있는 것만 연도·월 오름차순(과거→현재),
+   *   시점 모르는 건 등록순으로 뒤에 따로 묶음
+   * - "timetravel-reverse"(역시간여행순): 위와 같지만 연도·월 내림차순
+   *   (지금→과거)
+   * dated/undated로 나눠 반환 — "시점을 알 수 없는 기억들" 구간 렌더는
+   * 호출부마다 마크업이 달라 여기서 합치지 않는다.
+   */
+  sortStoriesForDisplay(stories, mode) {
+    if (mode !== "timetravel" && mode !== "timetravel-reverse") {
+      return {
+        dated: [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+        undated: [],
+      };
     }
-    return sorted[Math.abs(hash) % sorted.length];
+    const dated = stories.filter((s) => this.getStoryYear(s) !== null);
+    const undated = stories.filter((s) => this.getStoryYear(s) === null);
+    const dir = mode === "timetravel-reverse" ? -1 : 1;
+
+    dated.sort((a, b) => {
+      const ay = this.getStoryYear(a), by = this.getStoryYear(b);
+      if (ay !== by) return dir * (ay - by);
+      const am = this.getStoryMonth(a) || 0, bm = this.getStoryMonth(b) || 0;
+      return dir * (am - bm);
+    });
+    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return { dated, undated };
   },
 
   getRandomRecentStory() {

@@ -85,28 +85,7 @@ function renderSheetContent(group) {
     displayStories = group.stories.filter((s) => Storage.getStoryYear(s) === focusYear);
   }
 
-  let listHtml;
-  if (currentSort === "timetravel") {
-    const dated = displayStories.filter((s) => Storage.getStoryYear(s) !== null);
-    const undated = displayStories.filter((s) => Storage.getStoryYear(s) === null);
-
-    dated.sort((a, b) => {
-      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
-      if (ay !== by) return ay - by;
-      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
-      return am - bm;
-    });
-    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    listHtml = dated.map((s) => renderStoryItem(s)).join("");
-    if (undated.length > 0) {
-      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
-      listHtml += undated.map((s) => renderStoryItem(s)).join("");
-    }
-  } else {
-    const sorted = [...displayStories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    listHtml = sorted.map((s) => renderStoryItem(s)).join("");
-  }
+  const listHtml = buildSortedListHtml(displayStories, currentSort, (s) => renderStoryItem(s));
 
   const distinctYears = [...new Set(group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null))].sort((a, b) => a - b);
   const isTimelineOpen = !!spotTimelineOpen[group.key];
@@ -136,10 +115,7 @@ function renderSheetContent(group) {
         `
         : `<span class="story-spot-count">${group.stories.length}개의 기억</span>`}
     </div>
-    <div class="sort-toggle">
-      <button class="sort-btn ${currentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
-      <button class="sort-btn ${currentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
-    </div>
+    ${SORT_TOGGLE_HTML(currentSort)}
     <div class="story-list">${listHtml}</div>
     ${distinctYears.length > 1 ? `<button class="spot-timeline-toggle" id="spot-timeline-toggle">${isTimelineOpen ? "시간연대표 접기" : spotCountLabel + " · 연대표 보기"} →</button>` : ""}
     ${timelineHtml}
@@ -361,38 +337,14 @@ function renderHashtagSheetContent() {
   const content = document.getElementById("sheet-content");
   const stories = Storage.getVisibleStories().filter((s) => (s.hashtags || []).includes(tag));
 
-  let listHtml;
-  if (hashtagSheetSort === "timetravel") {
-    const dated = stories.filter((s) => Storage.getStoryYear(s) !== null);
-    const undated = stories.filter((s) => Storage.getStoryYear(s) === null);
-
-    dated.sort((a, b) => {
-      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
-      if (ay !== by) return ay - by;
-      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
-      return am - bm;
-    });
-    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    listHtml = dated.map((s) => renderStoryItem(s, { showLocation: true })).join("");
-    if (undated.length > 0) {
-      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
-      listHtml += undated.map((s) => renderStoryItem(s, { showLocation: true })).join("");
-    }
-  } else {
-    const sorted = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    listHtml = sorted.map((s) => renderStoryItem(s, { showLocation: true })).join("");
-  }
+  const listHtml = buildSortedListHtml(stories, hashtagSheetSort, (s) => renderStoryItem(s, { showLocation: true }));
 
   content.innerHTML = `
     <div class="story-spot-header">
       <div class="story-spot-name">${escapeHtml(tag)}</div>
       <span class="story-spot-count">${stories.length}개의 기억</span>
     </div>
-    <div class="sort-toggle">
-      <button class="sort-btn ${hashtagSheetSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신순</button>
-      <button class="sort-btn ${hashtagSheetSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
-    </div>
+    ${SORT_TOGGLE_HTML(hashtagSheetSort)}
     <div class="story-list">${listHtml || `<p class="story-list-empty">아직 이 태그를 가진 기억이 없습니다.</p>`}</div>
   `;
 

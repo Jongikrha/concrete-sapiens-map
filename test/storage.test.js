@@ -257,6 +257,48 @@ test("getYearRange는 스토리들의 최소/최대 연도를 계산한다", () 
   assert.equal(range.max, new Date().getFullYear());
 });
 
+test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {
+  const now = new Date();
+  const todayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0).toISOString();
+  Storage._setCache([
+    createStory({ id: "today", createdAt: todayIso }),
+    createStory({ id: "yesterday", createdAt: "2020-01-01T00:00:00.000Z" }),
+  ]);
+  const result = Storage.getTodayStories();
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "today");
+});
+
+test("sortStoriesForDisplay는 latest 모드에서 createdAt 내림차순으로 정렬하고 undated는 비운다", () => {
+  const stories = [
+    createStory({ id: "a", createdAt: "2024-01-01T00:00:00.000Z" }),
+    createStory({ id: "b", createdAt: "2024-06-01T00:00:00.000Z" }),
+  ];
+  const { dated, undated } = Storage.sortStoriesForDisplay(stories, "latest");
+  assert.deepEqual(dated.map((s) => s.id), ["b", "a"]);
+  assert.equal(undated.length, 0);
+});
+
+test("sortStoriesForDisplay는 timetravel 모드에서 연도·월 오름차순으로 정렬하고 시점 모르는 건 따로 뺀다", () => {
+  const stories = [
+    createStory({ id: "recent", dateMode: "past", referenceDate: "2020-05" }),
+    createStory({ id: "old", dateMode: "past", referenceDate: "1998-03" }),
+    createStory({ id: "unknown", dateMode: "unknown", referenceDate: null }),
+  ];
+  const { dated, undated } = Storage.sortStoriesForDisplay(stories, "timetravel");
+  assert.deepEqual(dated.map((s) => s.id), ["old", "recent"]);
+  assert.deepEqual(undated.map((s) => s.id), ["unknown"]);
+});
+
+test("sortStoriesForDisplay는 timetravel-reverse 모드에서 연도·월 내림차순(지금→과거)으로 정렬한다", () => {
+  const stories = [
+    createStory({ id: "old", dateMode: "past", referenceDate: "1998-03" }),
+    createStory({ id: "recent", dateMode: "past", referenceDate: "2020-05" }),
+  ];
+  const { dated } = Storage.sortStoriesForDisplay(stories, "timetravel-reverse");
+  assert.deepEqual(dated.map((s) => s.id), ["recent", "old"]);
+});
+
 test("incrementViewCount는 조회수를 1 늘린다", () => {
   Storage._setCache([createStory({ id: "s1", viewCount: 2 })]);
   const updated = Storage.incrementViewCount("s1");

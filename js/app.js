@@ -36,74 +36,69 @@ function renderTotalCountBanner() {
 }
 
 // ------------------------------------------------------------
-// 최근에 쌓인 기억 목록 모달 — 배너 클릭 시 훑어볼 수 있다. 정렬은
-// storySheet.js의 스팟 상세와 같은 방식(최근에 쌓인 순/시간여행 순)을
-// 쓴다. 항목을 누르면 목록은 닫히고 지도 이동 + 기억 카드가 바로
-// 열리며, 카드의 뒤로가기(←)를 누르면 스크롤 위치까지 복원해서 이
-// 목록으로 돌아온다 (opts.scrollTop, goBackFromSheet 참고).
+// "최근에 쌓인 기억"/"오늘의 기억" 목록 모달 — 배너/칩 클릭 시 훑어볼
+// 수 있다. 정렬은 기억 카드(스팟/해시태그) 목록과 같은 3가지
+// (Storage.sortStoriesForDisplay 참고)를 쓴다. 항목을 누르면 목록은
+// 닫히고 지도 이동 + 기억 카드가 바로 열리며, 카드의 뒤로가기(←)를
+// 누르면 스크롤 위치까지 복원해서 이 목록으로 돌아온다
+// (opts.scrollTop, goBackFromSheet 참고).
 // ------------------------------------------------------------
+const SORT_TOGGLE_HTML = (activeSort) => `
+  <div class="sort-toggle">
+    <button class="sort-btn ${activeSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최신 등록순</button>
+    <button class="sort-btn ${activeSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행순</button>
+    <button class="sort-btn ${activeSort === "timetravel-reverse" ? "sort-btn--active" : ""}" data-sort="timetravel-reverse">역시간여행순</button>
+  </div>
+`;
+
+function renderRecentListItem(story) {
+  const year = Storage.getStoryYear(story);
+  const title = Storage.getGroupTitle({
+    placeId: story.placeId,
+    officialPlaceName: story.officialPlaceName,
+    customName: story.customName,
+    address: story.address,
+  });
+  return `
+    <div class="recent-item" data-id="${story.id}">
+      <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
+      <p class="recent-item-content">${escapeHtml(story.content)}</p>
+      <p class="recent-item-place">${escapeHtml(title)}</p>
+    </div>
+  `;
+}
+
+// renderItemFn은 호출부마다 다른 카드 마크업(요약 리스트 항목 vs 기억
+// 카드 전체)을 그린다. cap은 "최신 등록순"에서만 적용(기존 "최근에
+// 쌓인 기억" 최대 50개 표시 관행) — 시간여행 계열은 전체 타임라인을
+// 보여줘야 하니 자르지 않는다.
+function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
+  const { dated, undated } = Storage.sortStoriesForDisplay(stories, sortMode);
+  const shown = cap && sortMode === "latest" ? dated.slice(0, cap) : dated;
+  let html = shown.map(renderItemFn).join("");
+  if (undated.length > 0) {
+    html += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
+    html += undated.map(renderItemFn).join("");
+  }
+  return html;
+}
+
 let recentSort = "latest";
 
 function openRecentMemoriesModal(opts = {}) {
   const panel = document.getElementById("recent-panel");
   const stories = Storage.getVisibleStories();
 
-  const renderItem = (story) => {
-    const year = Storage.getStoryYear(story);
-    const title = Storage.getGroupTitle({
-      placeId: story.placeId,
-      officialPlaceName: story.officialPlaceName,
-      customName: story.customName,
-      address: story.address,
-    });
-    return `
-      <div class="recent-item" data-id="${story.id}">
-        <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
-        <p class="recent-item-content">${escapeHtml(story.content)}</p>
-        <p class="recent-item-place">${escapeHtml(title)}</p>
-      </div>
-    `;
-  };
-
-  let listHtml;
-  if (recentSort === "timetravel") {
-    const dated = stories.filter((s) => Storage.getStoryYear(s) !== null);
-    const undated = stories.filter((s) => Storage.getStoryYear(s) === null);
-
-    dated.sort((a, b) => {
-      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
-      if (ay !== by) return ay - by;
-      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
-      return am - bm;
-    });
-    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    listHtml = dated.map(renderItem).join("");
-    if (undated.length > 0) {
-      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
-      listHtml += undated.map(renderItem).join("");
-    }
-  } else {
-    const recent = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50);
-    listHtml = recent.map(renderItem).join("");
-  }
-
-  const sortToggleHtml = stories.length
-    ? `
-      <div class="sort-toggle">
-        <button class="sort-btn ${recentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최근에 쌓인 순</button>
-        <button class="sort-btn ${recentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행 순</button>
-      </div>
-    `
-    : "";
-  if (!stories.length) listHtml = `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
+  const listHtml = stories.length
+    ? buildSortedListHtml(stories, recentSort, renderRecentListItem, { cap: 50 })
+    : `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
 
   panel.innerHTML = `
     <div class="recent-header">
       <h2 class="composer-title" style="margin:0;">최근에 쌓인 기억</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
-    ${sortToggleHtml}
+    ${stories.length ? SORT_TOGGLE_HTML(recentSort) : ""}
     ${listHtml}
   `;
 
@@ -132,11 +127,53 @@ function closeRecentMemoriesModal() {
   document.getElementById("recent-overlay").classList.add("hidden");
 }
 
+let todaySort = "latest";
+
+function openTodayMemoriesModal(opts = {}) {
+  const panel = document.getElementById("today-panel");
+  const stories = Storage.getTodayStories();
+
+  const listHtml = stories.length
+    ? buildSortedListHtml(stories, todaySort, renderRecentListItem)
+    : `<p class="recent-empty">오늘 등록된 기억이 아직 없습니다.</p>`;
+
+  panel.innerHTML = `
+    <div class="recent-header">
+      <h2 class="composer-title" style="margin:0;">오늘의 기억</h2>
+      <button class="recent-close" id="today-close">✕</button>
+    </div>
+    ${stories.length ? SORT_TOGGLE_HTML(todaySort) : ""}
+    ${listHtml}
+  `;
+
+  panel.querySelector("#today-close").onclick = closeTodayMemoriesModal;
+
+  panel.querySelectorAll(".sort-btn").forEach((btn) => {
+    btn.onclick = () => { todaySort = btn.dataset.sort; openTodayMemoriesModal(); };
+  });
+
+  panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
+    item.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      closeTodayMemoriesModal();
+      navigateToStoryFromList(item.dataset.id, { kind: "today", scrollTop, label: "오늘의 기억" });
+    };
+  });
+
+  document.getElementById("today-overlay").classList.remove("hidden");
+  panel.scrollTop = opts.scrollTop || 0;
+}
+
+function closeTodayMemoriesModal() {
+  document.getElementById("today-overlay").classList.add("hidden");
+}
+
 // ------------------------------------------------------------
-// 목록(최근 기억 / 내 기억)에서 항목을 눌러 지도 이동 + 카드 오픈까지
-// 한번에 처리하는 공용 흐름. returnTo는 카드의 뒤로가기(←)가 어느
-// 목록을 어떤 스크롤 위치로 다시 열어야 하는지를 담는다 —
-// { kind: "recent" } 또는 { kind: "mymemory", listKind: "posted"|"reacted"|"shared" }.
+// 목록(최근 기억 / 오늘의 기억 / 내 기억)에서 항목을 눌러 지도 이동 +
+// 카드 오픈까지 한번에 처리하는 공용 흐름. returnTo는 카드의
+// 뒤로가기(←)가 어느 목록을 어떤 스크롤 위치로 다시 열어야 하는지를
+// 담는다 — { kind: "recent" }, { kind: "today" } 또는
+// { kind: "mymemory", listKind: "posted"|"reacted"|"shared" }.
 // ------------------------------------------------------------
 function navigateToStoryFromList(storyId, returnTo) {
   const story = Storage.getAllStories().find((s) => s.id === storyId);
@@ -156,6 +193,8 @@ function goBackFromSheet() {
   if (!returnTo) return;
   if (returnTo.kind === "recent") {
     openRecentMemoriesModal({ scrollTop: returnTo.scrollTop });
+  } else if (returnTo.kind === "today") {
+    openTodayMemoriesModal({ scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "mymemory") {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
   }
@@ -273,6 +312,9 @@ function bindUIEvents() {
   document.getElementById("recent-overlay").addEventListener("click", (e) => {
     if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
   });
+  document.getElementById("today-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "today-overlay") closeTodayMemoriesModal();
+  });
   // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
   // 버튼이나 ESC를 눌러야 닫힌다).
@@ -299,6 +341,7 @@ function bindUIEvents() {
       else if (!document.getElementById("mymemory-overlay").classList.contains("hidden")) closeMyMemoryList();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
+      else if (!document.getElementById("today-overlay").classList.contains("hidden")) closeTodayMemoriesModal();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
     }
   });

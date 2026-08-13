@@ -27,12 +27,11 @@ function renderHashtagChips() {
 
   document.getElementById("filter-banner").classList.add("hidden");
 
-  const daily = Storage.getDailyFeaturedStory();
-  if (daily) {
+  if (Storage.getTodayStories().length > 0) {
     const todayChip = document.createElement("button");
     todayChip.className = "chip chip--today";
     todayChip.textContent = "오늘의 기억";
-    todayChip.onclick = () => flyToStory(daily, true);
+    todayChip.onclick = openTodayMemoriesModal;
     wrap.appendChild(todayChip);
   }
 
