@@ -245,9 +245,6 @@ function bindUIEvents() {
   document.getElementById("recent-overlay").addEventListener("click", (e) => {
     if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
   });
-  document.getElementById("share-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "share-overlay") closeShareModal();
-  });
   // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
   // 버튼이나 ESC를 눌러야 닫힌다).
@@ -279,7 +276,6 @@ function bindUIEvents() {
       else if (!document.getElementById("mymemory-overlay").classList.contains("hidden")) closeMyMemoryList();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
-      else if (!document.getElementById("share-overlay").classList.contains("hidden")) closeShareModal();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
     }
   });

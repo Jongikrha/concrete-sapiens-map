@@ -225,7 +225,15 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
   });
 
   content.querySelectorAll(".share-btn").forEach((btn) => {
-    btn.onclick = () => handleShare(btn.dataset.id);
+    btn.onclick = () => toggleSharePanel(btn.dataset.id);
+  });
+
+  content.querySelectorAll(".share-kakao-btn").forEach((btn) => {
+    btn.onclick = () => shareToKakao(btn.dataset.id);
+  });
+
+  content.querySelectorAll(".share-link-btn").forEach((btn) => {
+    btn.onclick = () => copyShareLink(btn.dataset.id);
   });
 
   content.querySelectorAll(".story-item-menu-btn").forEach((btn) => {
@@ -436,6 +444,17 @@ function renderStoryItem(story, options = {}) {
         <button class="share-btn" data-id="${story.id}">↗ 기억 전하기</button>
       </div>
 
+      <div class="share-panel-inline hidden" id="share-panel-${story.id}">
+        <p class="share-panel-title">이 기억을 전할게요</p>
+        <div class="share-panel-actions">
+          <button class="share-kakao-btn" data-id="${story.id}">
+            <span class="share-kakao-badge">TALK</span> 카카오톡으로 전하기
+          </button>
+          <button class="share-link-btn" data-id="${story.id}">🔗 링크 복사</button>
+        </div>
+        <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
+      </div>
+
       ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}" data-story-id="${story.id}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
     </div>
   `;
@@ -447,205 +466,60 @@ function getStoryYearLabel(story) {
 }
 
 // ------------------------------------------------------------
-// 기억 전달하기 — 공유 카드 이미지 생성 + Web Share API
+// 기억 전달하기 — 카드 안에서 펼쳐지는 "카카오톡으로 전하기 / 링크
+// 복사" 패널(2026-08-13, 모달 대신 인라인 방식으로 교체). 카카오톡
+// 공유는 카카오 개발자 콘솔에서 이 앱의 "카카오톡 공유" 제품이
+// 활성화돼 있어야 동작한다 — 비활성 상태거나 SDK 초기화에 실패하면
+// 자동으로 링크 복사로 대체된다.
 // ------------------------------------------------------------
 function buildStoryUrl(publicId) {
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?story=${publicId}`;
 }
 
-function wrapCanvasText(ctx, text, maxWidth) {
-  const chars = text.split("");
-  const lines = [];
-  let line = "";
-  chars.forEach((ch) => {
-    const test = line + ch;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = ch;
-    } else {
-      line = test;
-    }
-  });
-  if (line) lines.push(line);
-  return lines;
+function toggleSharePanel(storyId) {
+  const panel = document.getElementById(`share-panel-${storyId}`);
+  if (panel) panel.classList.toggle("hidden");
 }
 
-// 인스타그램 스토리에 그대로 채워지는 9:16 세로 카드. 연도·장소·인용구는
-// 콘텐츠 길이에 따라 세로 위치가 밀리고, CTA/로고는 항상 하단에 고정한다.
-function generateShareCard(story) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1080;
-  canvas.height = 1920;
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#2F3031";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "#FF5A36";
-  ctx.beginPath();
-  ctx.arc(96, 140, 12, 0, Math.PI * 2);
-  ctx.fill();
-
-  const year = Storage.getStoryYear(story);
-  const groupLike = {
-    placeId: story.placeId,
-    officialPlaceName: story.officialPlaceName,
-    customName: story.customName,
-    address: story.address,
-  };
-  const title = Storage.getGroupTitle(groupLike);
-  const addressCaption = Storage.getGroupAddressCaption(groupLike);
-
-  const marginX = 96;
-  const maxWidth = canvas.width - marginX * 2;
-  let cursorY = 340;
-
-  ctx.fillStyle = "#F4F3EF";
-  ctx.font = "700 168px sans-serif";
-  ctx.fillText(year !== null ? String(year) : "· · ·", marginX, cursorY);
-  cursorY += 100;
-
-  ctx.font = "700 56px sans-serif";
-  ctx.fillStyle = "#F4F3EF";
-  const titleLines = wrapCanvasText(ctx, title, maxWidth).slice(0, 2);
-  titleLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 68));
-  cursorY += titleLines.length * 68 + 8;
-
-  // 작성자가 붙인 지역명(title)만으로는 실제 위치를 모를 수 있어
-  // 지번 주소를 옆에(작은 글씨로) 항상 함께 보여준다.
-  if (addressCaption) {
-    ctx.font = "400 30px sans-serif";
-    ctx.fillStyle = "#B9B9B5";
-    const addrLines = wrapCanvasText(ctx, addressCaption, maxWidth).slice(0, 2);
-    addrLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 40));
-    cursorY += addrLines.length * 40;
-  }
-  cursorY += 100;
-
-  const footerY = canvas.height - 200;
-  const lineHeight = 76;
-  const maxQuoteLines = Math.max(3, Math.floor((footerY - 40 - cursorY) / lineHeight));
-
-  ctx.font = "400 52px serif";
-  ctx.fillStyle = "#F4F3EF";
-  let quoteLines = wrapCanvasText(ctx, `"${story.content}"`, maxWidth);
-  if (quoteLines.length > maxQuoteLines) {
-    quoteLines = quoteLines.slice(0, maxQuoteLines);
-    const last = quoteLines[quoteLines.length - 1];
-    quoteLines[quoteLines.length - 1] = last.slice(0, Math.max(0, last.length - 1)) + "…";
-  }
-  quoteLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * lineHeight));
-
-  ctx.font = "700 38px sans-serif";
-  ctx.fillStyle = "#F4F3EF";
-  ctx.fillText("이 기억의 장소를 지도에서", marginX, footerY);
-  ctx.fillText("열어보세요 →", marginX, footerY + 52);
-
-  ctx.font = "700 30px sans-serif";
-  ctx.fillStyle = "#FF5A36";
-  ctx.fillText("CONCRETE SAPIENS", marginX, footerY + 120);
-  ctx.font = "400 24px sans-serif";
-  ctx.fillStyle = "#B9B9B5";
-  ctx.fillText("MEMORY MAP", marginX, footerY + 150);
-
-  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
-}
-
-async function handleShare(storyId) {
+function shareToKakao(storyId) {
   const story = Storage.getAllStories().find((s) => s.id === storyId);
   if (!story) return;
+
+  if (!window.Kakao || !Kakao.isInitialized()) {
+    copyShareLink(storyId);
+    return;
+  }
 
   const url = buildStoryUrl(story.publicId);
   const title = Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address });
   const year = Storage.getStoryYear(story);
-  const shareText = `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`;
 
+  try {
+    Kakao.Share.sendDefault({
+      objectType: "text",
+      text: `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`,
+      link: { mobileWebUrl: url, webUrl: url },
+    });
+    Storage.incrementShareCount(storyId);
+    Storage.markShared(storyId);
+  } catch (e) {
+    copyShareLink(storyId);
+  }
+}
+
+async function copyShareLink(storyId) {
+  const story = Storage.getAllStories().find((s) => s.id === storyId);
+  if (!story) return;
+  const url = buildStoryUrl(story.publicId);
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("share-toast", "링크가 복사되었습니다.", 2000);
+  } catch (e) {
+    showToast("share-toast", "링크 복사에 실패했습니다.", 2000);
+    return;
+  }
   Storage.incrementShareCount(storyId);
   Storage.markShared(storyId);
-
-  let blob = null;
-  try {
-    blob = await generateShareCard(story);
-  } catch (e) {
-    // 카드 이미지 생성이 실패해도 링크 공유는 계속 진행한다
-  }
-
-  if (blob) {
-    try {
-      const file = new File([blob], "concrete-sapiens-memory.png", { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
-        return;
-      }
-    } catch (e) {
-      // 폴백으로 진행
-    }
-  }
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url });
-      return;
-    } catch (e) {
-      return;
-    }
-  }
-
-  // navigator.share가 없는 환경(대부분의 PC 브라우저) — 카카오톡 같은 공유
-  // 시트가 뜨지 않으니, 카드 미리보기 + 직접 복사할 수 있는 링크를 모달로 보여준다.
-  openShareModal(url, blob);
-}
-
-function openShareModal(url, blob) {
-  const panel = document.getElementById("share-panel");
-  const imgUrl = blob ? URL.createObjectURL(blob) : null;
-
-  panel.innerHTML = `
-    <div class="recent-header">
-      <h2 class="composer-title" style="margin:0;">기억 전달하기</h2>
-      <button class="recent-close" id="share-modal-close">✕</button>
-    </div>
-    ${imgUrl ? `<div class="share-card-preview"><img src="${imgUrl}" alt="공유 카드" /></div>` : ""}
-    <p class="field-label" style="margin-top:0;">링크</p>
-    <div class="share-link-row">
-      <input type="text" id="share-link-input" class="share-link-input" value="${url}" readonly />
-      <button class="share-copy-btn" id="share-copy-btn">복사</button>
-    </div>
-    ${imgUrl ? `<button class="btn-secondary" id="share-save-image">⭳ 카드 이미지 저장</button>` : ""}
-  `;
-
-  panel.querySelector("#share-modal-close").onclick = closeShareModal;
-
-  const linkInput = panel.querySelector("#share-link-input");
-  linkInput.onclick = () => linkInput.select();
-
-  panel.querySelector("#share-copy-btn").onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("share-toast", "링크가 복사되었습니다.", 2000);
-    } catch (e) {
-      linkInput.select();
-      showToast("share-toast", "링크를 직접 선택해 복사해주세요.", 2000);
-    }
-  };
-
-  if (imgUrl) {
-    panel.querySelector("#share-save-image").onclick = () => {
-      const a = document.createElement("a");
-      a.href = imgUrl;
-      a.download = "concrete-sapiens-memory.png";
-      a.click();
-    };
-  }
-
-  document.getElementById("share-overlay").classList.remove("hidden");
-}
-
-function closeShareModal() {
-  document.getElementById("share-overlay").classList.add("hidden");
-  const panel = document.getElementById("share-panel");
-  const img = panel.querySelector("img");
-  if (img) URL.revokeObjectURL(img.src);
-  panel.innerHTML = "";
 }
