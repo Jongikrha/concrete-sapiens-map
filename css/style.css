@@ -18,6 +18,9 @@
   --cs-gray: #B9B9B5;
   --cs-map-gray: #E5E4DF;
   --cs-orange: #FF5A36;
+  /* 지도 위 Memory Light 점 전용 톤(js/map.js의 MEMORY_CORE와 같은 값) —
+     UI 전반의 --cs-orange보다 차분하다. "내 기억" 모드 강조색으로도 쓴다. */
+  --cs-memory-core: #C9573D;
 
   --cs-text-main: #2F3031;
   --cs-text-muted: #777875;
@@ -488,8 +491,13 @@ body {
      UI에 가려 안 보인다는 피드백(2026-08-13) — 여유를 더 준다. */
   bottom: 36px;
   left: 16px;
+  /* 버튼이 4개(내 주변/시간여행/어딘가의 기억/내 기억)로 늘면서 좁은
+     화면에서 오른쪽으로 넘칠 수 있어(2026-08-13) — 폭을 화면 안으로
+     제한하고 넘치면 다음 줄로 감싼다. */
+  right: 16px;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -517,6 +525,16 @@ body {
 
 .tool-btn--accent:hover {
   background: #1c1d1e;
+}
+
+.tool-btn--active {
+  background: var(--cs-memory-core);
+  color: var(--cs-paper);
+  border-color: var(--cs-memory-core);
+}
+
+.tool-btn--active:hover {
+  background: #b04b33;
 }
 
 /* ------------------------------------------------------------

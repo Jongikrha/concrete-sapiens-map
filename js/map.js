@@ -8,6 +8,7 @@ let placesService;
 let geocoderService;
 let markers = []; // { marker, group }
 let highlightedMarker = null;
+let myMemoryPolyline = null; // "내 기억" 모드에서 내 기억을 시간순으로 잇는 선
 
 // ------------------------------------------------------------
 // Memory Light 이미지 — 기억 수에 따라 크기 차등(makeDotImage 아래 참고)
@@ -186,13 +187,17 @@ function highlightMarkerForStory(story) {
 }
 
 // ------------------------------------------------------------
-// 마커 렌더링 (해시태그 / 연도 / 시간 슬라이더 필터 적용)
+// 마커 렌더링 (해시태그 / 연도 / 시간 슬라이더 / 내 기억 필터 적용)
 // ------------------------------------------------------------
 function renderMarkers() {
   clusterer.clear();
   markers.forEach((m) => kakao.maps.event.removeListener(m.marker, "click"));
   markers = [];
   highlightedMarker = null;
+  if (myMemoryPolyline) {
+    myMemoryPolyline.setMap(null);
+    myMemoryPolyline = null;
+  }
 
   let groups = Storage.getGroupedByPlace();
 
@@ -214,6 +219,11 @@ function renderMarkers() {
     groups = groups
       .map((g) => ({ ...g, stories: g.stories.filter((s) => s.hashtags.includes(activeHashtagFilter)) }))
       .filter((g) => g.stories.length > 0);
+  } else if (myMemoryModeActive) {
+    const deviceId = Storage.getDeviceId();
+    groups = groups
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => s.authorDeviceId === deviceId) }))
+      .filter((g) => g.stories.length > 0);
   }
 
   const kakaoMarkers = [];
@@ -231,6 +241,34 @@ function renderMarkers() {
   });
 
   clusterer.addMarkers(kakaoMarkers);
+
+  if (myMemoryModeActive) {
+    drawMyMemoryPath(groups);
+  }
+}
+
+/**
+ * "내 기억" 모드 전용 — 필터링된(=내 것만 남은) 그룹의 이야기를 전부
+ * 펼쳐서 작성 시점(createdAt) 오름차순으로 옅은 점선으로 잇는다.
+ * "내가 이 도시를 걸어온 시간의 길"처럼 보이게 하려는 의도라, 좌표
+ * 근접이 아니라 시간 순서를 기준으로 선을 그린다 — 같은 장소를 여러
+ * 번 남겼으면 그 지점을 다시 지나가는 것도 자연스럽게 표현된다.
+ */
+function drawMyMemoryPath(groups) {
+  const points = groups
+    .flatMap((g) => g.stories.map((s) => ({ lat: g.lat, lng: g.lng, createdAt: s.createdAt })))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  if (points.length < 2) return;
+
+  myMemoryPolyline = new kakao.maps.Polyline({
+    map,
+    path: points.map((p) => new kakao.maps.LatLng(p.lat, p.lng)),
+    strokeWeight: 2,
+    strokeColor: MEMORY_CORE,
+    strokeOpacity: 0.45,
+    strokeStyle: "shortdash",
+  });
 }
 
 function goToMyLocation() {

@@ -6,6 +6,7 @@ let activeHashtagFilter = null;
 let activeYearFilter = null;
 let sliderActive = false;
 let sliderYear = null;
+let myMemoryModeActive = false;
 
 // ------------------------------------------------------------
 // 해시태그 칩 렌더링 ("오늘의 기억" + 상위 N개 + 더보기)
@@ -68,6 +69,7 @@ function exploreHashtag(tag) {
   activeHashtagFilter = tag;
   activeYearFilter = null;
   closeSlider();
+  closeMyMemoryMode();
   renderHashtagChips();
   renderMarkers();
   openHashtagSheet(tag);
@@ -77,6 +79,7 @@ function setYearFilter(year) {
   activeYearFilter = year;
   activeHashtagFilter = null;
   closeSlider();
+  closeMyMemoryMode();
   renderHashtagChips();
   renderMarkers();
 }
@@ -91,6 +94,7 @@ function exploreSameYear(year, excludeStoryId) {
   activeYearFilter = year;
   activeHashtagFilter = null;
   closeSlider();
+  closeMyMemoryMode();
   renderHashtagChips();
   renderMarkers();
 
@@ -136,6 +140,7 @@ function toggleSlider() {
     return;
   }
   clearFilters();
+  closeMyMemoryMode();
   const range = Storage.getYearRange();
   sliderActive = true;
   sliderYear = range.max;
@@ -155,6 +160,35 @@ function closeSlider() {
   sliderActive = false;
   sliderYear = null;
   document.getElementById("time-slider-panel").classList.add("hidden");
+  renderTotalCountBanner();
+}
+
+// ------------------------------------------------------------
+// 내 기억 — 내가 남긴 기억만 지도에 남기고, 작성 시점(createdAt)순으로
+// 옅은 점선으로 이어서 "내가 이 도시를 걸어온 시간의 길"처럼 보여준다
+// (2026-08-13, 리텐션 아이디어 논의 결과). 다른 필터/시간슬라이더와는
+// 동시에 켜지지 않는다 — 이 모드를 켤 때 그것들을 끄고, 그것들을 켤
+// 때 이 모드를 끈다(위 exploreHashtag/setYearFilter/exploreSameYear/
+// toggleSlider 참고).
+// ------------------------------------------------------------
+function toggleMyMemoryMode() {
+  if (myMemoryModeActive) {
+    closeMyMemoryMode();
+    renderMarkers();
+    return;
+  }
+  clearFilters();
+  closeSlider();
+  myMemoryModeActive = true;
+  document.getElementById("btn-my-memory").classList.add("tool-btn--active");
+  renderMarkers();
+  renderTotalCountBanner();
+}
+
+function closeMyMemoryMode() {
+  if (!myMemoryModeActive) return;
+  myMemoryModeActive = false;
+  document.getElementById("btn-my-memory").classList.remove("tool-btn--active");
   renderTotalCountBanner();
 }
 

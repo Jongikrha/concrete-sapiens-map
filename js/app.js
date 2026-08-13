@@ -21,7 +21,7 @@ function renderTotalCountBanner() {
   const el = document.getElementById("total-count-banner");
   if (!el) return;
 
-  if (activeHashtagFilter || activeYearFilter !== null || sliderActive) {
+  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive) {
     el.classList.add("hidden");
     return;
   }
@@ -323,6 +323,7 @@ function bindUIEvents() {
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
   document.getElementById("btn-timeslider").onclick = toggleSlider;
+  document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;
   document.getElementById("time-slider-close").onclick = closeSlider;
   document.getElementById("time-slider-input").addEventListener("input", (e) => {
     sliderYear = parseInt(e.target.value, 10);
