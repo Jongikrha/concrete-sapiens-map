@@ -135,7 +135,8 @@ function initMap() {
     }
     const latlng = mouseEvent.latLng;
     spawnClickStamp(mouseEvent);
-    requireLogin(() => startFreePinComposer(latlng.getLat(), latlng.getLng()));
+    const promptPrefill = consumePendingDailyPrompt();
+    requireLogin(() => startFreePinComposer(latlng.getLat(), latlng.getLng(), promptPrefill));
   });
 }
 

@@ -7,6 +7,20 @@ let activeYearFilter = null;
 let sliderActive = false;
 let sliderYear = null;
 let myMemoryModeActive = false;
+// "오늘의 질문"에 확인을 누르면 여기 담아둔다 — 지도 중심 같은 임의
+// 좌표로 바로 기억 남기기를 띄우면 나와 무관한 장소에 남기게 되는
+// 문제가 있어(2026-08-14 논의), 대신 사용자가 다음에 지도를 클릭하거나
+// 검색 결과를 고르는(=장소를 직접 정하는) 순간까지 기다렸다가 그
+// 작성폼에 미리 채워 넣는다. map.js 클릭 핸들러/search.js 결과 클릭
+// 둘 다 consumePendingDailyPrompt()를 거친다.
+let pendingDailyPrompt = null;
+
+function consumePendingDailyPrompt() {
+  if (!pendingDailyPrompt) return "";
+  const text = `${pendingDailyPrompt}\n`;
+  pendingDailyPrompt = null;
+  return text;
+}
 
 // ------------------------------------------------------------
 // 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 질문" + 상위 N개 + 더보기)
@@ -73,15 +87,35 @@ function renderHashtagChips() {
 }
 
 /**
- * 오늘의 질문 칩 클릭 — 질문을 확인시키고, 동의하면 지금 보고 있는 지도
- * 중심에 그 질문을 본문 앞머리로 채운 자유 핀 작성폼을 띄운다.
+ * 오늘의 질문 칩 클릭 — 전용 모달로 질문을 보여준다. "확인"을 누르면
+ * 그 질문을 pendingDailyPrompt에 담아두고, 사용자가 다음에 지도를
+ * 클릭하거나 검색 결과를 골라 장소를 직접 정하는 순간 작성폼에 미리
+ * 채워 넣는다(consumePendingDailyPrompt 참고, 2026-08-14 논의 결과).
  */
 function openDailyPrompt() {
   const prompt = Storage.getDailyPrompt();
-  const center = map.getCenter();
-  if (confirm(`오늘의 질문\n\n"${prompt}"\n\n이 질문에 답하며 기억을 남겨볼까요?`)) {
-    requireLogin(() => startFreePinComposer(center.getLat(), center.getLng(), `${prompt}\n`));
-  }
+  const panel = document.getElementById("daily-prompt-panel");
+  panel.innerHTML = `
+    <div class="daily-prompt-header">
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>오늘의 질문</span>
+      <button class="daily-prompt-close" id="daily-prompt-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="daily-prompt-quote">&ldquo;${escapeHtml(prompt)}&rdquo;</p>
+    <p class="daily-prompt-hint">이 질문에 답한 기억을 남겨보세요.</p>
+    <div class="daily-prompt-divider"></div>
+    <button class="btn-primary" id="daily-prompt-confirm">확인</button>
+  `;
+  panel.querySelector("#daily-prompt-close").onclick = closeDailyPrompt;
+  panel.querySelector("#daily-prompt-confirm").onclick = () => {
+    pendingDailyPrompt = prompt;
+    closeDailyPrompt();
+    showToast("entry-toast", "지도에서 장소를 눌러 이 질문에 답해보세요", 3200);
+  };
+  document.getElementById("daily-prompt-overlay").classList.remove("hidden");
+}
+
+function closeDailyPrompt() {
+  document.getElementById("daily-prompt-overlay").classList.add("hidden");
 }
 
 /**

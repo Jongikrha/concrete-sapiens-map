@@ -37,12 +37,14 @@ function bindSearchEvents() {
           searchResults.classList.add("hidden");
           searchInput.value = "";
 
+          const promptPrefill = consumePendingDailyPrompt();
           requireLogin(() => openComposer({
             lat, lng,
             officialPlaceName: item.dataset.name,
             placeId: item.dataset.id,
             address: item.dataset.address || null,
             isFreePin: false,
+            prefillContent: promptPrefill,
           }));
         };
       });
