@@ -544,16 +544,25 @@ body {
   display: none;
 }
 
+/* .composer-card는 둥근 테두리 프레임 역할만 하고(overflow: hidden으로
+   모서리를 확실히 클리핑), 실제 스크롤은 안쪽 .composer-card-inner가
+   담당한다. 스크롤 전용 요소에 커스텀 스크롤바 + border-radius를 같이
+   주면 브라우저에 따라 스크롤바 트랙이 둥근 모서리를 뚫고 각지게
+   삐져나오는 문제가 있어(2026-08-13 확인) 이렇게 분리했다. */
 .composer-card {
   width: 100%;
   max-width: 420px;
-  max-height: 86vh;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--cs-paper);
-  border-radius: var(--cs-radius-sheet) var(--cs-radius-sheet) var(--cs-radius-sheet) var(--cs-radius-sheet);
-  padding: 24px 22px 22px;
+  border-radius: var(--cs-radius-sheet);
   position: relative;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.composer-card-inner {
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 24px 22px 22px;
 }
 
 /* ------------------------------------------------------------
@@ -652,24 +661,24 @@ body {
 }
 
 /* ------------------------------------------------------------
-   커스텀 스크롤바 — 스크롤이 있는 모달/시트 공통(.composer-card,
+   커스텀 스크롤바 — 스크롤이 있는 모달/시트 공통(.composer-card-inner,
    .sheet-scroll)에 적용. 블록 라운드형: 트랙은 거의 안 보이게, 썸만
    살짝 두께감 있는 둥근 블록으로 표시. 트랙에 위아래 margin을 줘서
    썸이 박스 맨 위/아래 끝까지 닿지 않게(스크롤 가능 범위를 박스보다
    작게) 만든다.
    ------------------------------------------------------------ */
-.composer-card,
+.composer-card-inner,
 .sheet-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgb(139, 139, 139) transparent;
 }
 
-.composer-card::-webkit-scrollbar,
+.composer-card-inner::-webkit-scrollbar,
 .sheet-scroll::-webkit-scrollbar {
   width: 10px;
 }
 
-.composer-card::-webkit-scrollbar-track,
+.composer-card-inner::-webkit-scrollbar-track,
 .sheet-scroll::-webkit-scrollbar-track {
   background: transparent;
   margin: 5% 0;
@@ -677,13 +686,13 @@ body {
 
 /* "기억 남기기" 모달은 스크롤바 범위가 모달 전체 길이와 같아 보이면 안
    된다 — 시작은 닫기(✕) 버튼 위쪽, 끝은 "기억 남기기" 오렌지 버튼
-   아랫단까지만. .composer-card의 padding(24px 위 / 22px 아래)과 맞춰
-   트랙이 그 버튼 바로 아래 padding 영역에서 멈추게 한다. */
-.composer-card::-webkit-scrollbar-track {
+   아랫단까지만. .composer-card-inner의 padding(24px 위 / 22px 아래)과
+   맞춰 트랙이 그 버튼 바로 아래 padding 영역에서 멈추게 한다. */
+.composer-card-inner::-webkit-scrollbar-track {
   margin: 24px 0 22px;
 }
 
-.composer-card::-webkit-scrollbar-thumb,
+.composer-card-inner::-webkit-scrollbar-thumb,
 .sheet-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(139, 139, 139);
   border-radius: var(--cs-radius-card);
@@ -691,7 +700,7 @@ body {
   background-clip: padding-box;
 }
 
-.composer-card::-webkit-scrollbar-thumb:hover,
+.composer-card-inner::-webkit-scrollbar-thumb:hover,
 .sheet-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgb(115, 115, 115);
 }
