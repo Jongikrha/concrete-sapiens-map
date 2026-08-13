@@ -37,7 +37,11 @@ function renderHashtagChips() {
   }
 
   const allTags = Storage.getAllHashtagsWithCounts();
-  const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
+  // 모바일 화면(<=600px, 다른 반응형 분기와 동일 기준)에서는 칩이 너무
+  // 많이 줄바꿈되지 않도록 20개 대신 10개만 먼저 보여주고 나머지는
+  // "더보기"로 넘긴다(2026-08-13).
+  const topLimit = window.innerWidth <= 600 ? 10 : CONFIG.TOP_HASHTAG_LIMIT;
+  const topTags = allTags.slice(0, topLimit);
   topTags.forEach(({ tag }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
