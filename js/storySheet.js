@@ -407,6 +407,9 @@ function renderStoryItem(story, options = {}) {
   // "내가 쓴 글"은 실계정이 아니라 authorDeviceId(브라우저 단위 비식별
   // 상관관계, mymemory.js의 "내가 남긴 기억"과 동일 기준)로 판단한다.
   // 내 글이면 수정/삭제, 남의 글이면 신고만 노출한다.
+  const authorName = story.displayAuthorName || "익명";
+  const authorNameWithHonorific = authorName === "익명" ? authorName : `${authorName}님`;
+
   const isMine = !!story.authorDeviceId && story.authorDeviceId === Storage.getDeviceId();
   const menuItemsHtml = isMine
     ? `<button class="edit-link" data-id="${story.id}">수정하기</button>
@@ -433,7 +436,7 @@ function renderStoryItem(story, options = {}) {
           </div>
         </div>
       </div>
-      ${story.customName ? `<p class="story-custom-name">${escapeHtml(story.displayAuthorName || "익명")}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
+      ${story.customName ? `<p class="story-custom-name">${escapeHtml(authorNameWithHonorific)}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
 
       <div class="action-row-split">
