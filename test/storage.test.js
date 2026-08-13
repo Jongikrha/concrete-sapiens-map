@@ -252,16 +252,6 @@ test("getYearRange는 스토리들의 최소/최대 연도를 계산한다", () 
   assert.equal(range.max, new Date().getFullYear());
 });
 
-test("importStories는 이미 있는 id는 건너뛰고 새 항목만 캐시에 추가한다", async () => {
-  Storage._setCache([createStory({ id: "existing" })]);
-  const addedCount = await Storage.importStories([
-    createStory({ id: "existing" }),
-    createStory({ id: "new-1" }),
-  ]);
-  assert.equal(addedCount, 1);
-  assert.equal(Storage.getAllStories().length, 2);
-});
-
 test("incrementViewCount는 조회수를 1 늘린다", () => {
   Storage._setCache([createStory({ id: "s1", viewCount: 2 })]);
   const updated = Storage.incrementViewCount("s1");

@@ -349,25 +349,6 @@ const Storage = {
   },
 
   /**
-   * 백업 파일 가져오기 전용 — 이미 없는 id만 추가한다(additive-only).
-   * 공유 DB에서는 로컬 백업으로 전체를 덮어쓰는 saveAll류 동작이 파괴적이라
-   * 의도적으로 없앴다.
-   */
-  async importStories(stories) {
-    const existingIds = new Set(_cache.map((s) => s.id));
-    const toAdd = stories.filter((s) => s.id && !existingIds.has(s.id));
-    for (const story of toAdd) {
-      try {
-        await client.models.Story.create(story);
-        _cache.push(story);
-      } catch (e) {
-        console.error("가져오기 실패", story.id, e);
-      }
-    }
-    return toAdd.length;
-  },
-
-  /**
    * 좌표 근처(같은 장소)의 이야기를 그룹핑합니다.
    * - placeId가 있으면(검색형) 그룹 제목은 카카오 공식 장소명
    * - 없으면(자유 핀) 그룹 제목은 항상 "주소" (첫 이야기의 address)

@@ -1,8 +1,8 @@
 // ============================================================
 // 콘크리트 사피엔스 지도 — 앱 부트스트랩 / 진입 흐름 / 전역 UI 이벤트
 // 지도·마커는 map.js, 작성폼은 composer.js, 이야기 열람은 storySheet.js,
-// 해시태그/연도/시간슬라이더는 filters.js, 검색은 search.js, 백업은
-// backup.js로 분리되어 있다. 이 파일은 그 조각들을 엮는 core.
+// 해시태그/연도/시간슬라이더는 filters.js, 검색은 search.js로 분리되어
+// 있다. 이 파일은 그 조각들을 엮는 core.
 // ============================================================
 
 async function initApp() {
@@ -72,19 +72,9 @@ function openRecentMemoriesModal(opts = {}) {
       <button class="recent-close" id="recent-close">✕</button>
     </div>
     ${listHtml}
-    <div class="backup-row">
-      <button class="backup-link" id="btn-export-backup">⭳ 데이터 내보내기 (백업)</button>
-      <button class="backup-link" id="btn-import-backup">⭱ 백업 파일 가져오기</button>
-      <input type="file" id="import-file-input" accept="application/json" class="hidden" />
-    </div>
   `;
 
   panel.querySelector("#recent-close").onclick = closeRecentMemoriesModal;
-  panel.querySelector("#btn-export-backup").onclick = exportBackup;
-  panel.querySelector("#btn-import-backup").onclick = () => {
-    document.getElementById("import-file-input").click();
-  };
-  panel.querySelector("#import-file-input").addEventListener("change", handleImportFile);
 
   panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
     item.onclick = () => {
@@ -133,8 +123,6 @@ function goBackFromSheet() {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
   }
 }
-
-// 데이터 백업(내보내기/가져오기)은 js/backup.js로 분리됨 (exportBackup, handleImportFile)
 
 // ------------------------------------------------------------
 // 최초 진입: 최근 이야기 랜덤 랜딩

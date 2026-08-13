@@ -1535,29 +1535,6 @@ button.story-place-line:hover {
   margin: 0 0 10px;
 }
 
-.backup-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--cs-map-gray);
-}
-
-.backup-link {
-  border: none;
-  background: none;
-  color: var(--cs-text-muted);
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-  padding: 2px 0;
-}
-
-.backup-link:hover {
-  color: var(--cs-black);
-}
-
 /* ------------------------------------------------------------
    기억 전달하기(공유) — "기억 전하기" 버튼을 누르면 카드 안에서
    펼쳐지는 인라인 패널(모달 아님). 링크를 보여주고 복사만 하는
