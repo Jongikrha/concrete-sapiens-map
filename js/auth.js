@@ -186,6 +186,13 @@ function closeAuthOverlay() {
   authEmailValue = "";
   authPasswordValue = "";
   authPasswordConfirmValue = "";
+  // 상태만 비우고 패널을 다시 그리지 않으면, 숨겨진 auth-panel 안의
+  // <input type="password"> DOM 값이 방금 입력했던 비밀번호를 그대로
+  // 들고 남아있는다. 페이지에 <form> 경계가 없는 SPA라, 크롬이 나중에
+  // 전혀 무관한 다른 입력(예: 기억 남기기 폼의 장소 이름)을 이 남은
+  // 비밀번호 값과 한 쌍으로 착각해 "비밀번호를 저장하시겠습니까?"를
+  // 띄우는 원인이 된다 — 닫을 때 실제로 비워서 렌더링한다.
+  renderAuthPanel();
 }
 
 function isValidEmail(v) {
