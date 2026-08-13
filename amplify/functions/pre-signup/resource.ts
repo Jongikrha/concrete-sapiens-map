@@ -8,4 +8,8 @@ import { defineFunction } from '@aws-amplify/backend';
 export const preSignUpFn = defineFunction({
   name: 'pre-signup',
   entry: './handler.ts',
+  // auth 트리거 함수를 기본 스택에 두면 auth/data/function 스택 사이에
+  // 순환 의존성이 생겨 배포가 실패한다(2026-08-13, CloudformationStack
+  // CircularDependencyError로 확인) — auth 스택 소속으로 명시해 해결.
+  resourceGroupName: 'auth',
 });
