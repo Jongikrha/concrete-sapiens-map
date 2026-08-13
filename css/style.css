@@ -166,6 +166,11 @@ body {
 
 #search-input {
   flex: 1;
+  /* flex item 기본값(min-width:auto)은 placeholder 글자 수만큼의 폭
+     밑으로는 안 줄어든다 — 화면이 좁으면 이 때문에 옆의 #search-btn이
+     .search-input-row의 overflow:hidden에 잘려 안 보이는 문제가 있어서
+     (2026-08-13, 모바일에서 확인) 명시적으로 풀어준다. */
+  min-width: 0;
   border: none;
   background: transparent;
   padding: 9px 16px;
@@ -624,6 +629,9 @@ body {
   background: var(--cs-gray);
 }
 
+/* 기억 남기기 모달의 닫기 버튼(.composer-close-btn)과 같은 스타일 —
+   테두리 없이 아이콘만 있으면 잘 안 보인다는 피드백(2026-08-13)이라
+   맞춰서 통일한다. */
 .sheet-close {
   position: absolute;
   right: 14px;
@@ -637,15 +645,16 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--cs-gray);
+  background: #fff;
   color: var(--cs-text-muted);
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
 }
 
 .sheet-close:hover {
   color: var(--cs-black);
+  border-color: var(--cs-black);
 }
 
 .sheet-back-link {
@@ -1853,6 +1862,13 @@ button.story-place-line:hover {
   }
   .composer-card {
     max-width: 100%;
+  }
+  /* 화면 폭이 다양한 모바일에서 특정 기기에 맞추기보다, 항상 화면
+     폭의 80%로 — 좌우에 여백을 둬서 꽉 차 보이지 않게 한다
+     (2026-08-13). */
+  .bottom-sheet {
+    left: 10%;
+    right: 10%;
   }
 }
 
