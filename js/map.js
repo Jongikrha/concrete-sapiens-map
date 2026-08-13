@@ -37,8 +37,22 @@ function makeDotImage(tier, selected) {
   const canvas = ring + 6;
   const c = canvas / 2;
 
+  // 선택되지 않은 점만 은은하게 반짝인다 — 선택된 점은 이미 크기로
+  // 강조되니 계속 움직이면 오히려 산만하다. 마커를 만들 때마다 주기/
+  // 시작 위상을 랜덤하게 뽑아서 다 같이 반짝이지 않고 제각각 켜졌다
+  // 꺼지게 한다(begin을 음수로 줘서 로드 즉시 각자 다른 위상에서
+  // 시작 — 양수 delay면 처음 몇 초간 전부 같이 꺼진 채로 대기한다).
+  const twinkle = selected
+    ? ""
+    : (() => {
+        const peak = Math.min(ringOpacity + 0.14, 0.4);
+        const dur = (2.6 + Math.random() * 2).toFixed(2);
+        const begin = (Math.random() * dur).toFixed(2);
+        return `<animate attributeName="opacity" values="${ringOpacity};${peak};${ringOpacity}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
+      })();
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
-    <circle cx="${c}" cy="${c}" r="${ring / 2}" fill="#FF5A36" opacity="${ringOpacity}"/>
+    <circle cx="${c}" cy="${c}" r="${ring / 2}" fill="#FF5A36" opacity="${ringOpacity}">${twinkle}</circle>
     <circle cx="${c}" cy="${c}" r="${center / 2}" fill="#FF5A36" stroke="#FFFFFF" stroke-width="2"/>
   </svg>`;
 
