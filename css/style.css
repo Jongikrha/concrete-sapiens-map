@@ -707,7 +707,10 @@ body {
    ------------------------------------------------------------ */
 .story-spot-header {
   padding-right: 32px;
-  margin-bottom: 4px;
+  /* 기억이 1개뿐이면 정렬 토글이 안 보이는데(sort-toggle의 여백이
+     사라짐), 그러면 주소 바로 아래 연도가 너무 붙어 보인다 — 토글
+     유무와 상관없이 항상 최소한의 여백을 보장한다. */
+  margin-bottom: 16px;
 }
 
 .story-spot-count {
