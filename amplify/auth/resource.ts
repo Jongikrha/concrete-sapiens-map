@@ -1,4 +1,5 @@
 import { defineAuth } from '@aws-amplify/backend';
+import { preSignUpFn } from '../functions/pre-signup/resource';
 
 /**
  * Define and configure your auth resource
@@ -7,6 +8,11 @@ import { defineAuth } from '@aws-amplify/backend';
 export const auth = defineAuth({
   loginWith: {
     email: true,
+  },
+  // 가입 시 이메일 인증 코드 단계를 건너뛰기 위한 트리거(2026-08-13,
+  // preSignUpFn 주석 참고) — 이메일/비밀번호만 맞으면 바로 가입 완료.
+  triggers: {
+    preSignUp: preSignUpFn,
   },
   groups: ['Admins'],
   senders: {

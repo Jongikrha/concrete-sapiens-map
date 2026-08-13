@@ -6,11 +6,19 @@
 // window._authReady Promise로 넘겨준다(Amplify.configure를 backend.js
 // 한 곳에서만 호출하기 위함 — backend.js 상단 주석 참고).
 //
+// 가입은 이메일 + 비밀번호(+확인) 입력만으로 바로 완료된다(2026-08-13).
+// amplify/functions/pre-signup 트리거가 Cognito 쪽에서 자동으로 확인
+// 처리를 해주기 때문 — 이메일 인증 코드는 더 이상 가입 단계에서 쓰지
+// 않고, 비밀번호를 잊었을 때 재설정 코드 용도로만 남아있다(authMode
+// "verify"는 그 이전에 가입했지만 아직 미확인 상태로 남아있는 레거시
+// 계정이 로그인을 시도할 때의 폴백 경로로만 쓰인다 — handleLoginSubmit
+// 참고).
+//
 // 이 파일은 두 가지를 담당한다.
 // 1) 전역 Auth 객체 — 로그인 상태 조회/변경의 단일 창구.
 // 2) openAuthOverlay(onSuccess) — "기억 남기기" 진입점에서 로그인 안
-//    되어 있을 때 띄우는 가입/인증/로그인 UI. 로그인(또는 가입+인증)
-//    성공 시 onSuccess()를 호출해 원래 하려던 작성 흐름으로 이어간다.
+//    되어 있을 때 띄우는 가입/로그인 UI. 로그인(또는 가입) 성공 시
+//    onSuccess()를 호출해 원래 하려던 작성 흐름으로 이어간다.
 // ============================================================
 
 const Auth = {
@@ -50,16 +58,21 @@ const Auth = {
     return this._currentUser;
   },
 
+  // pre-signup 트리거가 자동으로 확인 처리를 해주므로(amplify/functions/
+  // pre-signup 참고) signUp 직후 바로 signIn까지 이어서 "가입 완료 =
+  // 로그인된 상태"를 만든다.
   async signUp({ email, password }) {
-    return this._sdk.signUp({
+    await this._sdk.signUp({
       username: email,
       password,
       options: { userAttributes: { email } },
     });
+    await this._sdk.signIn({ username: email, password });
+    await this._refreshCurrentUser();
   },
 
-  // 인증 코드 확인 후 곧바로 로그인 상태로 전환한다(기획서 5장 —
-  // "가입 완료" = 로그인된 상태).
+  // 레거시 미확인 계정이 로그인을 시도할 때만 쓰는 인증 코드 확인 경로
+  // (handleLoginSubmit의 UserNotConfirmedException 폴백).
   async confirmSignUp({ email, code, password }) {
     await this._sdk.confirmSignUp({ username: email, confirmationCode: code });
     await this._sdk.signIn({ username: email, password });
@@ -127,6 +140,7 @@ let pendingResetEmail = "";
 // 그래서 입력값도 여기 상태로 같이 들고 있다가 렌더할 때 그대로 채운다.
 let authEmailValue = "";
 let authPasswordValue = "";
+let authPasswordConfirmValue = "";
 
 // "기억 남기기"로 이어지는 모든 진입점(플로팅 버튼, 스팟 상세, 지도 클릭,
 // 검색 결과)이 공통으로 쓰는 게이트. 로그인 상태면 바로
@@ -147,6 +161,7 @@ function openAuthOverlay(onSuccess) {
   authBusy = false;
   authEmailValue = "";
   authPasswordValue = "";
+  authPasswordConfirmValue = "";
   renderAuthPanel();
   document.getElementById("auth-overlay").classList.remove("hidden");
 }
@@ -159,6 +174,7 @@ function closeAuthOverlay() {
   pendingResetEmail = "";
   authEmailValue = "";
   authPasswordValue = "";
+  authPasswordConfirmValue = "";
 }
 
 function isValidEmail(v) {
@@ -184,6 +200,8 @@ function renderAuthPanel() {
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>
       <input type="password" id="auth-password" class="input-field" placeholder="8자 이상" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
+      <label class="field-label">비밀번호 확인</label>
+      <input type="password" id="auth-password-confirm" class="input-field" placeholder="비밀번호를 다시 입력해주세요" maxlength="128" value="${escapeHtml(authPasswordConfirmValue)}" />
       <p class="field-hint">8자 이상으로 만들어주세요.</p>
       ${errorHtml}
       <button class="btn-primary" id="auth-submit">계정 만들기</button>
@@ -285,8 +303,10 @@ function renderAuthPanel() {
 async function handleSignupSubmit() {
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
+  const passwordConfirm = document.getElementById("auth-password-confirm").value;
   authEmailValue = email;
   authPasswordValue = password;
+  authPasswordConfirmValue = passwordConfirm;
 
   if (!isValidEmail(email)) {
     authError = "이메일 형식을 확인해주세요.";
@@ -298,6 +318,11 @@ async function handleSignupSubmit() {
     renderAuthPanel();
     return;
   }
+  if (password !== passwordConfirm) {
+    authError = "비밀번호가 일치하지 않습니다.";
+    renderAuthPanel();
+    return;
+  }
 
   authBusy = true;
   authError = "";
@@ -305,11 +330,9 @@ async function handleSignupSubmit() {
 
   try {
     await Auth.signUp({ email, password });
-    pendingSignupEmail = email;
-    pendingSignupPassword = password;
-    authMode = "verify";
-    authBusy = false;
-    renderAuthPanel();
+    const onSuccess = pendingAuthSuccess;
+    closeAuthOverlay();
+    if (onSuccess) onSuccess();
   } catch (e) {
     authBusy = false;
     authError = Auth.mapError(e);
