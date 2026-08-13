@@ -33,8 +33,12 @@ const MEMORY_GLOW = "#E76D4F";
 /**
  * Memory Light — 핀이 아니라 "장소에 남겨진 기억을 작은 빛의 잔광으로
  * 표현"하는 컨셉의 마커(디자인 가이드 기준, 2026-08-13 개편). 중심부
- * (거의 불투명) → 1차 광원(옅은 중간 광훈) → 2차 잔광(아주 옅고 큰
- * 바깥 haze) 3겹의 radialGradient로 부드러운 빛무리를 만든다.
+ * (거의 불투명) → 1차 광원(중간 광훈) → 2차 잔광(옅고 큰 바깥 haze)
+ * 3겹의 반투명 원을 겹쳐 빛무리를 만든다. radialGradient(defs)를
+ * 한 번 써봤는데 지도가 흐려지는 것과 겹쳐 마커가 거의 안 보이는
+ * 문제가 있었다(2026-08-13) — 그라디언트가 카카오 마커 이미지로
+ * 래스터라이즈되는 과정에서 옅어지는 것으로 추정, 검증된 방식(단순
+ * 반투명 원 겹치기)으로 되돌리고 대신 불투명도를 확실히 올렸다.
  * 기억 수는 크기로(기존 tier), "오늘 남긴 기억이 있는가"는 광원의
  * 선명도로 구분한다(VARIATIONS: 오늘의 기억 = 더 선명·따뜻, 오래된
  * 기억 = 더 희미·부드러움). 선택되지 않은 점만 아주 느리게 커졌다
@@ -43,20 +47,19 @@ const MEMORY_GLOW = "#E76D4F";
  */
 function makeDotImage(tier, selected, isToday) {
   const centerSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
-  const glow1Sizes = { 1: 18, 2: 22, 3: 26, 4: 30 };
-  const glow2Sizes = { 1: 32, 2: 38, 3: 44, 4: 50 };
+  const glow1Sizes = { 1: 16, 2: 19, 3: 22, 4: 25 };
+  const glow2Sizes = { 1: 26, 2: 30, 3: 34, 4: 38 };
 
   const center = selected ? centerSizes[tier] + 3 : centerSizes[tier];
-  const glow1 = selected ? glow1Sizes[tier] + 6 : glow1Sizes[tier];
-  const glow2 = selected ? glow2Sizes[tier] + 8 : glow2Sizes[tier];
+  const glow1 = selected ? glow1Sizes[tier] + 5 : glow1Sizes[tier];
+  const glow2 = selected ? glow2Sizes[tier] + 7 : glow2Sizes[tier];
 
-  const coreOpacity = selected ? 1 : isToday ? 0.95 : 0.85;
-  const glow1Opacity = selected ? 0.24 : isToday ? 0.2 : 0.15;
-  const glow2Opacity = selected ? 0.07 : isToday ? 0.06 : 0.03;
+  const coreOpacity = selected ? 1 : isToday ? 1 : 0.9;
+  const glow1Opacity = selected ? 0.4 : isToday ? 0.34 : 0.24;
+  const glow2Opacity = selected ? 0.16 : isToday ? 0.13 : 0.08;
 
   const canvas = glow2 + 6;
   const c = canvas / 2;
-  const uid = Math.random().toString(36).slice(2, 8);
 
   // 선택되지 않은 점만 숨쉬듯 커졌다 작아진다. 마커마다 주기/시작
   // 위상을 랜덤하게 뽑아서 다 같이 움직이지 않고 제각각 호흡하게 한다
@@ -67,24 +70,14 @@ function makeDotImage(tier, selected, isToday) {
     const dur = (5 + Math.random() * 2).toFixed(2);
     const begin = (Math.random() * dur).toFixed(2);
     const glow2Peak = (glow2 / 2) * 1.15;
-    const glow1PeakOpacity = Math.min(glow1Opacity + 0.05, 0.3);
+    const glow1PeakOpacity = Math.min(glow1Opacity + 0.08, 0.5);
     glow2Animate = `<animate attributeName="r" values="${glow2 / 2};${glow2Peak.toFixed(2)};${glow2 / 2}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
     glow1Animate = `<animate attributeName="opacity" values="${glow1Opacity};${glow1PeakOpacity};${glow1Opacity}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
-    <defs>
-      <radialGradient id="g2-${uid}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${MEMORY_CORE}" stop-opacity="${glow2Opacity}"/>
-        <stop offset="100%" stop-color="${MEMORY_CORE}" stop-opacity="0"/>
-      </radialGradient>
-      <radialGradient id="g1-${uid}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${MEMORY_GLOW}" stop-opacity="1"/>
-        <stop offset="100%" stop-color="${MEMORY_GLOW}" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="url(#g2-${uid})">${glow2Animate}</circle>
-    <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="url(#g1-${uid})" opacity="${glow1Opacity}">${glow1Animate}</circle>
+    <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
+    <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${center / 2}" fill="${MEMORY_CORE}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.5"/>
   </svg>`;
 
@@ -122,7 +115,7 @@ function initMap() {
         height: "19px",
         background: "#C9573D",
         borderRadius: "50%",
-        boxShadow: "0 0 8px 4px rgba(231,109,79,0.22), 0 0 24px 12px rgba(201,87,61,0.05)",
+        boxShadow: "0 0 8px 4px rgba(231,109,79,0.34), 0 0 24px 12px rgba(201,87,61,0.1)",
         color: "transparent",
         textAlign: "center",
         lineHeight: "19px",

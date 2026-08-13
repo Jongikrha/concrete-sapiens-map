@@ -53,8 +53,8 @@ body {
 
 /* ------------------------------------------------------------
    레이아웃 뼈대 / 레이어 구조
-   Layer 1 Kakao Map / Layer 2 DIM / Layer 3 Dot
-   Layer 4 Controls / Layer 5 Bottom Sheet / Layer 6 Global UI
+   Layer 1 Kakao Map(+Dot, filter로 흐릿한 톤 처리) / Layer 2 Controls
+   / Layer 3 Bottom Sheet / Layer 4 Global UI
    ------------------------------------------------------------ */
 #app {
   position: relative;
@@ -73,21 +73,14 @@ body {
   width: 100%;
   height: 100%;
   background: var(--cs-map-gray);
-}
-
-.map-dim-layer {
-  position: absolute;
-  inset: 0;
-  /* 지도 전체(카카오맵 타일 + 마커)를 옅게 덮는 뿌연 막 — 이 레이어가
-     #map 바로 다음(마커보다 위, 상단바/툴바보다는 아래 z-index)에
-     오는 걸 이용해 지도 위 모든 것에 균일하게 뿌연 느낌을 준다.
-     예전엔 어둡게 깔던 dim(검정 20%)이었는데, 흐릿하고 옅은 톤
-     컨셉(2026-08-13, 디자인 레퍼런스 기준)으로 바꾸며 같은 레이어를
-     밝은 톤으로 재활용했다. */
-  background: var(--cs-paper);
-  opacity: 0.46;
-  pointer-events: none;
-  z-index: 5;
+  /* 흐릿한 지도 톤(디자인 레퍼런스 기준, 2026-08-13). 처음엔 #map 위에
+     옅은 색 레이어(.map-dim-layer)를 따로 덮는 방식으로 했는데, 그
+     레이어가 카카오맵이 #map 안에 그리는 마커까지 통째로 덮어버려서
+     마커까지 안 보일 정도로 흐려지는 문제가 있었다. filter는 같은
+     서브트리 안에서 상대적인 채도/명도 차이를 유지한 채 낮추는 방식이라
+     (모든 걸 하나의 옅은 색으로 뭉개는 게 아니라), 옅은 지도 타일은 더
+     흐릿해지면서도 마커의 orange 톤은 상대적으로 또렷하게 남는다. */
+  filter: saturate(0.6) brightness(1.05) contrast(0.95);
 }
 
 /* 지도를 클릭했을 때 "도장 찍힌" 느낌을 주는 짧은 링 애니메이션 */
