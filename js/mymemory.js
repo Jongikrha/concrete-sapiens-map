@@ -100,7 +100,10 @@ function openMyMemoryList(kind, opts = {}) {
   });
 
   document.getElementById("mymemory-overlay").classList.remove("hidden");
-  if (opts.scrollTop) panel.scrollTop = opts.scrollTop;
+  // 목록에서 기억을 보다가 뒤로 돌아온 경우(opts.scrollTop)에는 보던
+  // 위치를 유지하고, 그 외에는 이전에 열었을 때 남은 스크롤 위치가
+  // 이어지지 않도록 맨 위로 되돌린다.
+  panel.scrollTop = opts.scrollTop || 0;
 }
 
 function closeMyMemoryList() {

@@ -311,6 +311,7 @@ function openComposer(pin) {
   };
 
   document.getElementById("composer-overlay").classList.remove("hidden");
+  panel.scrollTop = 0;
 }
 
 function closeComposer() {

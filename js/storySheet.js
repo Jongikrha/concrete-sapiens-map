@@ -27,6 +27,10 @@ function openSheet(group, options = {}) {
   // hidden 해제가 먼저 와야 한다.
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
+  // 이전에 열었던 시트의 스크롤 위치가 같은 #sheet-content 요소에 남아있을
+  // 수 있어 매번 맨 위로 되돌린다 — highlightStoryId가 있으면 아래
+  // renderSheetContent에서 다시 그 기억으로 스크롤하며 덮어쓴다.
+  document.getElementById("sheet-content").scrollTop = 0;
   renderSheetContent(group);
   sheetOpen = true;
   group.stories.forEach((s) => Storage.incrementViewCount(s.id));
@@ -300,6 +304,7 @@ function openHashtagSheet(tag) {
   renderHashtagSheetContent();
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
+  document.getElementById("sheet-content").scrollTop = 0;
   sheetOpen = true;
 }
 
@@ -313,6 +318,7 @@ function openAllTagsSheet() {
   renderAllTagsSheetContent();
   document.getElementById("sheet-backdrop").classList.remove("hidden");
   document.getElementById("bottom-sheet").classList.remove("hidden");
+  document.getElementById("sheet-content").scrollTop = 0;
   sheetOpen = true;
 }
 

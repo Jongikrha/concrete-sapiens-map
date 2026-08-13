@@ -164,6 +164,7 @@ function openAuthOverlay(onSuccess) {
   authPasswordConfirmValue = "";
   renderAuthPanel();
   document.getElementById("auth-overlay").classList.remove("hidden");
+  document.getElementById("auth-panel").scrollTop = 0;
 }
 
 function closeAuthOverlay() {
