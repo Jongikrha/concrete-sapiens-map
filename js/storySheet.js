@@ -393,7 +393,7 @@ function renderStoryItem(story, options = {}) {
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
   const locationHtml = options.showLocation
-    ? `<button class="story-place-line" data-story-id="${story.id}">${escapeHtml(Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address }))}</button>`
+    ? `<button class="story-place-line" data-story-id="${story.id}">📍 ${escapeHtml(Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address }))} →</button>`
     : "";
 
   // "내가 쓴 글"은 실계정이 아니라 authorDeviceId(브라우저 단위 비식별

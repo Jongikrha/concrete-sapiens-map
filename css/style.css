@@ -980,14 +980,17 @@ body {
 }
 
 .story-place-line {
-  font-family: var(--font-serif);
+  font-family: var(--font-pretendard);
   font-size: 15px;
+  font-weight: 700;
   color: var(--cs-text-main);
   margin: 4px 0 16px;
 }
 
 /* 해시태그 전체 목록처럼 여러 스팟이 섞인 화면에서만 버튼으로 쓰인다
-   (js/storySheet.js renderStoryItem의 showLocation 옵션). */
+   (js/storySheet.js renderStoryItem의 showLocation 옵션). 본문 문장과
+   섞여 보이지 않도록 볼드 + 핀 아이콘 + 화살표로 "누르면 장소로
+   이동한다"는 걸 hover 없이도 바로 알 수 있게 한다(2026-08-13). */
 button.story-place-line {
   display: block;
   width: 100%;
