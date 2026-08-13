@@ -36,51 +36,88 @@ function renderTotalCountBanner() {
 }
 
 // ------------------------------------------------------------
-// 최근 기억 목록 모달 — 배너 클릭 시 최신순으로 쭉 훑어볼 수 있다.
-// 항목을 누르면 목록은 닫히고 지도 이동 + 기억 카드가 바로 열리며,
-// 카드의 뒤로가기(←)를 누르면 스크롤 위치까지 복원해서 이 목록으로
-// 돌아온다 (opts.scrollTop, goBackFromSheet 참고).
+// 최근에 쌓인 기억 목록 모달 — 배너 클릭 시 훑어볼 수 있다. 정렬은
+// storySheet.js의 스팟 상세와 같은 방식(최근에 쌓인 순/시간여행 순)을
+// 쓴다. 항목을 누르면 목록은 닫히고 지도 이동 + 기억 카드가 바로
+// 열리며, 카드의 뒤로가기(←)를 누르면 스크롤 위치까지 복원해서 이
+// 목록으로 돌아온다 (opts.scrollTop, goBackFromSheet 참고).
 // ------------------------------------------------------------
+let recentSort = "latest";
+
 function openRecentMemoriesModal(opts = {}) {
   const panel = document.getElementById("recent-panel");
-  const recent = [...Storage.getVisibleStories()]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 50);
+  const stories = Storage.getVisibleStories();
 
-  const listHtml = recent.length
-    ? recent.map((story) => {
-        const year = Storage.getStoryYear(story);
-        const title = Storage.getGroupTitle({
-          placeId: story.placeId,
-          officialPlaceName: story.officialPlaceName,
-          customName: story.customName,
-          address: story.address,
-        });
-        return `
-          <div class="recent-item" data-id="${story.id}">
-            <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
-            <p class="recent-item-content">${escapeHtml(story.content)}</p>
-            <p class="recent-item-place">${escapeHtml(title)}</p>
-          </div>
-        `;
-      }).join("")
-    : `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
+  const renderItem = (story) => {
+    const year = Storage.getStoryYear(story);
+    const title = Storage.getGroupTitle({
+      placeId: story.placeId,
+      officialPlaceName: story.officialPlaceName,
+      customName: story.customName,
+      address: story.address,
+    });
+    return `
+      <div class="recent-item" data-id="${story.id}">
+        <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
+        <p class="recent-item-content">${escapeHtml(story.content)}</p>
+        <p class="recent-item-place">${escapeHtml(title)}</p>
+      </div>
+    `;
+  };
+
+  let listHtml;
+  if (recentSort === "timetravel") {
+    const dated = stories.filter((s) => Storage.getStoryYear(s) !== null);
+    const undated = stories.filter((s) => Storage.getStoryYear(s) === null);
+
+    dated.sort((a, b) => {
+      const ay = Storage.getStoryYear(a), by = Storage.getStoryYear(b);
+      if (ay !== by) return ay - by;
+      const am = Storage.getStoryMonth(a) || 0, bm = Storage.getStoryMonth(b) || 0;
+      return am - bm;
+    });
+    undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    listHtml = dated.map(renderItem).join("");
+    if (undated.length > 0) {
+      listHtml += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
+      listHtml += undated.map(renderItem).join("");
+    }
+  } else {
+    const recent = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50);
+    listHtml = recent.map(renderItem).join("");
+  }
+
+  const sortToggleHtml = stories.length
+    ? `
+      <div class="sort-toggle">
+        <button class="sort-btn ${recentSort === "latest" ? "sort-btn--active" : ""}" data-sort="latest">최근에 쌓인 순</button>
+        <button class="sort-btn ${recentSort === "timetravel" ? "sort-btn--active" : ""}" data-sort="timetravel">시간여행 순</button>
+      </div>
+    `
+    : "";
+  if (!stories.length) listHtml = `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
 
   panel.innerHTML = `
     <div class="recent-header">
-      <h2 class="composer-title" style="margin:0;">최근 기억</h2>
+      <h2 class="composer-title" style="margin:0;">최근에 쌓인 기억</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
+    ${sortToggleHtml}
     ${listHtml}
   `;
 
   panel.querySelector("#recent-close").onclick = closeRecentMemoriesModal;
 
+  panel.querySelectorAll(".sort-btn").forEach((btn) => {
+    btn.onclick = () => { recentSort = btn.dataset.sort; openRecentMemoriesModal(); };
+  });
+
   panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeRecentMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "최근 기억" });
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "최근에 쌓인 기억" });
     };
   });
 
