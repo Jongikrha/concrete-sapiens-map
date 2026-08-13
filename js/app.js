@@ -260,11 +260,6 @@ function bindUIEvents() {
     renderMarkers();
   });
 
-  document.getElementById("fab-add").onclick = () => {
-    const center = map.getCenter();
-    requireLogin(() => startFreePinComposer(center.getLat(), center.getLng()));
-  };
-
   document.addEventListener("click", () => {
     document.querySelectorAll(".story-item-menu-dropdown").forEach((d) => d.classList.add("hidden"));
   });
