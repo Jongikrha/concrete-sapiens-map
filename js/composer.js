@@ -95,6 +95,7 @@ function openComposer(pin) {
 
   panel.innerHTML = `
     <h2 class="composer-title">${editing ? "기억 수정하기" : "기억 남기기"}</h2>
+    ${editing ? "" : `<p class="composer-subtitle">당신의 기억이 지도에 남아 빛이 됩니다.</p>`}
 
     <label class="field-label">WHERE</label>
     ${whereHtml}
