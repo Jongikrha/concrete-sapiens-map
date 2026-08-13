@@ -22,27 +22,61 @@ function tierForCount(n) {
 /**
  * Memory Ripple — 핀이 아니라 "누군가의 기억이 남아 있는 장소 =
  * 도시 위에 켜진 작은 불빛"이라는 컨셉의 마커. 색은 전적으로
- * Signal Orange 하나만 쓰고, 기억 수는 숫자로 노출하지 않고 크기
+ * Signal Orange 계열 하나만 쓰고, 기억 수는 숫자로 노출하지 않고 크기
  * 차이로만 표현한다(SNS 인기 경쟁처럼 보이지 않도록). 평소엔 조용한
- * 점, 선택되면 링이 한 번 커지는 정도의 절제된 변화만 준다.
+ * 빛, 선택되면 살짝 더 커지는 정도의 절제된 변화만 준다.
+ *
+ * 은은한 방사형 glow(원형 그라디언트) 위에 4방향 sparkle(반짝임) 별
+ * 모양을 얹어 "빛" 느낌을 낸다 — 지도 전체를 어둡게 하지 않아도 각
+ * 점 자체가 빛나 보이도록(2026-08-13, 참고 이미지 기반).
  */
-function makeDotImage(tier, selected) {
-  const centerSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
-  const ringSizes = { 1: 22, 2: 26, 3: 30, 4: 34 };
+function dotSvgDataUrl(tier, selected) {
+  const coreSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
+  const glowSizes = { 1: 26, 2: 32, 3: 38, 4: 44 };
 
-  const center = selected ? centerSizes[tier] + 3 : centerSizes[tier];
-  const ring = selected ? ringSizes[tier] + 6 : ringSizes[tier];
-  const ringOpacity = selected ? 0.28 : 0.18;
+  const core = selected ? coreSizes[tier] + 3 : coreSizes[tier];
+  const glow = selected ? glowSizes[tier] + 8 : glowSizes[tier];
+  const glowOpacity = selected ? 0.85 : 0.65;
 
-  const canvas = ring + 6;
+  const canvas = glow + 10;
   const c = canvas / 2;
 
+  const starOuter = core * 1.1;
+  const starInner = starOuter * 0.34;
+  const k = starInner / Math.SQRT2;
+  const starPoints = [
+    [c, c - starOuter],
+    [c + k, c - k],
+    [c + starOuter, c],
+    [c + k, c + k],
+    [c, c + starOuter],
+    [c - k, c + k],
+    [c - starOuter, c],
+    [c - k, c - k],
+  ]
+    .map((p) => p.join(","))
+    .join(" ");
+
+  const gradId = `dotGlow-${tier}-${selected ? 1 : 0}`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
-    <circle cx="${c}" cy="${c}" r="${ring / 2}" fill="#FF5A36" opacity="${ringOpacity}"/>
-    <circle cx="${c}" cy="${c}" r="${center / 2}" fill="#FF5A36" stroke="#FFFFFF" stroke-width="2"/>
+    <defs>
+      <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#FFF3D6" stop-opacity="0.9"/>
+        <stop offset="45%" stop-color="#FFB65C" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#FF5A36" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="${c}" cy="${c}" r="${glow / 2}" fill="url(#${gradId})" opacity="${glowOpacity}"/>
+    <polygon points="${starPoints}" fill="#FFF3D6"/>
+    <circle cx="${c}" cy="${c}" r="${core / 2.6}" fill="#FFF8E7"/>
   </svg>`;
 
-  const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  return { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg), canvas };
+}
+
+function makeDotImage(tier, selected) {
+  const { url, canvas } = dotSvgDataUrl(tier, selected);
+  const c = canvas / 2;
   return new kakao.maps.MarkerImage(
     url,
     new kakao.maps.Size(canvas, canvas),
@@ -66,21 +100,22 @@ function initMap() {
     // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
     minLevel: 5,
     disableClickZoom: false,
-    // 뭉친 지점도 개별 Memory Dot과 같은 Signal Orange 점으로 보이도록,
-    // 숫자 배지 대신 makeDotImage의 큰 점(tier 4) 모양을 그대로 재사용한다.
+    // 뭉친 지점도 개별 Memory Dot과 같은 빛 모양으로 보이도록, 숫자 배지
+    // 대신 dotSvgDataUrl의 큰 점(tier 4) 이미지를 배경으로 그대로 재사용한다.
     styles: [
-      {
-        width: "19px",
-        height: "19px",
-        background: "#FF5A36",
-        borderRadius: "50%",
-        border: "2px solid #FFFFFF",
-        color: "transparent",
-        textAlign: "center",
-        lineHeight: "19px",
-        fontSize: "0px",
-        fontWeight: "500",
-      },
+      (() => {
+        const { url, canvas } = dotSvgDataUrl(4, false);
+        return {
+          width: `${canvas}px`,
+          height: `${canvas}px`,
+          background: `url(${url}) no-repeat center / contain`,
+          color: "transparent",
+          textAlign: "center",
+          lineHeight: `${canvas}px`,
+          fontSize: "0px",
+          fontWeight: "500",
+        };
+      })(),
     ],
   });
 
