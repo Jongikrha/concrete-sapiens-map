@@ -23,6 +23,22 @@ const REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 
+// 오늘의 질문 프롬프트 목록 (매일 오전 6시에 하나씩 결정론적으로 노출) —
+// 데이터 의존 없음. 한 번 만들었다가(2026-08-11) 없앴는데(2026-08-12),
+// 해시태그 칩과 같은 크기의 칩으로 다시 살렸다(2026-08-14).
+const DAILY_PROMPTS = [
+  "당신이 처음으로 혼자 소주를 마셨던 가게는 어디인가요?",
+  "부모님과 마지막으로 손을 잡고 걸었던 길을 기억하나요?",
+  "이사 가기 전, 마지막으로 눈에 담았던 우리 집 풍경은?",
+  "첫 출근길, 어떤 마음으로 그 길을 걸었나요?",
+  "가장 친했던 친구와 마지막으로 함께 있었던 장소는?",
+  "혼자 울고 싶을 때 찾아가던 곳이 있었나요?",
+  "첫사랑과 처음 손을 잡았던 곳은 어디였나요?",
+  "이제는 사라진, 그리운 동네 가게가 있나요?",
+  "졸업식 날, 가장 오래 머물렀던 장소는 어디였나요?",
+  "누군가를 배웅하며 눈물을 참았던 곳이 있나요?",
+];
+
 let client = null;
 let _cache = [];
 let _bannedWords = [];
@@ -503,6 +519,24 @@ const Storage = {
   },
 
   /**
+   * 오늘의 질문 — 날짜 문자열을 시드로 DAILY_PROMPTS 중 하나를 결정론적으로
+   * 고른다(같은 날 여러 번 불러도 항상 같은 질문). 요청대로(2026-08-14)
+   * 자정이 아니라 오전 6시를 하루 경계로 쓴다 — 6시 이전이면 "어제"로
+   * 쳐서 전날 질문을 그대로 이어간다.
+   */
+  getDailyPrompt() {
+    const now = new Date();
+    const effective = new Date(now);
+    if (now.getHours() < 6) effective.setDate(effective.getDate() - 1);
+    const seed = `${effective.getFullYear()}-${String(effective.getMonth() + 1).padStart(2, "0")}-${String(effective.getDate()).padStart(2, "0")}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) % DAILY_PROMPTS.length;
+    }
+    return DAILY_PROMPTS[Math.abs(hash) % DAILY_PROMPTS.length];
+  },
+
+  /**
    * 목록 정렬 공통 로직 — "최근에 쌓인 기억"/"오늘의 기억" 모달과 기억
    * 카드(스팟/해시태그) 목록이 전부 같은 3가지 정렬을 쓴다:
    * - "latest"(최신 등록순): createdAt 내림차순, 시점 유무 구분 없음
@@ -565,5 +599,5 @@ const Storage = {
 // 브라우저에서는 <script src="js/storage.js">로 로드되어 전역 Storage를
 // 그대로 쓰고, Node(node:test)에서는 이 guard로 require해서 테스트한다.
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { Storage };
+  module.exports = { Storage, DAILY_PROMPTS };
 }

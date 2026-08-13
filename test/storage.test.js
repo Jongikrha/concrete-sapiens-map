@@ -44,7 +44,7 @@ global.CONFIG = {
   RECENT_STORY_POOL_SIZE: 100,
 };
 
-const { Storage } = require("../js/storage.js");
+const { Storage, DAILY_PROMPTS } = require("../js/storage.js");
 
 function createStory(overrides = {}) {
   return {
@@ -255,6 +255,13 @@ test("getYearRange는 스토리들의 최소/최대 연도를 계산한다", () 
   const range = Storage.getYearRange();
   assert.equal(range.min, 1998);
   assert.equal(range.max, new Date().getFullYear());
+});
+
+test("getDailyPrompt는 항상 DAILY_PROMPTS 중 하나를, 같은 날엔 같은 값을 반환한다", () => {
+  const first = Storage.getDailyPrompt();
+  const second = Storage.getDailyPrompt();
+  assert.ok(DAILY_PROMPTS.includes(first));
+  assert.equal(first, second);
 });
 
 test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {

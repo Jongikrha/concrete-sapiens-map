@@ -9,7 +9,7 @@ let sliderYear = null;
 let myMemoryModeActive = false;
 
 // ------------------------------------------------------------
-// 해시태그 칩 렌더링 ("오늘의 기억" + 상위 N개 + 더보기)
+// 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 질문" + 상위 N개 + 더보기)
 // ------------------------------------------------------------
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
@@ -28,13 +28,24 @@ function renderHashtagChips() {
 
   document.getElementById("filter-banner").classList.add("hidden");
 
-  if (Storage.getTodayStories().length > 0) {
-    const todayChip = document.createElement("button");
-    todayChip.className = "chip chip--today";
-    todayChip.textContent = "오늘의 기억";
-    todayChip.onclick = openTodayMemoriesModal;
-    wrap.appendChild(todayChip);
-  }
+  // 오늘 등록된 기억이 없어도 칩 자체는 계속 보여준다 — 눌렀을 때
+  // 모달 안에서 "오늘 등록된 기억이 아직 없습니다"로 안내한다(비어
+  // 있다고 칩까지 사라지면 기능이 없어진 것처럼 보인다는 피드백,
+  // 2026-08-14).
+  const todayChip = document.createElement("button");
+  todayChip.className = "chip chip--today";
+  todayChip.textContent = "오늘의 기억";
+  todayChip.onclick = openTodayMemoriesModal;
+  wrap.appendChild(todayChip);
+
+  // "오늘의 기억" 바로 옆에 같은 칩 크기로 — 예전엔 별도 배너였는데
+  // (2026-08-11 추가, 2026-08-12 제거), 해시태그 칩과 같은 자리/크기로
+  // 색만 다르게 다시 살렸다(2026-08-14).
+  const promptChip = document.createElement("button");
+  promptChip.className = "chip chip--prompt";
+  promptChip.textContent = "오늘의 질문";
+  promptChip.onclick = openDailyPrompt;
+  wrap.appendChild(promptChip);
 
   const allTags = Storage.getAllHashtagsWithCounts();
   // 모바일 화면(<=600px, 다른 반응형 분기와 동일 기준)에서는 칩이 너무
@@ -59,6 +70,18 @@ function renderHashtagChips() {
   }
 
   renderTotalCountBanner();
+}
+
+/**
+ * 오늘의 질문 칩 클릭 — 질문을 확인시키고, 동의하면 지금 보고 있는 지도
+ * 중심에 그 질문을 본문 앞머리로 채운 자유 핀 작성폼을 띄운다.
+ */
+function openDailyPrompt() {
+  const prompt = Storage.getDailyPrompt();
+  const center = map.getCenter();
+  if (confirm(`오늘의 질문\n\n"${prompt}"\n\n이 질문에 답하며 기억을 남겨볼까요?`)) {
+    requireLogin(() => startFreePinComposer(center.getLat(), center.getLng(), `${prompt}\n`));
+  }
 }
 
 /**

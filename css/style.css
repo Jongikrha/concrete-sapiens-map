@@ -349,6 +349,15 @@ body {
   font-weight: 500;
 }
 
+/* "오늘의 기억"과 같은 칩 크기, 색만 다르게(2026-08-14) — Memory Light
+   점/지도 필터 강조에 쓰는 차분한 톤을 재사용해서 구분한다. */
+.chip--prompt {
+  background: var(--cs-memory-core);
+  color: var(--cs-paper);
+  border-color: var(--cs-memory-core);
+  font-weight: 500;
+}
+
 .chip--more {
   color: var(--cs-text-main);
   font-weight: 500;
