@@ -88,7 +88,7 @@ function openComposer(pin) {
     <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
   `;
 
-  let dateMode = editing ? editing.dateMode : "unknown";
+  let dateMode = editing ? editing.dateMode : "past";
   let authorMode = editing ? editing.authorMode : "anonymous";
   const [initialYear, initialMonth] = editing && editing.dateMode === "past" && editing.referenceDate
     ? editing.referenceDate.split("-")

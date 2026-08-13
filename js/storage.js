@@ -456,6 +456,9 @@ const Storage = {
       const parts = story.referenceDate.split("-");
       return parts[1] ? parseInt(parts[1], 10) : null;
     }
+    if (story.dateMode === "now") {
+      return new Date(story.createdAt).getMonth() + 1;
+    }
     return null;
   },
 

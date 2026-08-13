@@ -157,6 +157,11 @@ test("getStoryMonth는 referenceDate가 없으면 null을 반환한다", () => {
   assert.equal(Storage.getStoryMonth(story), null);
 });
 
+test("getStoryMonth는 dateMode가 now일 때 createdAt에서 월을 뽑는다", () => {
+  const story = createStory({ dateMode: "now", createdAt: "2024-05-01T00:00:00.000Z" });
+  assert.equal(Storage.getStoryMonth(story), 5);
+});
+
 test("saveStory는 캐시에 즉시 반영되고 저장한 값을 그대로 반환한다", () => {
   const story = createStory({ id: "s1" });
   const saved = Storage.saveStory(story);
