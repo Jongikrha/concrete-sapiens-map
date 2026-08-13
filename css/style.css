@@ -78,8 +78,14 @@ body {
 .map-dim-layer {
   position: absolute;
   inset: 0;
-  background: var(--cs-black);
-  opacity: 0.2;
+  /* 지도 전체(카카오맵 타일 + 마커)를 옅게 덮는 뿌연 막 — 이 레이어가
+     #map 바로 다음(마커보다 위, 상단바/툴바보다는 아래 z-index)에
+     오는 걸 이용해 지도 위 모든 것에 균일하게 뿌연 느낌을 준다.
+     예전엔 어둡게 깔던 dim(검정 20%)이었는데, 흐릿하고 옅은 톤
+     컨셉(2026-08-13, 디자인 레퍼런스 기준)으로 바꾸며 같은 레이어를
+     밝은 톤으로 재활용했다. */
+  background: var(--cs-paper);
+  opacity: 0.46;
   pointer-events: none;
   z-index: 5;
 }

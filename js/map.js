@@ -1,5 +1,5 @@
 // ============================================================
-// 지도 / 마커 (Memory Dot)
+// 지도 / 마커 (Memory Light)
 // ============================================================
 
 let map;
@@ -10,7 +10,7 @@ let markers = []; // { marker, group }
 let highlightedMarker = null;
 
 // ------------------------------------------------------------
-// Memory Dot 이미지 — 기억 수에 따라 크기 차등, 선택 시 Signal Orange
+// Memory Light 이미지 — 기억 수에 따라 크기 차등(makeDotImage 아래 참고)
 // ------------------------------------------------------------
 function tierForCount(n) {
   if (n >= 50) return 4;
@@ -19,41 +19,73 @@ function tierForCount(n) {
   return 1;
 }
 
+function groupHasTodayStory(group) {
+  return group.stories.some((s) => Storage.isToday(s.createdAt));
+}
+
+// "Memory Light" 컬러 — UI 전반의 --cs-orange(#FF5A36)와는 별개로,
+// 지도 위 점 전용으로 쓰는 더 차분한 톤(2026-08-13, 디자인 가이드
+// POINT DESIGN 기준). 중심부/2차 잔광은 MEMORY_CORE, 1차 광원(중간
+// 광훈)은 MEMORY_GLOW.
+const MEMORY_CORE = "#C9573D";
+const MEMORY_GLOW = "#E76D4F";
+
 /**
- * Memory Ripple — 핀이 아니라 "누군가의 기억이 남아 있는 장소 =
- * 도시 위에 켜진 작은 불빛"이라는 컨셉의 마커. 색은 전적으로
- * Signal Orange 하나만 쓰고, 기억 수는 숫자로 노출하지 않고 크기
- * 차이로만 표현한다(SNS 인기 경쟁처럼 보이지 않도록). 평소엔 조용한
- * 점, 선택되면 링이 한 번 커지는 정도의 절제된 변화만 준다.
+ * Memory Light — 핀이 아니라 "장소에 남겨진 기억을 작은 빛의 잔광으로
+ * 표현"하는 컨셉의 마커(디자인 가이드 기준, 2026-08-13 개편). 중심부
+ * (거의 불투명) → 1차 광원(옅은 중간 광훈) → 2차 잔광(아주 옅고 큰
+ * 바깥 haze) 3겹의 radialGradient로 부드러운 빛무리를 만든다.
+ * 기억 수는 크기로(기존 tier), "오늘 남긴 기억이 있는가"는 광원의
+ * 선명도로 구분한다(VARIATIONS: 오늘의 기억 = 더 선명·따뜻, 오래된
+ * 기억 = 더 희미·부드러움). 선택되지 않은 점만 아주 느리게 커졌다
+ * 작아지길 반복한다(BEHAVIOR, 5~7초 주기 — 선택된 점은 이미 크기로
+ * 강조되니 정적으로 둔다).
  */
-function makeDotImage(tier, selected) {
+function makeDotImage(tier, selected, isToday) {
   const centerSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
-  const ringSizes = { 1: 22, 2: 26, 3: 30, 4: 34 };
+  const glow1Sizes = { 1: 18, 2: 22, 3: 26, 4: 30 };
+  const glow2Sizes = { 1: 32, 2: 38, 3: 44, 4: 50 };
 
   const center = selected ? centerSizes[tier] + 3 : centerSizes[tier];
-  const ring = selected ? ringSizes[tier] + 6 : ringSizes[tier];
-  const ringOpacity = selected ? 0.28 : 0.18;
+  const glow1 = selected ? glow1Sizes[tier] + 6 : glow1Sizes[tier];
+  const glow2 = selected ? glow2Sizes[tier] + 8 : glow2Sizes[tier];
 
-  const canvas = ring + 6;
+  const coreOpacity = selected ? 1 : isToday ? 0.95 : 0.85;
+  const glow1Opacity = selected ? 0.24 : isToday ? 0.2 : 0.15;
+  const glow2Opacity = selected ? 0.07 : isToday ? 0.06 : 0.03;
+
+  const canvas = glow2 + 6;
   const c = canvas / 2;
+  const uid = Math.random().toString(36).slice(2, 8);
 
-  // 선택되지 않은 점만 은은하게 반짝인다 — 선택된 점은 이미 크기로
-  // 강조되니 계속 움직이면 오히려 산만하다. 마커를 만들 때마다 주기/
-  // 시작 위상을 랜덤하게 뽑아서 다 같이 반짝이지 않고 제각각 켜졌다
-  // 꺼지게 한다(begin을 음수로 줘서 로드 즉시 각자 다른 위상에서
-  // 시작 — 양수 delay면 처음 몇 초간 전부 같이 꺼진 채로 대기한다).
-  const twinkle = selected
-    ? ""
-    : (() => {
-        const peak = Math.min(ringOpacity + 0.14, 0.4);
-        const dur = (2.6 + Math.random() * 2).toFixed(2);
-        const begin = (Math.random() * dur).toFixed(2);
-        return `<animate attributeName="opacity" values="${ringOpacity};${peak};${ringOpacity}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
-      })();
+  // 선택되지 않은 점만 숨쉬듯 커졌다 작아진다. 마커마다 주기/시작
+  // 위상을 랜덤하게 뽑아서 다 같이 움직이지 않고 제각각 호흡하게 한다
+  // (begin을 음수로 줘서 로드 즉시 각자 다른 위상에서 시작).
+  let glow2Animate = "";
+  let glow1Animate = "";
+  if (!selected) {
+    const dur = (5 + Math.random() * 2).toFixed(2);
+    const begin = (Math.random() * dur).toFixed(2);
+    const glow2Peak = (glow2 / 2) * 1.15;
+    const glow1PeakOpacity = Math.min(glow1Opacity + 0.05, 0.3);
+    glow2Animate = `<animate attributeName="r" values="${glow2 / 2};${glow2Peak.toFixed(2)};${glow2 / 2}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
+    glow1Animate = `<animate attributeName="opacity" values="${glow1Opacity};${glow1PeakOpacity};${glow1Opacity}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
+  }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
-    <circle cx="${c}" cy="${c}" r="${ring / 2}" fill="#FF5A36" opacity="${ringOpacity}">${twinkle}</circle>
-    <circle cx="${c}" cy="${c}" r="${center / 2}" fill="#FF5A36" stroke="#FFFFFF" stroke-width="2"/>
+    <defs>
+      <radialGradient id="g2-${uid}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${MEMORY_CORE}" stop-opacity="${glow2Opacity}"/>
+        <stop offset="100%" stop-color="${MEMORY_CORE}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="g1-${uid}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${MEMORY_GLOW}" stop-opacity="1"/>
+        <stop offset="100%" stop-color="${MEMORY_GLOW}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="url(#g2-${uid})">${glow2Animate}</circle>
+    <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="url(#g1-${uid})" opacity="${glow1Opacity}">${glow1Animate}</circle>
+    <circle cx="${c}" cy="${c}" r="${center / 2}" fill="${MEMORY_CORE}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.5"/>
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
@@ -80,15 +112,17 @@ function initMap() {
     // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
     minLevel: 5,
     disableClickZoom: false,
-    // 뭉친 지점도 개별 Memory Dot과 같은 Signal Orange 점으로 보이도록,
-    // 숫자 배지 대신 makeDotImage의 큰 점(tier 4) 모양을 그대로 재사용한다.
+    // 뭉친 지점도 개별 Memory Light와 같은 톤(MEMORY_CORE/MEMORY_GLOW)의
+    // 은은한 빛무리로 보이도록, 숫자 배지 대신 box-shadow로 광원을
+    // 흉내낸다(MarkerClusterer의 styles는 생성되는 div에 그대로 꽂히는
+    // 인라인 CSS라 box-shadow도 그대로 먹는다).
     styles: [
       {
         width: "19px",
         height: "19px",
-        background: "#FF5A36",
+        background: "#C9573D",
         borderRadius: "50%",
-        border: "2px solid #FFFFFF",
+        boxShadow: "0 0 8px 4px rgba(231,109,79,0.22), 0 0 24px 12px rgba(201,87,61,0.05)",
         color: "transparent",
         textAlign: "center",
         lineHeight: "19px",
@@ -151,10 +185,10 @@ function highlightMarkerForStory(story) {
   if (highlightedMarker && highlightedMarker !== entry.marker) {
     const prevEntry = markers.find((m) => m.marker === highlightedMarker);
     if (prevEntry) {
-      highlightedMarker.setImage(makeDotImage(tierForCount(prevEntry.group.stories.length), false));
+      highlightedMarker.setImage(makeDotImage(tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group)));
     }
   }
-  entry.marker.setImage(makeDotImage(tierForCount(entry.group.stories.length), true));
+  entry.marker.setImage(makeDotImage(tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group)));
   highlightedMarker = entry.marker;
 }
 
@@ -196,7 +230,7 @@ function renderMarkers() {
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),
-      image: makeDotImage(tier, false),
+      image: makeDotImage(tier, false, groupHasTodayStory(group)),
     });
     kakao.maps.event.addListener(marker, "click", () => openSheet(group));
     markers.push({ marker, group });

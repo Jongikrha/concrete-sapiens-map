@@ -481,18 +481,25 @@ const Storage = {
   },
 
   /**
-   * "오늘의 기억" 칩용 — 오늘(로컬 기준 00:00~23:59) createdAt으로 등록된
-   * 기억 전부. 예전에는 날짜 시드로 고른 "매일 하나씩" 랜덤 추천이었는데,
-   * 실제로 오늘 올라온 글만 보고 싶다는 요청(2026-08-13)으로 바뀌었다.
+   * createdAt이 오늘(로컬 기준 00:00~23:59) 안에 있는지. "오늘의 기억"
+   * 목록과 지도 마커의 "오늘 남긴 기억이 있으면 더 선명하게"(디자인
+   * 가이드 VARIATIONS) 둘 다 이 기준을 쓴다.
    */
-  getTodayStories() {
+  isToday(dateString) {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-    return this.getVisibleStories().filter((s) => {
-      const t = new Date(s.createdAt).getTime();
-      return t >= start && t <= end;
-    });
+    const t = new Date(dateString).getTime();
+    return t >= start && t <= end;
+  },
+
+  /**
+   * "오늘의 기억" 칩용 — 오늘 등록된 기억 전부. 예전에는 날짜 시드로
+   * 고른 "매일 하나씩" 랜덤 추천이었는데, 실제로 오늘 올라온 글만 보고
+   * 싶다는 요청(2026-08-13)으로 바뀌었다.
+   */
+  getTodayStories() {
+    return this.getVisibleStories().filter((s) => this.isToday(s.createdAt));
   },
 
   /**
