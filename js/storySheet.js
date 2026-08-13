@@ -115,7 +115,7 @@ function renderSheetContent(group) {
         `
         : `<span class="story-spot-count">${group.stories.length}개의 기억</span>`}
     </div>
-    ${SORT_TOGGLE_HTML(currentSort)}
+    ${displayStories.length > 1 ? SORT_TOGGLE_HTML(currentSort) : ""}
     <div class="story-list">${listHtml}</div>
     ${distinctYears.length > 1 ? `<button class="spot-timeline-toggle" id="spot-timeline-toggle">${isTimelineOpen ? "시간연대표 접기" : spotCountLabel + " · 연대표 보기"} →</button>` : ""}
     ${timelineHtml}
@@ -344,7 +344,7 @@ function renderHashtagSheetContent() {
       <div class="story-spot-name">${escapeHtml(tag)}</div>
       <span class="story-spot-count">${stories.length}개의 기억</span>
     </div>
-    ${SORT_TOGGLE_HTML(hashtagSheetSort)}
+    ${stories.length > 1 ? SORT_TOGGLE_HTML(hashtagSheetSort) : ""}
     <div class="story-list">${listHtml || `<p class="story-list-empty">아직 이 태그를 가진 기억이 없습니다.</p>`}</div>
   `;
 

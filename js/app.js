@@ -98,7 +98,7 @@ function openRecentMemoriesModal(opts = {}) {
       <h2 class="composer-title" style="margin:0;">최근에 쌓인 기억</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
-    ${stories.length ? SORT_TOGGLE_HTML(recentSort) : ""}
+    ${stories.length > 1 ? SORT_TOGGLE_HTML(recentSort) : ""}
     ${listHtml}
   `;
 
@@ -142,7 +142,7 @@ function openTodayMemoriesModal(opts = {}) {
       <h2 class="composer-title" style="margin:0;">오늘의 기억</h2>
       <button class="recent-close" id="today-close">✕</button>
     </div>
-    ${stories.length ? SORT_TOGGLE_HTML(todaySort) : ""}
+    ${stories.length > 1 ? SORT_TOGGLE_HTML(todaySort) : ""}
     ${listHtml}
   `;
 
