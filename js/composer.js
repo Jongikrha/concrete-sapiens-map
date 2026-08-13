@@ -76,7 +76,7 @@ function openComposer(pin) {
     : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
   const nameValue = pin.isFreePin ? (pin.customName || "") : (pin.officialPlaceName || "");
   const nameHint = pin.isFreePin
-    ? `<div class="field-hint">지번 주소만으로는 다른 사람이 어딘지 알아보기 어려워요. 자유롭게 붙여주세요. 예) 서울역, 창천동 첫집</div>`
+    ? `<div class="field-hint">지번 주소만으로는 다른 사람이 어딘지 알아보기 어려워요. 자유롭게 붙여주세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
     : "";
 
   const whereHtml = `
@@ -109,7 +109,6 @@ function openComposer(pin) {
     <div class="composer-section-card">
       <div class="composer-field-group">
         <div class="field-heading"><span class="field-num">01</span><span class="field-label-text">WHERE</span></div>
-        <p class="field-desc">지번 주소 또는 다른 사람이 알아보기 쉽도록 자유롭게 적어주세요.</p>
         ${whereHtml}
       </div>
 
@@ -236,7 +235,7 @@ function openComposer(pin) {
     const enteredName = nameInput ? nameInput.value.trim() : "";
 
     if (pendingPin.isFreePin && !enteredName) {
-      alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 창천동 첫집");
+      alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 우리의 따뜻한 신혼집");
       nameInput.focus();
       return;
     }
