@@ -73,10 +73,14 @@ const Auth = {
 
   // 레거시 미확인 계정이 로그인을 시도할 때만 쓰는 인증 코드 확인 경로
   // (handleLoginSubmit의 UserNotConfirmedException 폴백).
+  // password가 없으면(비밀번호 재설정 중 미확인 계정을 먼저 인증시키는
+  // 경우 — handleForgotSubmit 참고) 로그인은 건너뛰고 인증만 완료한다.
   async confirmSignUp({ email, code, password }) {
     await this._sdk.confirmSignUp({ username: email, confirmationCode: code });
-    await this._sdk.signIn({ username: email, password });
-    await this._refreshCurrentUser();
+    if (password) {
+      await this._sdk.signIn({ username: email, password });
+      await this._refreshCurrentUser();
+    }
   },
 
   async resendCode({ email }) {
@@ -135,6 +139,11 @@ let pendingAuthSuccess = null;
 let pendingSignupEmail = "";
 let pendingSignupPassword = "";
 let pendingResetEmail = "";
+// "verify" 화면(인증 코드 입력)에 로그인 중 미확인 계정으로 들어왔는지,
+// 비밀번호 재설정 중 미확인 계정으로 들어왔는지 구분한다 — 후자는
+// 비밀번호를 모르니 인증 완료 후 로그인 대신 비밀번호 재설정으로
+// 이어줘야 한다(handleVerifySubmit 참고).
+let verifyIntent = "login";
 // authBusy/authError 갱신 시 패널 전체를 다시 그리는데(innerHTML 교체),
 // <input>에 value를 안 채워두면 사용자가 입력한 값이 그 순간 날아간다.
 // 그래서 입력값도 여기 상태로 같이 들고 있다가 렌더할 때 그대로 채운다.
@@ -173,6 +182,7 @@ function closeAuthOverlay() {
   pendingSignupEmail = "";
   pendingSignupPassword = "";
   pendingResetEmail = "";
+  verifyIntent = "login";
   authEmailValue = "";
   authPasswordValue = "";
   authPasswordConfirmValue = "";
@@ -354,6 +364,14 @@ async function handleVerifySubmit() {
   renderAuthPanel();
 
   try {
+    if (verifyIntent === "forgot") {
+      // 비밀번호를 모르는 상태로 들어온 경우 — 가입 인증만 완료하고,
+      // 곧바로 비밀번호 재설정 코드를 새로 보내 그 화면으로 이어준다.
+      await Auth.confirmSignUp({ email: pendingSignupEmail, code });
+      await Auth.requestPasswordReset({ email: pendingSignupEmail });
+      moveToResetScreen(pendingSignupEmail);
+      return;
+    }
     await Auth.confirmSignUp({ email: pendingSignupEmail, code, password: pendingSignupPassword });
     const onSuccess = pendingAuthSuccess;
     closeAuthOverlay();
@@ -407,6 +425,7 @@ async function handleLoginSubmit() {
     if (e?.name === "UserNotConfirmedException") {
       pendingSignupEmail = email;
       pendingSignupPassword = password;
+      verifyIntent = "login";
       authMode = "verify";
       authError = Auth.mapError(e);
       try {
@@ -446,6 +465,29 @@ async function handleForgotSubmit() {
     // (기획서 7장 "계정 존재 여부를 과도하게 노출하지 않는다").
     if (e?.name === "UserNotFoundException") {
       moveToResetScreen(email);
+      return;
+    }
+    // Cognito는 가입 인증(이메일 확인)을 아직 안 끝낸 계정에 대해
+    // ForgotPassword를 거부하면서 InvalidParameterException(메시지에
+    // "verified"가 들어감)을 던진다 — 이메일 형식과는 무관한데
+    // Auth.mapError로 그냥 넘기면 "이메일 형식을 확인해주세요"로 잘못
+    // 안내된다. 이메일 인증 단계를 없애기(2026-08-13) 전에 가입해서
+    // 미확인 상태로 남은 레거시 계정이 이 경로를 탄다고 추정된다 —
+    // pre-signup 트리거가 모든 신규 가입을 자동 확인시키는 지금 구조상
+    // 실제 미확인 계정을 새로 재현해볼 수 없어 100% 확인은 못 했다.
+    // 인증 코드를 다시 보내 먼저 가입 인증을 마치게 하고, 완료되면
+    // 비밀번호 재설정으로 이어준다.
+    if (e?.name === "InvalidParameterException" && /verified/i.test(e?.message || "")) {
+      pendingSignupEmail = email;
+      verifyIntent = "forgot";
+      authMode = "verify";
+      authError = "아직 가입 인증이 끝나지 않은 계정이에요. 인증 코드를 새로 보내드렸어요 — 인증을 마치면 비밀번호를 재설정할 수 있어요.";
+      try {
+        await Auth.resendCode({ email });
+      } catch (_) {
+        // 재발송 실패는 조용히 무시 — 사용자는 "다시 보내기"로 재시도 가능
+      }
+      renderAuthPanel();
       return;
     }
     authError = Auth.mapError(e);
