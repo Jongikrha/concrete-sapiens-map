@@ -1578,6 +1578,64 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
+/* ------------------------------------------------------------
+   기억 전달하기(공유) 모달 — navigator.share가 없는 환경(PC 등)에서
+   카드 미리보기 + 복사 가능한 링크를 보여주는 대체 UI
+   ------------------------------------------------------------ */
+.share-card-preview {
+  width: 100%;
+  max-height: 340px;
+  border-radius: var(--cs-radius-card);
+  overflow: hidden;
+  margin-bottom: 18px;
+  background: var(--cs-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-card-preview img {
+  max-width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+}
+
+.share-link-row {
+  display: flex;
+  background: rgba(244, 243, 239, 0.92);
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+  overflow: hidden;
+}
+
+.share-link-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--cs-text-main);
+  outline: none;
+}
+
+.share-copy-btn {
+  border: none;
+  background: var(--cs-black);
+  color: var(--cs-paper);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.share-copy-btn:hover {
+  background: #1c1d1e;
+}
+
 .date-mode-toggle,
 .author-mode-toggle {
   display: flex;

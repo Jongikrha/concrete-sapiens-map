@@ -564,15 +564,23 @@ async function handleShare(storyId) {
   Storage.incrementShareCount(storyId);
   Storage.markShared(storyId);
 
+  let blob = null;
   try {
-    const blob = await generateShareCard(story);
-    const file = new File([blob], "concrete-sapiens-memory.png", { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
-      return;
-    }
+    blob = await generateShareCard(story);
   } catch (e) {
-    // 폴백으로 진행
+    // 카드 이미지 생성이 실패해도 링크 공유는 계속 진행한다
+  }
+
+  if (blob) {
+    try {
+      const file = new File([blob], "concrete-sapiens-memory.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
+        return;
+      }
+    } catch (e) {
+      // 폴백으로 진행
+    }
   }
 
   if (navigator.share) {
@@ -584,10 +592,60 @@ async function handleShare(storyId) {
     }
   }
 
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast("share-toast", "링크가 복사되었습니다.", 2000);
-  } catch (e) {
-    showToast("share-toast", "링크 복사에 실패했습니다.", 2000);
+  // navigator.share가 없는 환경(대부분의 PC 브라우저) — 카카오톡 같은 공유
+  // 시트가 뜨지 않으니, 카드 미리보기 + 직접 복사할 수 있는 링크를 모달로 보여준다.
+  openShareModal(url, blob);
+}
+
+function openShareModal(url, blob) {
+  const panel = document.getElementById("share-panel");
+  const imgUrl = blob ? URL.createObjectURL(blob) : null;
+
+  panel.innerHTML = `
+    <div class="recent-header">
+      <h2 class="composer-title" style="margin:0;">기억 전달하기</h2>
+      <button class="recent-close" id="share-modal-close">✕</button>
+    </div>
+    ${imgUrl ? `<div class="share-card-preview"><img src="${imgUrl}" alt="공유 카드" /></div>` : ""}
+    <p class="field-label" style="margin-top:0;">링크</p>
+    <div class="share-link-row">
+      <input type="text" id="share-link-input" class="share-link-input" value="${url}" readonly />
+      <button class="share-copy-btn" id="share-copy-btn">복사</button>
+    </div>
+    ${imgUrl ? `<button class="btn-secondary" id="share-save-image">⭳ 카드 이미지 저장</button>` : ""}
+  `;
+
+  panel.querySelector("#share-modal-close").onclick = closeShareModal;
+
+  const linkInput = panel.querySelector("#share-link-input");
+  linkInput.onclick = () => linkInput.select();
+
+  panel.querySelector("#share-copy-btn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("share-toast", "링크가 복사되었습니다.", 2000);
+    } catch (e) {
+      linkInput.select();
+      showToast("share-toast", "링크를 직접 선택해 복사해주세요.", 2000);
+    }
+  };
+
+  if (imgUrl) {
+    panel.querySelector("#share-save-image").onclick = () => {
+      const a = document.createElement("a");
+      a.href = imgUrl;
+      a.download = "concrete-sapiens-memory.png";
+      a.click();
+    };
   }
+
+  document.getElementById("share-overlay").classList.remove("hidden");
+}
+
+function closeShareModal() {
+  document.getElementById("share-overlay").classList.add("hidden");
+  const panel = document.getElementById("share-panel");
+  const img = panel.querySelector("img");
+  if (img) URL.revokeObjectURL(img.src);
+  panel.innerHTML = "";
 }
