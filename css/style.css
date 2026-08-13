@@ -675,11 +675,12 @@ body {
   margin: 5% 0;
 }
 
-/* "기억 남기기" 모달은 스크롤바 시작을 제목 글자 위쪽(.composer-card의
-   위쪽 padding, 24px)에, 끝은 박스 맨 아래(margin 0)에 맞춘다 — 위/아래
-   대칭 5% 대신 이 모달만 별도 지정. */
+/* "기억 남기기" 모달은 스크롤바 범위가 모달 전체 길이와 같아 보이면 안
+   된다 — 시작은 닫기(✕) 버튼 위쪽, 끝은 "기억 남기기" 오렌지 버튼
+   아랫단까지만. .composer-card의 padding(24px 위 / 22px 아래)과 맞춰
+   트랙이 그 버튼 바로 아래 padding 영역에서 멈추게 한다. */
 .composer-card::-webkit-scrollbar-track {
-  margin: 24px 0 0;
+  margin: 24px 0 22px;
 }
 
 .composer-card::-webkit-scrollbar-thumb,
