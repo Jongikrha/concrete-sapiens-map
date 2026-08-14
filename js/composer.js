@@ -27,6 +27,7 @@ function startFreePinComposer(lat, lng, prefillContent) {
       addrEl.textContent = address || "주소를 확인할 수 없습니다";
     }
     if (pendingPin) pendingPin.address = address || null;
+    updateComposerScrollbarBounds();
   });
 }
 
@@ -312,6 +313,39 @@ function openComposer(pin) {
 
   document.getElementById("composer-overlay").classList.remove("hidden");
   panel.scrollTop = 0;
+  updateComposerScrollbarBounds();
+}
+
+// ------------------------------------------------------------
+// 스크롤바 트랙 범위 실측 — 닫기(✕) 버튼 바로 아래에서 시작해서
+// "이름 또는 닉네임" 버튼 중간까지만 보이게 한다. 헤더 높이나 주소
+// 줄바꿈에 따라 매번 픽셀이 달라져서 고정 CSS 값으로는 못 맞추고,
+// 열릴 때마다(그리고 주소가 비동기로 갱신될 때) 실제 레이아웃을 재서
+// --composer-scrollbar-top/bottom 커스텀 프로퍼티로 넘긴다(css/style.css의
+// .composer-card-inner::-webkit-scrollbar-track이 이 값을 margin으로 씀).
+//
+// 아래쪽 여백은 "패널 바닥에서 닉네임까지의 거리"가 아니라 "전체
+// 콘텐츠 끝(scrollHeight)에서 닉네임까지의 거리"로 잰다 — 닉네임 뒤에
+// 오는 요소(안내문구 한 줄 + 제출 버튼)는 화면 폭/주소 줄바꿈과
+// 무관하게 항상 같은 높이라 이 값은 뷰포트 크기와 상관없이 일정하다.
+// 반대로 "패널 바닥까지의 거리"로 재면 뷰포트가 낮을 때 닉네임이
+// 처음부터 화면 밖(스크롤 전)에 있어 0으로 잘려버리는 문제가 있었다.
+function updateComposerScrollbarBounds() {
+  const panel = document.getElementById("composer-panel");
+  const closeBtn = document.getElementById("btn-composer-close");
+  const nickBtn = panel && panel.querySelector('[data-author-mode="custom"]');
+  if (!panel || !closeBtn || !nickBtn) return;
+
+  const panelRect = panel.getBoundingClientRect();
+  const closeRect = closeBtn.getBoundingClientRect();
+  const nickRect = nickBtn.getBoundingClientRect();
+
+  const topGap = Math.max(0, closeRect.bottom - panelRect.top);
+  const nickMidFromContentTop = (nickRect.top + nickRect.bottom) / 2 - panelRect.top + panel.scrollTop;
+  const bottomGap = Math.max(0, panel.scrollHeight - nickMidFromContentTop);
+
+  panel.style.setProperty("--composer-scrollbar-top", `${topGap}px`);
+  panel.style.setProperty("--composer-scrollbar-bottom", `${bottomGap}px`);
 }
 
 function closeComposer() {

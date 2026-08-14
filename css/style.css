@@ -709,34 +709,18 @@ body {
   scrollbar-width: thin;
 }
 
-/* "기억 남기기" 모달 스크롤바 썸만 회색(RGB 199,199,199)으로 — 다른
-   시트(.sheet-scroll)는 기존 오렌지 유지(2026-08-14). */
-.composer-card-inner {
-  scrollbar-color: rgb(199, 199, 199) var(--cs-gray);
-}
-
 .sheet-scroll {
   scrollbar-color: var(--cs-orange) var(--cs-gray);
 }
 
-.composer-card-inner::-webkit-scrollbar,
 .sheet-scroll::-webkit-scrollbar {
   width: 4px;
 }
 
-.composer-card-inner::-webkit-scrollbar-track,
 .sheet-scroll::-webkit-scrollbar-track {
   background: var(--cs-gray);
   border-radius: var(--cs-radius-chip);
   margin: 5% 0;
-}
-
-/* "기억 남기기" 모달은 스크롤바 범위가 모달 전체 길이와 같아 보이면 안
-   된다 — 시작은 닫기(✕) 버튼 위쪽, 끝은 "기억 남기기" 오렌지 버튼
-   아랫단까지만. .composer-card-inner의 padding(24px 위 / 22px 아래)과
-   맞춰 트랙이 그 버튼 바로 아래 padding 영역에서 멈추게 한다. */
-.composer-card-inner::-webkit-scrollbar-track {
-  margin: 24px 0 22px;
 }
 
 .sheet-scroll::-webkit-scrollbar-thumb {
@@ -748,13 +732,33 @@ body {
   background-color: var(--cs-memory-core);
 }
 
+/* "기억 남기기" 모달 스크롤바 — 박스(트랙) RGB(232,230,227) + 바(썸)
+   RGB(157,157,157), 두께는 다른 스크롤바(4px)의 2/3 수준(2026-08-14).
+   트랙의 위/아래 margin은 고정값이 아니라 composer.js가 열릴 때마다
+   실측해서 넣는 --composer-scrollbar-top/bottom 커스텀 프로퍼티를 쓴다 —
+   시작점(닫기 ✕ 버튼 바로 아래)과 끝점("이름 또는 닉네임" 버튼 중간)이
+   헤더 높이·주소 줄바꿈에 따라 매번 달라져서 고정 px로는 못 맞춘다. */
+.composer-card-inner {
+  scrollbar-color: rgb(157, 157, 157) rgb(232, 230, 227);
+}
+
+.composer-card-inner::-webkit-scrollbar {
+  width: 2.67px;
+}
+
+.composer-card-inner::-webkit-scrollbar-track {
+  background: rgb(232, 230, 227);
+  border-radius: var(--cs-radius-chip);
+  margin: var(--composer-scrollbar-top, 24px) 0 var(--composer-scrollbar-bottom, 22px);
+}
+
 .composer-card-inner::-webkit-scrollbar-thumb {
-  background-color: rgb(199, 199, 199);
+  background-color: rgb(157, 157, 157);
   border-radius: var(--cs-radius-chip);
 }
 
 .composer-card-inner::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(160, 160, 160);
+  background-color: rgb(120, 120, 120);
 }
 
 /* ------------------------------------------------------------
