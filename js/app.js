@@ -127,14 +127,17 @@ function closeRecentMemoriesModal() {
   document.getElementById("recent-overlay").classList.add("hidden");
 }
 
-let todaySort = "latest";
-
+// 오늘의 기억은 "최근에 쌓인 기억"과 달리 정렬 토글을 두지 않는다 —
+// 하루 안에서는 시간여행순/역시간여행순의 기준(연도·월)이 대부분 동률이라
+// (dateMode:"now"면 다 올해) 실질적으로 순서가 안 바뀌는 죽은 옵션이
+// 되기 때문. 초 단위까지 갈리는 등록 순서(latest)만 남겨 "지금 뭐가
+// 올라오고 있나"에 집중한다(2026-08-14).
 function openTodayMemoriesModal(opts = {}) {
   const panel = document.getElementById("today-panel");
   const stories = Storage.getTodayStories();
 
   const listHtml = stories.length
-    ? buildSortedListHtml(stories, todaySort, renderRecentListItem)
+    ? buildSortedListHtml(stories, "latest", renderRecentListItem)
     : `<p class="recent-empty">오늘 등록된 기억이 아직 없습니다.</p>`;
 
   panel.innerHTML = `
@@ -142,15 +145,10 @@ function openTodayMemoriesModal(opts = {}) {
       <h2 class="composer-title" style="margin:0;">오늘의 기억</h2>
       <button class="recent-close" id="today-close">✕</button>
     </div>
-    ${stories.length > 1 ? SORT_TOGGLE_HTML(todaySort) : ""}
     ${listHtml}
   `;
 
   panel.querySelector("#today-close").onclick = closeTodayMemoriesModal;
-
-  panel.querySelectorAll(".sort-btn").forEach((btn) => {
-    btn.onclick = () => { todaySort = btn.dataset.sort; openTodayMemoriesModal(); };
-  });
 
   panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
     item.onclick = () => {
