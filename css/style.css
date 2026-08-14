@@ -1266,7 +1266,7 @@ button.story-place-line:hover {
   border: none;
   background: none;
   color: var(--cs-text-muted);
-  font-size: 12px;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
