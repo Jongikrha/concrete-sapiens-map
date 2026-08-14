@@ -368,13 +368,13 @@ function renderStoryItem(story, options = {}) {
     ? `<button class="story-place-line" data-story-id="${story.id}">📍 ${escapeHtml(Storage.getGroupTitle({ placeId: story.placeId, officialPlaceName: story.officialPlaceName, customName: story.customName, address: story.address }))} →</button>`
     : "";
 
-  // "내가 쓴 글"은 실계정이 아니라 authorDeviceId(브라우저 단위 비식별
-  // 상관관계, mymemory.js의 "내가 남긴 기억"과 동일 기준)로 판단한다.
-  // 내 글이면 수정/삭제, 남의 글이면 신고만 노출한다.
+  // "내가 쓴 글"은 오직 계정 연결(StoryAuthor, Storage.isMyStory)로만
+  // 판단한다 — 브라우저 기기ID는 절대 안 쓴다(2026-08-14, mymemory.js
+  // 헤더 주석 참고). 내 글이면 수정/삭제, 남의 글이면 신고만 노출한다.
   const authorName = story.displayAuthorName || "익명";
   const authorNameWithHonorific = authorName === "익명" ? authorName : `${authorName}님`;
 
-  const isMine = !!story.authorDeviceId && story.authorDeviceId === Storage.getDeviceId();
+  const isMine = Storage.isMyStory(story.id);
   const menuItemsHtml = isMine
     ? `<button class="edit-link" data-id="${story.id}">수정하기</button>
        <button class="delete-link" data-id="${story.id}">삭제하기</button>`

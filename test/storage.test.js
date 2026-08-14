@@ -17,7 +17,7 @@ function createLocalStorageMock() {
   };
 }
 
-function createFakeClient() {
+function createFakeClient(storyAuthorRecords = []) {
   return {
     models: {
       Story: {
@@ -33,6 +33,10 @@ function createFakeClient() {
       },
       PageView: {
         create: async () => ({}),
+      },
+      StoryAuthor: {
+        create: async () => ({}),
+        list: async () => ({ data: storyAuthorRecords, nextToken: null }),
       },
     },
   };
@@ -74,6 +78,7 @@ beforeEach(() => {
   Storage._setClient(createFakeClient());
   Storage._setCache([]);
   Storage._setBannedWords([]);
+  Storage.clearMyStoryIds();
 });
 
 test("generatePublicId는 허용된 문자로 8자리 문자열을 생성한다", () => {
@@ -422,4 +427,37 @@ test("addBannedWord/removeBannedWord는 캐시에 즉시 반영된다", async ()
   const id = Storage.getBannedWords()[0].id;
   await Storage.removeBannedWord(id);
   assert.equal(Storage.getBannedWords().length, 0);
+});
+
+test("isMyStory는 refreshMyStoryIds 전에는 항상 false다(로딩 전/비로그인)", () => {
+  assert.equal(Storage.isMyStory("s1"), false);
+});
+
+test("refreshMyStoryIds는 계정 연결(StoryAuthor)된 storyId만 isMyStory를 true로 만든다 — 브라우저 기기ID는 안 본다", async () => {
+  Storage._setClient(createFakeClient([{ storyId: "s1" }, { storyId: "s2" }]));
+  await Storage.refreshMyStoryIds();
+  assert.equal(Storage.isMyStory("s1"), true);
+  assert.equal(Storage.isMyStory("s2"), true);
+  assert.equal(Storage.isMyStory("s3"), false);
+});
+
+test("clearMyStoryIds는 캐시를 비워 로그아웃 후 isMyStory가 전부 false가 되게 한다", async () => {
+  Storage._setClient(createFakeClient([{ storyId: "s1" }]));
+  await Storage.refreshMyStoryIds();
+  assert.equal(Storage.isMyStory("s1"), true);
+  Storage.clearMyStoryIds();
+  assert.equal(Storage.isMyStory("s1"), false);
+});
+
+test("addMyStoryId는 방금 쓴 글을 재조회 없이 바로 isMyStory에 반영한다", async () => {
+  Storage._setClient(createFakeClient([]));
+  await Storage.refreshMyStoryIds();
+  assert.equal(Storage.isMyStory("new-story"), false);
+  Storage.addMyStoryId("new-story");
+  assert.equal(Storage.isMyStory("new-story"), true);
+});
+
+test("addMyStoryId는 refreshMyStoryIds가 아직 한 번도 안 불린 상태(캐시 null)면 조용히 무시한다", () => {
+  Storage.addMyStoryId("orphan-story");
+  assert.equal(Storage.isMyStory("orphan-story"), false);
 });

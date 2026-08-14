@@ -2,13 +2,11 @@
 // GNB(계정 아바타) — 내가 남긴/떠올린/전달한 기억 목록 + 로그아웃
 // ============================================================
 // 로그인 상태일 때만 화면 오른쪽 상단에 이메일 첫 글자를 담은 동그라미가
-// 뜬다. 세 목록 모두 실계정 서버 조회 대신 이미 검증된 로컬 상관관계를
-// 재사용한다 — "내가 남긴 기억"은 authorDeviceId(브라우저 단위, Story가
-// 이미 guest/authenticated에 read를 열어둠), "떠올린/전달한 기억"은 기존
-// 반응 추적과 동일한 패턴의 localStorage 기록. 계정 소유자(owner) 기반
-// 서버 권한은 identityPool 인증모드와의 호환성이 불확실하고 지금은
-// 로컬에서 미리 배포 검증을 할 수 없어서(2026-08-11) 의도적으로 피했다 —
-// 나중에 sandbox로 검증 가능해지면 계정 기준(기기 무관) 조회로 옮길 수 있다.
+// 뜬다. "내가 남긴 기억"은 오직 계정 연결(StoryAuthor, owner 기반 서버
+// 조회)만 본다 — 브라우저 기기ID(authorDeviceId)는 절대 안 쓴다
+// (2026-08-14, 같은 브라우저에서 계정을 바꾸면 이전 계정 글이 새 계정의
+// "내 기억"에 섞여 보이던 사고 이후). "떠올린/전달한 기억"은 계정과
+// 무관하게 "내가 반응/공유했는지"라 기존처럼 localStorage 기록을 쓴다.
 
 const MY_MEMORY_TITLES = {
   posted: "내가 남긴 기억",
@@ -149,21 +147,22 @@ function closeAccountMenu() {
   document.getElementById("account-menu").classList.add("hidden");
 }
 
-// "posted"는 이 브라우저(authorDeviceId)에서 쓴 글과, 로그인 계정으로
-// 연결된 글(StoryAuthor, owner 기반 조회)을 합쳐서 보여준다 — 계정으로
-// 로그인했으면 다른 기기에서 쓴 글도 보이게 하기 위해서다(2026-08-14,
-// storage.js listMyStoryAuthors 참고). 로그인 계정 연결은 이 기능 도입
-// (2026-08-14) 이후 새로 쓴 글부터 적용되고, 아직 서버 조회가 필요해서
-// 이 함수 자체가 async로 바뀌었다.
+// "posted"는 오직 계정 연결(StoryAuthor, owner 기반 조회)만 본다 —
+// 브라우저 기기ID(authorDeviceId) 매칭은 완전히 뺐다(2026-08-14). 원래는
+// 로그인 없이 게스트로 쓴 글도 "내 기억"에 남게 하려던 용도였는데,
+// requireLogin이 글쓰기 진입점을 전부 막고 있어 로그인 없이는 애초에
+// 글을 쓸 수 없다 — 그런데도 기기ID 매칭이 남아있어서, 같은 브라우저에서
+// 계정을 바꿔 로그인하면 이전 계정이 쓴 글이 새 계정의 "내 기억"에도
+// 그대로 보이는 문제가 있었다(실제 사고: 새로 가입한 계정에 다른
+// 계정이 쓴 당현천 글이 "내 기억"으로 뜸). 로그인 안 한 상태에서는 팔로우할
+// 계정이 없으니 빈 목록을 반환한다.
 async function buildMyMemoryList(kind) {
   const all = Storage.getAllStories();
   if (kind === "posted") {
-    const myStoryIds = new Set(all.filter((s) => s.authorDeviceId === Storage.getDeviceId()).map((s) => s.id));
     const user = Auth.getCurrentUser();
-    if (user) {
-      const myAuthorRecords = await Storage.listMyStoryAuthors();
-      myAuthorRecords.forEach((r) => myStoryIds.add(r.storyId));
-    }
+    if (!user) return [];
+    const myAuthorRecords = await Storage.listMyStoryAuthors();
+    const myStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
     return all.filter((s) => myStoryIds.has(s.id) && s.status !== "DELETED");
   }
   if (kind === "reacted") return all.filter((s) => Storage.hasReacted(s.id));

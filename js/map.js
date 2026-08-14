@@ -276,9 +276,10 @@ function renderMarkers() {
       .map((g) => ({ ...g, stories: g.stories.filter((s) => s.hashtags.includes(activeHashtagFilter)) }))
       .filter((g) => g.stories.length > 0);
   } else if (myMemoryModeActive) {
-    const deviceId = Storage.getDeviceId();
+    // 계정(StoryAuthor) 연결만 본다 — 브라우저 기기ID는 안 쓴다(2026-08-14,
+    // filters.js startMyMemoryMode 참고).
     groups = groups
-      .map((g) => ({ ...g, stories: g.stories.filter((s) => s.authorDeviceId === deviceId || myMemoryAccountStoryIds.has(s.id)) }))
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => myMemoryAccountStoryIds.has(s.id)) }))
       .filter((g) => g.stories.length > 0);
   }
 

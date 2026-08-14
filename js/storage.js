@@ -68,6 +68,11 @@ const DAILY_PROMPTS = [
 let client = null;
 let _cache = [];
 let _bannedWords = [];
+// 로그인 계정으로 연결된(StoryAuthor 기반) "내 글" id 집합 — isMyStory()가
+// 동기로 매번 참조해야 해서(카드 목록 렌더링 도중) 미리 캐싱해둔다.
+// null이면 아직 로드 전(=isMyStory는 항상 false). auth.js가 로그인/로그아웃
+// 시점에 refreshMyStoryIds()/clearMyStoryIds()로 갱신한다.
+let _myStoryIds = null;
 
 async function fetchAll(modelName) {
   const items = [];
@@ -347,6 +352,39 @@ const Storage = {
       console.error("내 작성 기록 조회 실패", e);
     }
     return items;
+  },
+
+  /**
+   * 로그인 직후(auth.js)에 한 번 호출해 "내 글" id 캐시를 채운다.
+   * isMyStory()가 카드 렌더링 중 동기로 이 캐시를 참조한다 — 수정하기/
+   * 삭제하기 버튼 노출도 오직 계정 연결만 보고, 브라우저 기기ID는
+   * 절대 안 쓴다(2026-08-14).
+   */
+  async refreshMyStoryIds() {
+    const records = await this.listMyStoryAuthors();
+    _myStoryIds = new Set(records.map((r) => r.storyId));
+  },
+
+  /**
+   * 로그아웃(auth.js)에 한 번 호출해 캐시를 비운다 — 남아있으면 다음
+   * 사용자가 로그인하기 전 짧은 순간 이전 계정의 글이 "내 글"로 보일 수
+   * 있다.
+   */
+  clearMyStoryIds() {
+    _myStoryIds = null;
+  },
+
+  /**
+   * 방금 글을 쓴 직후(composer.js)에 부른다 — 다음 refreshMyStoryIds
+   * 왕복을 기다리지 않고 바로 그 카드에 수정하기/삭제하기가 뜨게
+   * 낙관적으로 캐시에 추가해둔다.
+   */
+  addMyStoryId(storyId) {
+    if (_myStoryIds) _myStoryIds.add(storyId);
+  },
+
+  isMyStory(storyId) {
+    return !!_myStoryIds && _myStoryIds.has(storyId);
   },
 
   /**

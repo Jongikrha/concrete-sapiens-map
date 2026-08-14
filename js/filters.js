@@ -7,7 +7,7 @@ let activeYearFilter = null;
 let sliderActive = false;
 let sliderYear = null;
 let myMemoryModeActive = false;
-// 로그인 계정으로 연결된(기기 무관) storyId 집합 — toggleMyMemoryMode가
+// 로그인 계정으로 연결된(기기 무관) storyId 집합 — startMyMemoryMode가
 // 켤 때 한 번 채워서 map.js renderMarkers()가 동기적으로 읽는다
 // (mymemory.js의 "내가 남긴 기억"과 같은 이유, 2026-08-14).
 let myMemoryAccountStoryIds = new Set();
@@ -232,27 +232,31 @@ function closeSlider() {
 // 필터/시간슬라이더와는 동시에 켜지지 않는다 — 이 모드를 켤 때
 // 그것들을 끄고, 그것들을 켤 때 이 모드를 끈다(위
 // exploreHashtag/setYearFilter/exploreSameYear/toggleSlider 참고).
+//
+// 오직 계정(StoryAuthor)만 본다 — 브라우저 기기ID는 절대 안 쓴다
+// (2026-08-14). 로그인 안 한 상태로 누르면 requireLogin이 가입/로그인
+// 화면부터 띄운다 — 팔로우할 계정이 없으면 애초에 "내 기억"이라는
+// 개념이 성립하지 않는다.
 // ------------------------------------------------------------
-async function toggleMyMemoryMode() {
+function toggleMyMemoryMode() {
   if (myMemoryModeActive) {
     closeMyMemoryMode();
     renderMarkers();
     return;
   }
+  requireLogin(startMyMemoryMode);
+}
+
+async function startMyMemoryMode() {
   clearFilters();
   closeSlider();
   myMemoryModeActive = true;
   document.getElementById("btn-my-memory").classList.add("tool-btn--active");
 
-  // 로그인 상태면 계정으로 연결된 글도 합쳐서 켠다(다른 기기에서 쓴 글
-  // 포함) — renderMarkers()가 매번 서버를 왕복하지 않도록 여기서 한 번만
-  // 조회해 캐싱한다.
-  myMemoryAccountStoryIds = new Set();
-  const user = Auth.getCurrentUser();
-  if (user) {
-    const myAuthorRecords = await Storage.listMyStoryAuthors();
-    myMemoryAccountStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
-  }
+  // renderMarkers()가 매번 서버를 왕복하지 않도록 여기서 한 번만 조회해
+  // 캐싱한다(다른 기기에서 쓴 글도 계정 연결로 포함된다).
+  const myAuthorRecords = await Storage.listMyStoryAuthors();
+  myMemoryAccountStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
 
   // 지도가 하늘로 쭉 올라가듯 64km 축척(레벨 13 — CONFIG.DEFAULT_LEVEL과
   // 같은 값, 카카오맵 레벨별 축척 표 기준) 까지 줌아웃한 뒤에 내 기억

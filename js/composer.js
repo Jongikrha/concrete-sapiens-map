@@ -299,7 +299,12 @@ function openComposer(pin) {
       };
       Storage.saveStory(story);
       const currentUser = Auth.getCurrentUser();
-      if (currentUser) Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
+      if (currentUser) {
+        Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
+        // "내 글" 캐시(storage.js isMyStory)에 바로 반영 — 서버 재조회를
+        // 기다리지 않아도 방금 쓴 글에 곧바로 수정하기/삭제하기가 뜬다.
+        Storage.addMyStoryId(story.id);
+      }
     }
 
     closeComposer();
