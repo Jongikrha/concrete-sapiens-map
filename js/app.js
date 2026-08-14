@@ -289,15 +289,10 @@ function goToRandomStory() {
     highlightMarkerForStory(story);
 
     setTimeout(() => {
-      const year = Storage.getStoryYear(story);
-      const title = Storage.getGroupTitle({
-        placeId: story.placeId,
-        officialPlaceName: story.officialPlaceName,
-        customName: story.customName,
-        address: story.address,
-      });
-      const label = year ? `${year} · ${title}` : title;
-      showToast("entry-toast", label, 1400);
+      const group = buildFilteredGroupContainingStory(story.id);
+      if (group && group.stories.length > 0) {
+        openSheet(group);
+      }
     }, 500);
   }, 650);
 }
