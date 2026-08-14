@@ -27,7 +27,7 @@ function clearSearchArea() {
 function buildSearchAreaBannerText(placeName, stories) {
   const count = stories.length;
   if (count === 0) {
-    return `${placeName}에는 아직 남겨진 기억이 없어요. 첫 기억을 남겨보세요.`;
+    return `${placeName} 인근에는 아직 남겨진 기억이 없어요. 첫 기억을 남겨보세요.`;
   }
   const years = stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null);
   if (years.length === 0) {
@@ -36,9 +36,9 @@ function buildSearchAreaBannerText(placeName, stories) {
   const minYear = Math.min(...years);
   const maxYear = Math.max(...years);
   if (minYear === maxYear) {
-    return `${placeName}에는 ${minYear}년, ${count.toLocaleString()}개의 기억이 남아 있습니다.`;
+    return `${placeName} 인근에는 ${minYear}년, ${count.toLocaleString()}개의 기억이 남아 있습니다.`;
   }
-  return `${placeName}에는 ${minYear}년부터 ${maxYear}년까지 ${count.toLocaleString()}개의 기억이 남아 있습니다.`;
+  return `${placeName} 인근에는 ${minYear}년부터 ${maxYear}년까지 ${count.toLocaleString()}개의 기억이 남아 있습니다.`;
 }
 
 /**
