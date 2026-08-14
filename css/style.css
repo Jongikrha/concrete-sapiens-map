@@ -693,71 +693,57 @@ body {
 
 .sheet-scroll {
   overflow-y: auto;
-  padding: 4px 24px 28px;
+  /* 오른쪽에 스크롤바 전용 여백을 두려고 margin-right로 스크롤 요소
+     자체를 시트보다 좁힌다 — .composer-card-inner와 같은 이유/방식
+     (2026-08-14, 아래 커스텀 스크롤바 섹션 참고). */
+  margin-right: 7px;
+  padding: 4px 14px 28px 24px;
 }
 
 /* ------------------------------------------------------------
    커스텀 스크롤바 — 스크롤이 있는 모달/시트 공통(.composer-card-inner,
-   .sheet-scroll)에 적용. 가는 알약형: 트랙은 옅은 회색 실선으로 항상
-   보이고, 썸은 브랜드 오렌지(--cs-orange) 알약으로 그 위에 겹친다
-   (참고 이미지 기준, 2026-08-14). 트랙에 위아래 margin을 줘서 썸이
-   박스 맨 위/아래 끝까지 닿지 않게(스크롤 가능 범위를 박스보다 작게)
-   만든다.
+   .sheet-scroll)에 적용. 가는 알약형: 박스(트랙) RGB(232,230,227) +
+   바(썸) RGB(157,157,157), 두께는 기본 스크롤바보다 2/3 수준으로 얇게
+   (2026-08-14 — 원래 "기억 남기기" 모달용으로 만들었다가 "기억 카드"
+   시트(.sheet-scroll)에도 같은 디자인을 그대로 적용). 트랙에 위아래
+   margin을 줘서 썸이 박스 맨 위/아래 끝까지 닿지 않게 한다 — 시작/끝
+   지점은 모달마다 다르다: .composer-card-inner는 열릴 때마다 실측해서
+   넣는 --composer-scrollbar-top/bottom(닫기 ✕ 아래 ~ 이름 버튼 중간,
+   js/composer.js 참고), .sheet-scroll은 고정 비율(5%)을 쓴다.
    ------------------------------------------------------------ */
 .composer-card-inner,
 .sheet-scroll {
   scrollbar-width: thin;
-}
-
-.sheet-scroll {
-  scrollbar-color: var(--cs-orange) var(--cs-gray);
-}
-
-.sheet-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sheet-scroll::-webkit-scrollbar-track {
-  background: var(--cs-gray);
-  border-radius: var(--cs-radius-chip);
-  margin: 5% 0;
-}
-
-.sheet-scroll::-webkit-scrollbar-thumb {
-  background-color: var(--cs-orange);
-  border-radius: var(--cs-radius-chip);
-}
-
-.sheet-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: var(--cs-memory-core);
-}
-
-/* "기억 남기기" 모달 스크롤바 — 박스(트랙) RGB(232,230,227) + 바(썸)
-   RGB(157,157,157), 두께는 다른 스크롤바(4px)의 2/3 수준(2026-08-14).
-   트랙의 위/아래 margin은 고정값이 아니라 composer.js가 열릴 때마다
-   실측해서 넣는 --composer-scrollbar-top/bottom 커스텀 프로퍼티를 쓴다 —
-   시작점(닫기 ✕ 버튼 바로 아래)과 끝점("이름 또는 닉네임" 버튼 중간)이
-   헤더 높이·주소 줄바꿈에 따라 매번 달라져서 고정 px로는 못 맞춘다. */
-.composer-card-inner {
   scrollbar-color: rgb(157, 157, 157) rgb(232, 230, 227);
 }
 
-.composer-card-inner::-webkit-scrollbar {
+.composer-card-inner::-webkit-scrollbar,
+.sheet-scroll::-webkit-scrollbar {
   width: 2.67px;
 }
 
-.composer-card-inner::-webkit-scrollbar-track {
+.composer-card-inner::-webkit-scrollbar-track,
+.sheet-scroll::-webkit-scrollbar-track {
   background: rgb(232, 230, 227);
   border-radius: var(--cs-radius-chip);
+}
+
+.composer-card-inner::-webkit-scrollbar-track {
   margin: var(--composer-scrollbar-top, 24px) 0 var(--composer-scrollbar-bottom, 22px);
 }
 
-.composer-card-inner::-webkit-scrollbar-thumb {
+.sheet-scroll::-webkit-scrollbar-track {
+  margin: 5% 0;
+}
+
+.composer-card-inner::-webkit-scrollbar-thumb,
+.sheet-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(157, 157, 157);
   border-radius: var(--cs-radius-chip);
 }
 
-.composer-card-inner::-webkit-scrollbar-thumb:hover {
+.composer-card-inner::-webkit-scrollbar-thumb:hover,
+.sheet-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgb(120, 120, 120);
 }
 
