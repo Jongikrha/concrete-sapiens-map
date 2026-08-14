@@ -587,10 +587,19 @@ body {
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
 }
 
+/* 네이티브 스크롤바는 padding이 아니라 스크롤 요소 자신의 테두리에
+   바로 붙어서 그려진다 — padding-right를 아무리 늘려도 스크롤바 자체는
+   카드 오른쪽 모서리에 그대로 붙는다. 그래서 스크롤바 오른쪽에 여백을
+   두려면 스크롤 요소(.composer-card-inner) 자체를 카드보다 좁게 만들어야
+   한다: margin-right로 폭을 줄이면 스크롤바가 그 여백만큼 안쪽으로
+   들어와 카드 배경(같은 --cs-paper 톤) 위에 뜬 것처럼 보인다(2026-08-14).
+   .composer-card의 overflow:hidden + border-radius가 그 여백 영역을
+   그대로 카드 모서리로 클리핑해준다. */
 .composer-card-inner {
   max-height: 86vh;
   overflow-y: auto;
-  padding: 24px 22px 22px;
+  margin-right: 14px;
+  padding: 24px 12px 22px 22px;
 }
 
 /* ------------------------------------------------------------
