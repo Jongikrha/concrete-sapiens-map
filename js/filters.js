@@ -7,6 +7,10 @@ let activeYearFilter = null;
 let sliderActive = false;
 let sliderYear = null;
 let myMemoryModeActive = false;
+// 로그인 계정으로 연결된(기기 무관) storyId 집합 — toggleMyMemoryMode가
+// 켤 때 한 번 채워서 map.js renderMarkers()가 동기적으로 읽는다
+// (mymemory.js의 "내가 남긴 기억"과 같은 이유, 2026-08-14).
+let myMemoryAccountStoryIds = new Set();
 // "오늘의 질문"에 확인을 누르면 여기 담아둔다 — 지도 중심 같은 임의
 // 좌표로 바로 기억 남기기를 띄우면 나와 무관한 장소에 남기게 되는
 // 문제가 있어(2026-08-14 논의), 대신 사용자가 다음에 지도를 클릭하거나
@@ -229,7 +233,7 @@ function closeSlider() {
 // 그것들을 끄고, 그것들을 켤 때 이 모드를 끈다(위
 // exploreHashtag/setYearFilter/exploreSameYear/toggleSlider 참고).
 // ------------------------------------------------------------
-function toggleMyMemoryMode() {
+async function toggleMyMemoryMode() {
   if (myMemoryModeActive) {
     closeMyMemoryMode();
     renderMarkers();
@@ -239,6 +243,17 @@ function toggleMyMemoryMode() {
   closeSlider();
   myMemoryModeActive = true;
   document.getElementById("btn-my-memory").classList.add("tool-btn--active");
+
+  // 로그인 상태면 계정으로 연결된 글도 합쳐서 켠다(다른 기기에서 쓴 글
+  // 포함) — renderMarkers()가 매번 서버를 왕복하지 않도록 여기서 한 번만
+  // 조회해 캐싱한다.
+  myMemoryAccountStoryIds = new Set();
+  const user = Auth.getCurrentUser();
+  if (user) {
+    const myAuthorRecords = await Storage.listMyStoryAuthors();
+    myMemoryAccountStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
+  }
+
   renderMarkers();
   renderTotalCountBanner();
 }

@@ -303,7 +303,11 @@ const Storage = {
    */
   recordStoryAuthor(storyId, userId, email) {
     if (!client) return;
-    client.models.StoryAuthor.create({ storyId, userId, email })
+    // owner 필드가 로그인 계정의 sub로 채워지려면 이 create 호출 자체가
+    // userPool 인증으로 나가야 한다 — 기본 client(identityPool)로 보내면
+    // owner가 비어서 listMyStoryAuthors()의 owner 기반 읽기 규칙에 안
+    // 걸린다(amplify/data/resource.ts StoryAuthor 권한 주석 참고).
+    client.models.StoryAuthor.create({ storyId, userId, email }, { authMode: "userPool" })
       .catch((e) => console.error("작성자 계정 연결 기록 실패", storyId, e));
   },
 
@@ -313,6 +317,36 @@ const Storage = {
    */
   async listStoryAuthors() {
     return fetchAll("StoryAuthor");
+  },
+
+  /**
+   * 로그인한 본인 글만 — owner 기반 읽기라 recordStoryAuthor와 동일하게
+   * userPool authMode로 호출해야 한다. 비로그인 상태에선 애초에 호출하지
+   * 않는다(권한이 없어 에러만 남는다) — mymemory.js/filters.js가
+   * Auth.getCurrentUser()로 로그인 여부를 먼저 확인하고 부른다.
+   */
+  async listMyStoryAuthors() {
+    if (!client) return [];
+    const items = [];
+    let nextToken = null;
+    try {
+      do {
+        const { data, nextToken: token, errors } = await client.models.StoryAuthor.list({
+          limit: 1000,
+          nextToken,
+          authMode: "userPool",
+        });
+        if (errors) {
+          console.error("내 작성 기록 조회 실패", errors);
+          break;
+        }
+        items.push(...data);
+        nextToken = token;
+      } while (nextToken);
+    } catch (e) {
+      console.error("내 작성 기록 조회 실패", e);
+    }
+    return items;
   },
 
   /**

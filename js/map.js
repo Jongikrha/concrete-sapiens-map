@@ -278,7 +278,7 @@ function renderMarkers() {
   } else if (myMemoryModeActive) {
     const deviceId = Storage.getDeviceId();
     groups = groups
-      .map((g) => ({ ...g, stories: g.stories.filter((s) => s.authorDeviceId === deviceId) }))
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => s.authorDeviceId === deviceId || myMemoryAccountStoryIds.has(s.id)) }))
       .filter((g) => g.stories.length > 0);
   }
 

@@ -45,9 +45,23 @@ function closeAccountMenu() {
   document.getElementById("account-menu").classList.add("hidden");
 }
 
-function buildMyMemoryList(kind) {
+// "posted"는 이 브라우저(authorDeviceId)에서 쓴 글과, 로그인 계정으로
+// 연결된 글(StoryAuthor, owner 기반 조회)을 합쳐서 보여준다 — 계정으로
+// 로그인했으면 다른 기기에서 쓴 글도 보이게 하기 위해서다(2026-08-14,
+// storage.js listMyStoryAuthors 참고). 로그인 계정 연결은 이 기능 도입
+// (2026-08-14) 이후 새로 쓴 글부터 적용되고, 아직 서버 조회가 필요해서
+// 이 함수 자체가 async로 바뀌었다.
+async function buildMyMemoryList(kind) {
   const all = Storage.getAllStories();
-  if (kind === "posted") return all.filter((s) => s.authorDeviceId === Storage.getDeviceId() && s.status !== "DELETED");
+  if (kind === "posted") {
+    const myStoryIds = new Set(all.filter((s) => s.authorDeviceId === Storage.getDeviceId()).map((s) => s.id));
+    const user = Auth.getCurrentUser();
+    if (user) {
+      const myAuthorRecords = await Storage.listMyStoryAuthors();
+      myAuthorRecords.forEach((r) => myStoryIds.add(r.storyId));
+    }
+    return all.filter((s) => myStoryIds.has(s.id) && s.status !== "DELETED");
+  }
   if (kind === "reacted") return all.filter((s) => Storage.hasReacted(s.id));
   if (kind === "shared") return all.filter((s) => Storage.hasShared(s.id));
   return [];
@@ -57,10 +71,10 @@ function buildMyMemoryList(kind) {
 // 카드의 뒤로가기(←)를 누르면 opts.scrollTop으로 스크롤 위치까지
 // 복원해서 이 목록으로 돌아온다(최근 기억 목록과 동일 UX,
 // navigateToStoryFromList/goBackFromSheet 참고).
-function openMyMemoryList(kind, opts = {}) {
+async function openMyMemoryList(kind, opts = {}) {
   closeAccountMenu();
   const panel = document.getElementById("mymemory-panel");
-  const stories = [...buildMyMemoryList(kind)].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const stories = [...(await buildMyMemoryList(kind))].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const listHtml = stories.length
     ? stories.map((story) => {

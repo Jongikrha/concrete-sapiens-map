@@ -61,6 +61,15 @@ const schema = a.schema({
     .authorization((allow) => [
       allow.guest().to(['create']),
       allow.authenticated('identityPool').to(['create']),
+      // 로그인 계정 기준으로 "내가 남긴 기억"을 기기 무관하게 보여주기
+      // 위해 본인 글만 owner 기반으로 읽을 수 있게 허용한다(2026-08-14).
+      // owner 필드가 sub로 정상 채워지려면 create/read 둘 다 userPool
+      // authMode로 호출해야 한다(js/storage.js recordStoryAuthor/
+      // listMyStoryAuthors 참고, admin.js가 이미 쓰는 것과 같은 패턴).
+      // 기존 identityPool 경로(위 authenticated 규칙)로 만든 레코드는
+      // owner가 안 채워져 이 규칙으론 안 읽힌다 — 이번 변경 이후 계정으로
+      // 로그인해서 새로 쓴 글부터 기기 무관 조회가 된다.
+      allow.owner().to(['create', 'read']),
       allow.group('Admins').to(['read']),
     ]),
 
