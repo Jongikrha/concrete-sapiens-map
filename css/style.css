@@ -739,7 +739,7 @@ body {
 }
 
 .sheet-scroll::-webkit-scrollbar-track {
-  margin: 5% 0;
+  margin: 5% 0 10%;
 }
 
 .composer-card-inner::-webkit-scrollbar-thumb,
