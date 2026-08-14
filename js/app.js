@@ -36,7 +36,7 @@ function renderTotalCountBanner() {
 }
 
 // ------------------------------------------------------------
-// "최근에 쌓인 기억"/"오늘의 기억" 목록 모달 — 배너/칩 클릭 시 훑어볼
+// "지금까지 쌓인 기억"/"오늘의 기억" 목록 모달 — 배너/칩 클릭 시 훑어볼
 // 수 있다. 정렬은 기억 카드(스팟/해시태그) 목록과 같은 3가지
 // (Storage.sortStoriesForDisplay 참고)를 쓴다. 항목을 누르면 목록은
 // 닫히고 지도 이동 + 기억 카드가 바로 열리며, 카드의 뒤로가기(←)를
@@ -69,12 +69,13 @@ function renderRecentListItem(story) {
 }
 
 // renderItemFn은 호출부마다 다른 카드 마크업(요약 리스트 항목 vs 기억
-// 카드 전체)을 그린다. cap은 "최신 등록순"에서만 적용(기존 "최근에
-// 쌓인 기억" 최대 50개 표시 관행) — 시간여행 계열은 전체 타임라인을
-// 보여줘야 하니 자르지 않는다.
+// 카드 전체)을 그린다. cap은 호출부가 넘길 때만 적용(정렬 모드와
+// 무관 — "지금까지 쌓인 기억"의 디폴트가 역시간여행순이 된 뒤로도
+// 최대 50개 표시 관행은 그대로 유지해야 해서 정렬별 분기를 없앴다,
+// 2026-08-14).
 function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
   const { dated, undated } = Storage.sortStoriesForDisplay(stories, sortMode);
-  const shown = cap && sortMode === "latest" ? dated.slice(0, cap) : dated;
+  const shown = cap ? dated.slice(0, cap) : dated;
   let html = shown.map(renderItemFn).join("");
   if (undated.length > 0) {
     html += `<div class="timeline-section-label">시점을 알 수 없는 기억들</div>`;
@@ -83,7 +84,11 @@ function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
   return html;
 }
 
-let recentSort = "latest";
+// 디폴트를 역시간여행순(현재→과거)으로 — "지금까지 쌓인 기억"이 오늘의
+// 기억(실시간 피드)과 대비되는 "전체 역사를 훑어보는" 화면이라는
+// 정체성에 맞춘다. 아득한 과거부터 던지기보다 최근 과거부터 보여주고
+// 스크롤하며 더 옛날로 들어가는 편이 첫인상이 자연스럽다(2026-08-14).
+let recentSort = "timetravel-reverse";
 
 function openRecentMemoriesModal(opts = {}) {
   const panel = document.getElementById("recent-panel");
@@ -95,7 +100,7 @@ function openRecentMemoriesModal(opts = {}) {
 
   panel.innerHTML = `
     <div class="recent-header">
-      <h2 class="composer-title" style="margin:0;">최근에 쌓인 기억</h2>
+      <h2 class="composer-title" style="margin:0;">지금까지 쌓인 기억</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
     ${stories.length > 1 ? SORT_TOGGLE_HTML(recentSort) : ""}
@@ -112,7 +117,7 @@ function openRecentMemoriesModal(opts = {}) {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeRecentMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "최근에 쌓인 기억" });
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "지금까지 쌓인 기억" });
     };
   });
 
@@ -127,7 +132,7 @@ function closeRecentMemoriesModal() {
   document.getElementById("recent-overlay").classList.add("hidden");
 }
 
-// 오늘의 기억은 "최근에 쌓인 기억"과 달리 정렬 토글을 두지 않는다 —
+// 오늘의 기억은 "지금까지 쌓인 기억"과 달리 정렬 토글을 두지 않는다 —
 // 하루 안에서는 시간여행순/역시간여행순의 기준(연도·월)이 대부분 동률이라
 // (dateMode:"now"면 다 올해) 실질적으로 순서가 안 바뀌는 죽은 옵션이
 // 되기 때문. 초 단위까지 갈리는 등록 순서(latest)만 남겨 "지금 뭐가
