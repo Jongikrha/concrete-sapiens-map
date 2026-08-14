@@ -170,6 +170,21 @@ test("getNearbySameYearStories는 연도를 모르는 기억(dateMode unknown)�
   assert.deepEqual(Storage.getNearbySameYearStories(mine, 1000), []);
 });
 
+test("getStoriesNear는 반경 안의 기억을 연도와 무관하게 모두 반환한다", () => {
+  // 종로 기준 대략 780m 떨어진 지점(0.007도 ≈ 780m) — 1000m 반경 안
+  const near = createStory({ id: "near", lat: 37.5770, lng: 126.9800, dateMode: "now", createdAt: "2010-01-01T00:00:00.000Z" });
+  const far = createStory({ id: "far", lat: 35.1, lng: 129.0, dateMode: "now", createdAt: "2001-03-01T00:00:00.000Z" });
+  Storage._setCache([near, far]);
+
+  const result = Storage.getStoriesNear(37.57, 126.98, 1000);
+  assert.deepEqual(result.map((s) => s.id), ["near"]);
+});
+
+test("isNear는 반경 안이면 true, 밖이면 false를 반환한다", () => {
+  assert.equal(Storage.isNear(37.57, 126.98, 37.5770, 126.9800, 1000), true);
+  assert.equal(Storage.isNear(37.57, 126.98, 35.1, 129.0, 1000), false);
+});
+
 test("getGroupAddressCaption은 제목이 주소와 다를 때만 주소를 캡션으로 반환한다", () => {
   const group = {
     placeId: "kakao-1",

@@ -21,7 +21,7 @@ function renderTotalCountBanner() {
   const el = document.getElementById("total-count-banner");
   if (!el) return;
 
-  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive) {
+  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive || searchAreaActive) {
     el.classList.add("hidden");
     return;
   }

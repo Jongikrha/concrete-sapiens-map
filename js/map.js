@@ -291,7 +291,11 @@ function renderMarkers() {
     // 같아 보인다는 피드백으로 제거) 남아있는 점 전부를 오늘 남긴
     // 기억과 같은 밝기로 "불이 들어온" 것처럼 보여준다 — 실제로 오늘
     // 쓴 게 아니어도 "내 것"이라는 사실만으로 환하게 켜지는 것.
-    const lit = myMemoryModeActive || groupHasTodayStory(group);
+    const withinSearchArea =
+      searchAreaActive &&
+      searchAreaCenter &&
+      Storage.isNear(searchAreaCenter.lat, searchAreaCenter.lng, group.lat, group.lng, CONFIG.SEARCH_AREA_RADIUS_METERS);
+    const lit = myMemoryModeActive || groupHasTodayStory(group) || withinSearchArea;
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),

@@ -547,6 +547,20 @@ const Storage = {
   },
 
   /**
+   * 임의 좌표 기준 반경(미터) 안의 기억들 — 검색 결과를 눌렀을 때
+   * "이 동네에는 몇 개의 기억이, 몇 년부터 몇 년까지 있는지" 배너와
+   * 지도 마커 밝히기에 쓴다(js/search.js, js/map.js).
+   */
+  getStoriesNear(lat, lng, radiusMeters) {
+    return this.getVisibleStories().filter((s) => this._distanceMeters(lat, lng, s.lat, s.lng) <= radiusMeters);
+  },
+
+  /** 두 좌표가 반경(미터) 안인지 — map.js가 검색한 동네 근처 마커를 밝힐 때 쓴다. */
+  isNear(lat1, lng1, lat2, lng2, radiusMeters) {
+    return this._distanceMeters(lat1, lng1, lat2, lng2) <= radiusMeters;
+  },
+
+  /**
    * 스팟의 대표 제목을 결정한다. 이 서비스는 지도 서비스가 아니라
    * 기억 서비스이므로, 사람이 실제로 기억하는 이름(검색형 장소의
    * 공식 이름, 또는 누군가 붙인 개인적 이름)을 도로명주소보다

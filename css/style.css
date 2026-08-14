@@ -410,6 +410,34 @@ body {
 }
 
 /* ------------------------------------------------------------
+   검색한 동네 배너 — .filter-banner 레이아웃/색을 그대로 쓰고,
+   "기억 남기기" CTA 버튼만 추가한다(글쓰기로 바로 이어지는 유일한
+   버튼이라 오렌지로 눈에 띄게).
+   ------------------------------------------------------------ */
+.search-area-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.search-area-cta {
+  border: none;
+  background: var(--cs-orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--cs-radius-chip);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-area-cta:hover {
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------
    전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
    ------------------------------------------------------------ */
 .total-count-banner {

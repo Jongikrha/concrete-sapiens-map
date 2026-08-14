@@ -41,7 +41,7 @@
         </div>
         <div class="search-box">
           <div class="search-input-row">
-            <input type="text" id="search-input" placeholder="장소 검색" />
+            <input type="text" id="search-input" placeholder="당신의 동네를 검색해보세요" />
             <button id="search-btn">검색</button>
           </div>
           <ul class="search-results hidden" id="search-results"></ul>
@@ -63,6 +63,8 @@
 
       <!-- 전체 등록된 기억 수 — 워드마크 바로 아래, 숫자만 코랄 오렌지로 강조 -->
       <div class="total-count-banner hidden" id="total-count-banner"></div>
+      <!-- 검색한 동네에 남은 기억 개수/연도범위 — 검색 결과를 고르면 뜬다 -->
+      <div class="filter-banner search-area-banner hidden" id="search-area-banner"></div>
       <!-- 해시태그 칩 (많이 쓰인 순 상위 20개 + 더보기, 화면 폭에 맞춰 줄바꿈) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
       <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->

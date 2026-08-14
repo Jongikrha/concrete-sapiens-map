@@ -331,6 +331,7 @@ function openComposer(pin) {
     closeComposer();
     renderMarkers();
     renderHashtagChips();
+    renderSearchAreaBanner();
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
