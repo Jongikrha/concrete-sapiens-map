@@ -31,7 +31,14 @@ const MY_MEMORY_EMPTY = {
 // 순간으로 치고, 그때 스냅샷을 localStorage에 저장해 다음 비교 기준으로
 // 삼는다 — 그 전까지는(예: 새로고침) 뱃지가 계속 떠 있어야 실제로 본 게
 // 된다.
-const NOTIF_SEEN_KEY = "concrete_sapiens_notif_seen_v1";
+// v1 배포 당시 nearbyYearCount 버그(처음 계산되는 순간 실제 값을 그대로
+// 기준값으로 조용히 저장해버려, 이미 존재하던 근처 겹침은 영원히 알림이
+// 안 뜨던 문제, 2026-08-14 확인)로 잘못 저장된 v1 기록은 정상 값과
+// 구분할 방법이 없어 키 자체를 올려 전체 사용자를 한 번 리셋한다 —
+// reactionCount/addressCount도 같이 리셋되지만 그쪽은 원래도 "처음
+// 계산 시 조용히 기준값만 저장"이 맞는 동작이라 알림이 갑자기 몰아쳐
+// 뜨는 부작용은 없다.
+const NOTIF_SEEN_KEY = "concrete_sapiens_notif_seen_v2";
 // "장소는 달라도 걸어서 닿을 거리"의 기준(2026-08-14, storySheet.js
 // story-overlap-caption과는 별개 — 카드 캡션은 정확히 같은 장소만, 알림은
 // 반경까지 넓혀 "우연히 겹치는" 발견 범위를 키운다).
@@ -78,24 +85,27 @@ async function refreshNotificationBadge() {
 
     const prev = seen[story.id];
     if (!prev) {
-      // 뱃지 도입 이후 처음 추적하는 내 글 — 기존에 쌓여있던 반응/이웃
-      // 글이 전부 "새 알림"으로 한꺼번에 터지지 않도록, 알림 없이 지금
-      // 값을 바로 확인된 기준값으로 저장해둔다(계정 메뉴를 열 때까지
-      // 기다리면 그 사이엔 비교 기준이 아예 없어 늘어도 못 잡아낸다).
-      seen[story.id] = { reactionCount, addressCount, nearbyYearCount };
+      // 뱃지 도입 이후 처음 추적하는 내 글. reactionCount/addressCount는
+      // 이 알림 기능 이전부터 카드에 이미 보이던 값이라, 과거 활동이
+      // 한꺼번에 "새 알림"으로 안 터지게 지금 값을 그대로 기준값으로
+      // 조용히 저장한다. 반면 nearbyYearCount(반경 1000m 알림)는 이
+      // 뱃지 말고는 어디에도 노출된 적 없는 정보라 "처음 계산되는 순간"이
+      // 곧 사용자에게는 "새로 발견하는 순간"과 같다 — 그래서 기준값을
+      // 0으로 저장해, 이미 존재하던 근처 기억도 다음 새로고침에서
+      // 정상적으로 알려준다(실제 값은 계정 메뉴를 열 때 currentState로
+      // 확정 저장된다 — 아래 markNotificationsSeen 참고).
+      seen[story.id] = { reactionCount, addressCount, nearbyYearCount: 0 };
       seenUpdated = true;
+      if (nearbyYearCount > 0) hasNew = true;
       return;
     }
-    if (reactionCount > prev.reactionCount || addressCount > prev.addressCount) {
-      hasNew = true;
-    }
-    if (prev.nearbyYearCount === undefined) {
-      // nearbyYearCount는 이 글에 이번에 처음 추가되는 지표(2026-08-14) —
-      // 그 전까지 쌓여있던 근처 겹침을 전부 "새 알림"으로 터뜨리지 않도록
-      // 위 !prev 분기와 같은 방식으로 기준값만 갱신한다.
-      seen[story.id] = { ...prev, nearbyYearCount };
-      seenUpdated = true;
-    } else if (nearbyYearCount > prev.nearbyYearCount) {
+    if (
+      reactionCount > prev.reactionCount ||
+      addressCount > prev.addressCount ||
+      // prev.nearbyYearCount가 없는(이 지표 도입 전에 저장된) 기록도
+      // ||0로 0 기준 취급되어 위와 같은 원칙으로 동작한다.
+      nearbyYearCount > (prev.nearbyYearCount || 0)
+    ) {
       hasNew = true;
     }
   });
