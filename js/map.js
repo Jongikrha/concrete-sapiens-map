@@ -29,6 +29,9 @@ function groupHasTodayStory(group) {
 // 광훈)은 MEMORY_GLOW.
 const MEMORY_CORE = "#C9573D";
 const MEMORY_GLOW = "#E76D4F";
+// 별 도형 전용 — 광훈(MEMORY_CORE/GLOW)보다 한 톤 짙게 잡아서 작은
+// tier에서도 색이 옅어 보이지 않게 한다.
+const STAR_FILL = "#AB4A34";
 
 // 중심부를 원이 아니라 4각 별(반짝임) 모양으로 그리기 위한 좌표 계산.
 // outerR(뾰족한 끝)과 innerR(안쪽으로 파인 지점)을 45도 간격으로 번갈아
@@ -75,7 +78,7 @@ function burstRays(cx, cy, innerR, outerR, count, color, opacity) {
  * 강조되니 정적으로 둔다).
  */
 function makeDotImage(tier, selected, isToday) {
-  const centerSizes = { 1: 10, 2: 13, 3: 16, 4: 19 };
+  const centerSizes = { 1: 13, 2: 16, 3: 19, 4: 22 };
   const glow1Sizes = { 1: 16, 2: 19, 3: 22, 4: 25 };
   const glow2Sizes = { 1: 26, 2: 30, 3: 34, 4: 38 };
 
@@ -115,7 +118,7 @@ function makeDotImage(tier, selected, isToday) {
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
     ${rays}
-    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.4)}" fill="${MEMORY_CORE}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/>
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
@@ -124,6 +127,26 @@ function makeDotImage(tier, selected, isToday) {
     new kakao.maps.Size(canvas, canvas),
     { offset: new kakao.maps.Point(c, c) }
   );
+}
+
+// 카카오 MarkerClusterer 아이콘 — 개별 Memory Light(makeDotImage)와 같은
+// 별+광훈 구성을 SVG 배경 이미지로 만들어 CSS 원(box-shadow)을 대체한다.
+// styles 배열 항목은 클러스터러가 생성하는 div에 인라인 CSS로 그대로
+// 꽂히므로, background를 data URI로 지정하면 별 모양 그대로 나온다.
+function makeClusterBackground() {
+  const center = 18;
+  const glow1 = 24;
+  const glow2 = 36;
+  const canvas = glow2 + 6;
+  const c = canvas / 2;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
+    <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="0.12"/>
+    <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="0.3"/>
+    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"/>
+  </svg>`;
+
+  return { canvas, url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg) };
 }
 
 function initMap() {
@@ -142,23 +165,23 @@ function initMap() {
     // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
     minLevel: 5,
     disableClickZoom: false,
-    // 뭉친 지점도 개별 Memory Light와 같은 톤(MEMORY_CORE/MEMORY_GLOW)의
-    // 은은한 빛무리로 보이도록, 숫자 배지 대신 box-shadow로 광원을
-    // 흉내낸다(MarkerClusterer의 styles는 생성되는 div에 그대로 꽂히는
-    // 인라인 CSS라 box-shadow도 그대로 먹는다).
+    // 뭉친 지점도 개별 Memory Light와 같은 별+광훈 구성으로 보이도록
+    // makeClusterBackground()가 만든 SVG를 배경 이미지로 꽂는다(숫자
+    // 배지 없이, 은은한 빛무리 + 별만).
     styles: [
-      {
-        width: "19px",
-        height: "19px",
-        background: "#C9573D",
-        borderRadius: "50%",
-        boxShadow: "0 0 8px 4px rgba(231,109,79,0.34), 0 0 24px 12px rgba(201,87,61,0.1)",
-        color: "transparent",
-        textAlign: "center",
-        lineHeight: "19px",
-        fontSize: "0px",
-        fontWeight: "500",
-      },
+      (() => {
+        const bg = makeClusterBackground();
+        return {
+          width: `${bg.canvas}px`,
+          height: `${bg.canvas}px`,
+          background: `url("${bg.url}") no-repeat center / contain`,
+          color: "transparent",
+          textAlign: "center",
+          lineHeight: `${bg.canvas}px`,
+          fontSize: "0px",
+          fontWeight: "500",
+        };
+      })(),
     ],
   });
 
