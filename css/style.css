@@ -269,6 +269,20 @@ body {
   padding: 0;
 }
 
+/* 누가 반응/작성했는지는 안 밝히는 느슨한 알림 — 새 소식이 있다는
+   점 하나만 아바타 우상단에 띄운다(js/mymemory.js refreshNotificationBadge). */
+.account-notif-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  border: 2px solid var(--cs-paper);
+  pointer-events: none;
+}
+
 .account-menu {
   position: absolute;
   top: calc(100% + 8px);

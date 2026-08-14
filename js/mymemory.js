@@ -22,6 +22,80 @@ const MY_MEMORY_EMPTY = {
   shared: "아직 전달한 기억이 없습니다.",
 };
 
+// ------------------------------------------------------------
+// 아바타 알림 뱃지 — "누가" 반응했는지/썼는지는 알려주지 않는(느슨한
+// SNS) 대신, 내가 남긴 기억에 (1) 떠올랐어요가 늘었거나 (2) 같은
+// 장소에 새 기억이 생겼으면 점 하나만 켠다. 실시간이 아니라 로그인
+// 상태로 앱을 열 때마다(=Storage가 서버에서 새로 받아온 시점) 확인하는
+// 걸로 충분하다는 전제(2026-08-14 논의). "확인했다"는 계정 메뉴를 여는
+// 순간으로 치고, 그때 스냅샷을 localStorage에 저장해 다음 비교 기준으로
+// 삼는다 — 그 전까지는(예: 새로고침) 뱃지가 계속 떠 있어야 실제로 본 게
+// 된다.
+const NOTIF_SEEN_KEY = "concrete_sapiens_notif_seen_v1";
+let _pendingNotifState = null;
+
+function _getNotifSeenState() {
+  const raw = localStorage.getItem(NOTIF_SEEN_KEY);
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function _saveNotifSeenState(state) {
+  localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(state));
+}
+
+// 로그인한 사용자만 대상 — 비로그인 상태는 아바타 자체가 없어(위
+// renderAccountAvatar) 뱃지를 붙일 자리가 없다.
+async function refreshNotificationBadge() {
+  const dot = document.getElementById("account-notif-dot");
+  if (!dot) return;
+
+  const user = Auth.getCurrentUser();
+  if (!user) {
+    dot.classList.add("hidden");
+    _pendingNotifState = null;
+    return;
+  }
+
+  const myStories = await buildMyMemoryList("posted");
+  const seen = _getNotifSeenState();
+  const currentState = {};
+  let hasNew = false;
+  let seenUpdated = false;
+
+  myStories.forEach((story) => {
+    const reactionCount = story.reactionCount || 0;
+    const addressCount = Storage.getStoriesAtSamePlace(story).length;
+    currentState[story.id] = { reactionCount, addressCount };
+
+    const prev = seen[story.id];
+    if (!prev) {
+      // 뱃지 도입 이후 처음 추적하는 내 글 — 기존에 쌓여있던 반응/이웃
+      // 글이 전부 "새 알림"으로 한꺼번에 터지지 않도록, 알림 없이 지금
+      // 값을 바로 확인된 기준값으로 저장해둔다(계정 메뉴를 열 때까지
+      // 기다리면 그 사이엔 비교 기준이 아예 없어 늘어도 못 잡아낸다).
+      seen[story.id] = { reactionCount, addressCount };
+      seenUpdated = true;
+    } else if (reactionCount > prev.reactionCount || addressCount > prev.addressCount) {
+      hasNew = true;
+    }
+  });
+
+  if (seenUpdated) _saveNotifSeenState(seen);
+  _pendingNotifState = currentState;
+  dot.classList.toggle("hidden", !hasNew);
+}
+
+// 계정 메뉴를 열어야 "확인했다"로 치고 스냅샷을 저장한다 — 아바타만
+// 보고 지나치거나 새로고침만 하는 건 확인으로 안 친다.
+function markNotificationsSeen() {
+  if (_pendingNotifState) _saveNotifSeenState(_pendingNotifState);
+  document.getElementById("account-notif-dot").classList.add("hidden");
+}
+
 function renderAccountAvatar() {
   const wrap = document.getElementById("account-menu-wrap");
   const avatar = document.getElementById("account-avatar");
@@ -35,10 +109,14 @@ function renderAccountAvatar() {
 
   wrap.classList.remove("hidden");
   avatar.textContent = (user.email || "?").charAt(0).toUpperCase();
+  refreshNotificationBadge();
 }
 
 function toggleAccountMenu() {
-  document.getElementById("account-menu").classList.toggle("hidden");
+  const menu = document.getElementById("account-menu");
+  const opening = menu.classList.contains("hidden");
+  menu.classList.toggle("hidden");
+  if (opening) markNotificationsSeen();
 }
 
 function closeAccountMenu() {

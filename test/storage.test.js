@@ -117,6 +117,34 @@ test("getGroupTitle은 주소 정보조차 없으면 안내 문구를 반환한�
   assert.equal(Storage.getGroupTitle(group), "주소를 확인할 수 없는 곳");
 });
 
+test("getStoriesAtSamePlace는 같은 placeId를 가진 다른 스토리만 반환하고 자기 자신은 뺀다", () => {
+  const mine = createStory({ id: "mine", placeId: "kakao-1", lat: 37.5, lng: 127.0 });
+  const neighbor = createStory({ id: "neighbor", placeId: "kakao-1", lat: 37.5, lng: 127.0 });
+  const elsewhere = createStory({ id: "elsewhere", placeId: "kakao-2", lat: 33.4, lng: 126.5 });
+  Storage._setCache([mine, neighbor, elsewhere]);
+
+  const result = Storage.getStoriesAtSamePlace(mine);
+  assert.deepEqual(result.map((s) => s.id), ["neighbor"]);
+});
+
+test("getStoriesAtSamePlace는 placeId가 없으면 좌표(소수점 4자리)로 같은 장소를 판단한다", () => {
+  const mine = createStory({ id: "mine", placeId: null, lat: 37.12341, lng: 127.6789 });
+  const samePin = createStory({ id: "same-pin", placeId: null, lat: 37.12344, lng: 127.6789 });
+  const otherPin = createStory({ id: "other-pin", placeId: null, lat: 37.9999, lng: 127.6789 });
+  Storage._setCache([mine, samePin, otherPin]);
+
+  const result = Storage.getStoriesAtSamePlace(mine);
+  assert.deepEqual(result.map((s) => s.id), ["same-pin"]);
+});
+
+test("getStoriesAtSamePlace는 HIDDEN/DELETED 상태의 이웃 스토리를 제외한다", () => {
+  const mine = createStory({ id: "mine", placeId: "kakao-1" });
+  const hiddenNeighbor = createStory({ id: "hidden-neighbor", placeId: "kakao-1", status: "HIDDEN" });
+  Storage._setCache([mine, hiddenNeighbor]);
+
+  assert.deepEqual(Storage.getStoriesAtSamePlace(mine), []);
+});
+
 test("getGroupAddressCaption은 제목이 주소와 다를 때만 주소를 캡션으로 반환한다", () => {
   const group = {
     placeId: "kakao-1",

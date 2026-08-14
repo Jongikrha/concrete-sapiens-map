@@ -431,14 +431,21 @@ const Storage = {
    *   → 특정 유저가 붙인 임의의 이름이 장소의 "공식 명칭"처럼
    *     굳어버리는 것을 방지하기 위한 설계
    */
+  /**
+   * getGroupedByPlace/getStoriesAtSamePlace가 공유하는 장소 그룹 키.
+   */
+  _groupKeyFor(story) {
+    return story.placeId
+      ? `place:${story.placeId}`
+      : `pin:${story.lat.toFixed(4)},${story.lng.toFixed(4)}`;
+  },
+
   getGroupedByPlace() {
     const stories = this.getVisibleStories();
     const groups = {};
 
     stories.forEach((story) => {
-      const key = story.placeId
-        ? `place:${story.placeId}`
-        : `pin:${story.lat.toFixed(4)},${story.lng.toFixed(4)}`;
+      const key = this._groupKeyFor(story);
 
       if (!groups[key]) {
         groups[key] = {
@@ -459,6 +466,15 @@ const Storage = {
     });
 
     return Object.values(groups);
+  },
+
+  /**
+   * 같은 장소(스팟)에 남겨진 다른 기억들 — 자기 자신은 제외. 알림 뱃지가
+   * "내 기억이 있는 주소에 새 기억이 생겼는지" 판단할 때 쓴다(js/mymemory.js).
+   */
+  getStoriesAtSamePlace(story) {
+    const key = this._groupKeyFor(story);
+    return this.getVisibleStories().filter((s) => s.id !== story.id && this._groupKeyFor(s) === key);
   },
 
   /**
