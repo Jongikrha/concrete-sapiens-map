@@ -4,6 +4,11 @@
 
 let pendingPin = null;
 
+// 태그가 너무 많으면 해시태그 바 등에서 한 기억이 화면을 과도하게 차지해
+// 최대 개수를 둔다(2026-08-15). 태그 입력창(칩)과 본문 속 인라인 #태그를
+// 합친 최종 개수 둘 다 여기에 걸린다.
+const MAX_HASHTAGS = 7;
+
 // getDeviceId()는 storage.js(Storage.getDeviceId)로 이동 — 어드민 화면과
 // GNB의 "내가 남긴 기억"이 같은 비식별 상관관계 ID를 공유해서 쓴다.
 
@@ -203,7 +208,15 @@ function openComposer(pin) {
     const commitEntry = () => {
       const parts = entry.value.trim().split(/\s+/).filter(Boolean);
       if (!parts.length) return;
-      parts.forEach((p) => { if (!tagChips.includes(p)) tagChips.push(p); });
+      if (tagChips.length >= MAX_HASHTAGS) {
+        alert(`태그는 최대 ${MAX_HASHTAGS}개까지 남길 수 있어요.`);
+        entry.value = "";
+        return;
+      }
+      parts.forEach((p) => {
+        if (tagChips.length >= MAX_HASHTAGS) return;
+        if (!tagChips.includes(p)) tagChips.push(p);
+      });
       syncTagsHiddenInput();
       renderTagChips();
       document.getElementById("tag-entry").focus();
@@ -265,6 +278,14 @@ function openComposer(pin) {
       ? tagsInput.split(/\s|,/).map((t) => t.trim()).filter(Boolean).map((t) => (t.startsWith("#") ? t : `#${t}`))
       : [];
     const hashtags = [...new Set([...extractHashtags(content), ...tagsFromField])];
+
+    // 태그 입력창(칩)은 추가 시점에 이미 막아두지만, 본문에 직접 쓴
+    // 인라인 #태그까지 합치면 최종 개수가 그걸 넘어설 수 있어 제출
+    // 시점에도 한 번 더 확인한다.
+    if (hashtags.length > MAX_HASHTAGS) {
+      alert(`태그는 최대 ${MAX_HASHTAGS}개까지 남길 수 있어요. 본문의 #태그도 함께 계산돼요.`);
+      return;
+    }
 
     const sharedFields = {
       lat: pendingPin.lat,
