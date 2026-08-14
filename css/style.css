@@ -630,6 +630,12 @@ body {
   flex-direction: column;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
   transition: transform var(--cs-transition-normal) ease;
+  /* .sheet-scroll의 커스텀 스크롤바 트랙이 이 둥근 모서리를 뚫고
+     삐져나와 보이던 문제 수정 — border-radius를 가진 요소에는 overflow:
+     hidden도 같이 있어야 자식의 스크롤바가 모서리 안쪽으로 클리핑된다
+     (.composer-card/.composer-card-inner에 이미 적용한 것과 같은 이유,
+     2026-08-14).*/
+  overflow: hidden;
 }
 
 .bottom-sheet.hidden {
