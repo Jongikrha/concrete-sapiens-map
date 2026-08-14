@@ -132,6 +132,34 @@ test("getGroupAddressCaption은 제목이 곧 주소일 때(자유 핀, 이름 �
   assert.equal(Storage.getGroupAddressCaption(group), null);
 });
 
+test("abbreviateAddress는 시/도 풀네임만 축약하고 나머지는 그대로 둔다", () => {
+  assert.equal(Storage.abbreviateAddress("서울특별시 마포구 잔다리로 24"), "서울 마포구 잔다리로 24");
+  assert.equal(Storage.abbreviateAddress("경기도 성남시 분당구 판교역로 1"), "경기 성남시 분당구 판교역로 1");
+  assert.equal(Storage.abbreviateAddress("제주특별자치도 제주시 1100로 1"), "제주 제주시 1100로 1");
+  assert.equal(Storage.abbreviateAddress("전북특별자치도 전주시 완산구 1"), "전북 전주시 완산구 1");
+  assert.equal(Storage.abbreviateAddress("강원도 춘천시 1"), "강원 춘천시 1");
+});
+
+test("abbreviateAddress는 매칭되는 시/도가 없으면 원본을 그대로 반환한다", () => {
+  assert.equal(Storage.abbreviateAddress("서울 종로구 1길 1"), "서울 종로구 1길 1");
+  assert.equal(Storage.abbreviateAddress(null), null);
+});
+
+test("getGroupAddressCaption은 캡션으로 쓸 때 시/도 풀네임을 축약한다", () => {
+  const group = {
+    placeId: "kakao-1",
+    officialPlaceName: "동네 카페",
+    address: "서울특별시 종로구 1길 1",
+    stories: [],
+  };
+  assert.equal(Storage.getGroupAddressCaption(group), "서울 종로구 1길 1");
+});
+
+test("getGroupTitle은 주소로 폴백할 때도 시/도 풀네임을 축약한다", () => {
+  const group = { placeId: null, officialPlaceName: null, address: "서울특별시 종로구 1길 1", stories: [] };
+  assert.equal(Storage.getGroupTitle(group), "서울 종로구 1길 1");
+});
+
 test("getStoryYear는 dateMode가 past일 때 referenceDate(YYYY-MM)에서 연도를 뽑는다", () => {
   const story = createStory({ dateMode: "past", referenceDate: "1998-03" });
   assert.equal(Storage.getStoryYear(story), 1998);

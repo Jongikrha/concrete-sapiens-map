@@ -23,6 +23,32 @@ const REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 
+// 기억 카드에 주소를 보여줄 때 시/도 풀네임을 축약 — 카카오 역지오코딩이
+// 반환하는 공식 행정구역명(예: "서울특별시")은 카드에선 장황해서 앞부분만
+// 짧게 바꾼다. 개명 이력이 있는 도(강원도→강원특별자치도, 전라북도→
+// 전북특별자치도)는 신/구 표기를 둘 다 매핑해둔다(2026-08-14).
+const SIDO_ABBR = [
+  ["서울특별시", "서울"],
+  ["부산광역시", "부산"],
+  ["대구광역시", "대구"],
+  ["인천광역시", "인천"],
+  ["광주광역시", "광주"],
+  ["대전광역시", "대전"],
+  ["울산광역시", "울산"],
+  ["세종특별자치시", "세종"],
+  ["경기도", "경기"],
+  ["강원특별자치도", "강원"],
+  ["강원도", "강원"],
+  ["충청북도", "충북"],
+  ["충청남도", "충남"],
+  ["전북특별자치도", "전북"],
+  ["전라북도", "전북"],
+  ["전라남도", "전남"],
+  ["경상북도", "경북"],
+  ["경상남도", "경남"],
+  ["제주특별자치도", "제주"],
+];
+
 // 오늘의 질문 프롬프트 목록 (매일 오전 6시에 하나씩 결정론적으로 노출) —
 // 데이터 의존 없음. 한 번 만들었다가(2026-08-11) 없앴는데(2026-08-12),
 // 해시태그 칩과 같은 크기의 칩으로 다시 살렸다(2026-08-14).
@@ -415,7 +441,22 @@ const Storage = {
       const withCustomName = group.stories.find((s) => s.customName);
       if (withCustomName) return withCustomName.customName;
     }
-    return group.address || "주소를 확인할 수 없는 곳";
+    return (group.address && this.abbreviateAddress(group.address)) || "주소를 확인할 수 없는 곳";
+  },
+
+  /**
+   * 주소 맨 앞의 시/도 풀네임만 SIDO_ABBR 기준으로 축약한다(나머지
+   * 구/동/도로명은 그대로). 작성폼(composer.js)의 "주소 확인 중" 표시는
+   * 이 함수를 거치지 않는 별도 지점이라 원본 그대로 유지된다.
+   */
+  abbreviateAddress(address) {
+    if (!address) return address;
+    for (const [full, short] of SIDO_ABBR) {
+      if (address.startsWith(full)) {
+        return short + address.slice(full.length);
+      }
+    }
+    return address;
   },
 
   /**
@@ -424,9 +465,13 @@ const Storage = {
    * 주소인 경우(둘 다 정보가 없는 자유 핀) 중복 표시를 피한다.
    */
   getGroupAddressCaption(group) {
-    const title = this.getGroupTitle(group);
-    if (group.address && group.address !== title) return group.address;
-    return null;
+    if (!group.address) return null;
+    const abbreviated = this.abbreviateAddress(group.address);
+    // getGroupTitle()도 이름이 없으면 이 축약 주소로 폴백하므로,
+    // 축약된 값끼리 비교해야 "제목이 곧 주소인" 케이스를 정확히 잡는다
+    // (원본 vs 축약본을 비교하면 항상 다르게 나와 중복 표시가 새버린다).
+    if (abbreviated === this.getGroupTitle(group)) return null;
+    return abbreviated;
   },
 
   _getHashtagCounts() {
