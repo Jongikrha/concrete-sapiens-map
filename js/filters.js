@@ -254,8 +254,18 @@ async function toggleMyMemoryMode() {
     myMemoryAccountStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
   }
 
-  renderMarkers();
-  renderTotalCountBanner();
+  // 지도가 하늘로 쭉 올라가듯 64km 축척(레벨 13 — CONFIG.DEFAULT_LEVEL과
+  // 같은 값, 카카오맵 레벨별 축척 표 기준) 까지 줌아웃한 뒤에 내 기억
+  // 별만 켠다(2026-08-14). setLevel의 animate 옵션엔 완료 콜백이 없어서
+  // duration만큼 기다렸다가 렌더링해 "다 올라간 다음에 켜지는" 순서를
+  // 맞춘다.
+  const ZOOM_OUT_DURATION = 700;
+  map.setLevel(CONFIG.DEFAULT_LEVEL, { animate: { duration: ZOOM_OUT_DURATION } });
+  setTimeout(() => {
+    if (!myMemoryModeActive) return; // 애니메이션 도중 다시 꺼졌으면 무시
+    renderMarkers();
+    renderTotalCountBanner();
+  }, ZOOM_OUT_DURATION);
 }
 
 function closeMyMemoryMode() {
