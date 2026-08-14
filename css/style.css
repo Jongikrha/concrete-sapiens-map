@@ -689,25 +689,27 @@ body {
 
 /* ------------------------------------------------------------
    커스텀 스크롤바 — 스크롤이 있는 모달/시트 공통(.composer-card-inner,
-   .sheet-scroll)에 적용. 블록 라운드형: 트랙은 거의 안 보이게, 썸만
-   살짝 두께감 있는 둥근 블록으로 표시. 트랙에 위아래 margin을 줘서
-   썸이 박스 맨 위/아래 끝까지 닿지 않게(스크롤 가능 범위를 박스보다
-   작게) 만든다.
+   .sheet-scroll)에 적용. 가는 알약형: 트랙은 옅은 회색 실선으로 항상
+   보이고, 썸은 브랜드 오렌지(--cs-orange) 알약으로 그 위에 겹친다
+   (참고 이미지 기준, 2026-08-14). 트랙에 위아래 margin을 줘서 썸이
+   박스 맨 위/아래 끝까지 닿지 않게(스크롤 가능 범위를 박스보다 작게)
+   만든다.
    ------------------------------------------------------------ */
 .composer-card-inner,
 .sheet-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(139, 139, 139) transparent;
+  scrollbar-color: var(--cs-orange) var(--cs-gray);
 }
 
 .composer-card-inner::-webkit-scrollbar,
 .sheet-scroll::-webkit-scrollbar {
-  width: 10px;
+  width: 4px;
 }
 
 .composer-card-inner::-webkit-scrollbar-track,
 .sheet-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--cs-gray);
+  border-radius: var(--cs-radius-chip);
   margin: 5% 0;
 }
 
@@ -721,15 +723,13 @@ body {
 
 .composer-card-inner::-webkit-scrollbar-thumb,
 .sheet-scroll::-webkit-scrollbar-thumb {
-  background-color: rgb(139, 139, 139);
-  border-radius: var(--cs-radius-card);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background-color: var(--cs-orange);
+  border-radius: var(--cs-radius-chip);
 }
 
 .composer-card-inner::-webkit-scrollbar-thumb:hover,
 .sheet-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(115, 115, 115);
+  background-color: var(--cs-memory-core);
 }
 
 /* ------------------------------------------------------------
