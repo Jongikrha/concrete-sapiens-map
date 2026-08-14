@@ -317,12 +317,17 @@ function openComposer(pin) {
 }
 
 // ------------------------------------------------------------
-// 스크롤바 트랙 범위 실측 — 닫기(✕) 버튼 바로 아래에서 시작해서
-// "이름 또는 닉네임" 버튼 중간까지만 보이게 한다. 헤더 높이나 주소
-// 줄바꿈에 따라 매번 픽셀이 달라져서 고정 CSS 값으로는 못 맞추고,
+// 스크롤바 트랙 범위 실측 — 부제("...빛이 됩니다." 텍스트) 바로 아래에서
+// 시작해서 "이름 또는 닉네임" 버튼 중간까지만 보이게 한다. 헤더 높이나
+// 주소 줄바꿈에 따라 매번 픽셀이 달라져서 고정 CSS 값으로는 못 맞추고,
 // 열릴 때마다(그리고 주소가 비동기로 갱신될 때) 실제 레이아웃을 재서
 // --composer-scrollbar-top/bottom 커스텀 프로퍼티로 넘긴다(css/style.css의
 // .composer-card-inner::-webkit-scrollbar-track이 이 값을 margin으로 씀).
+//
+// 시작점은 닫기(✕) 버튼이 아니라 부제 텍스트 기준이다 — composer-header가
+// flex-start 정렬이라 ✕ 버튼(32px 높이)이 타이틀+부제 블록보다 짧아서,
+// ✕ 버튼 아래를 기준으로 삼으면 부제 텍스트 중간에서 시작해버린다(수정
+// 모드처럼 부제가 없는 경우엔 타이틀 아래를 대신 쓴다).
 //
 // 아래쪽 여백은 "패널 바닥에서 닉네임까지의 거리"가 아니라 "전체
 // 콘텐츠 끝(scrollHeight)에서 닉네임까지의 거리"로 잰다 — 닉네임 뒤에
@@ -332,15 +337,15 @@ function openComposer(pin) {
 // 처음부터 화면 밖(스크롤 전)에 있어 0으로 잘려버리는 문제가 있었다.
 function updateComposerScrollbarBounds() {
   const panel = document.getElementById("composer-panel");
-  const closeBtn = document.getElementById("btn-composer-close");
+  const topRefEl = panel && (panel.querySelector(".composer-subtitle") || panel.querySelector(".composer-title"));
   const nickBtn = panel && panel.querySelector('[data-author-mode="custom"]');
-  if (!panel || !closeBtn || !nickBtn) return;
+  if (!panel || !topRefEl || !nickBtn) return;
 
   const panelRect = panel.getBoundingClientRect();
-  const closeRect = closeBtn.getBoundingClientRect();
+  const topRefRect = topRefEl.getBoundingClientRect();
   const nickRect = nickBtn.getBoundingClientRect();
 
-  const topGap = Math.max(0, closeRect.bottom - panelRect.top);
+  const topGap = Math.max(0, topRefRect.bottom - panelRect.top);
   const nickMidFromContentTop = (nickRect.top + nickRect.bottom) / 2 - panelRect.top + panel.scrollTop;
   const bottomGap = Math.max(0, panel.scrollHeight - nickMidFromContentTop);
 
