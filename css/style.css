@@ -410,31 +410,212 @@ body {
 }
 
 /* ------------------------------------------------------------
-   검색한 동네 배너 — .filter-banner 레이아웃/색을 그대로 쓰고,
-   "기억 남기기" CTA 버튼만 추가한다(글쓰기로 바로 이어지는 유일한
-   버튼이라 오렌지로 눈에 띄게).
+   검색한 동네 발견 모달 — 검색 결과를 고르면 뜬다. .composer-card보다
+   넓게 잡아 왼쪽(인용구+CTA 유도) / 오른쪽(장소명+연대별 집계)을 나란히
+   보여준다(2026-08-15). 좁은 화면에서는 위아래로 쌓인다.
    ------------------------------------------------------------ */
-.search-area-banner-actions {
+.search-area-card {
+  width: 100%;
+  max-width: 640px;
+  overflow: hidden;
+  background: var(--cs-paper);
+  border-radius: var(--cs-radius-sheet);
+  position: relative;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.search-area-card-inner {
+  max-height: 86vh;
+  overflow-y: auto;
+  margin-right: 7px;
+  padding: 28px 24px 24px;
+}
+
+.search-area-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--cs-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.search-area-close:hover {
+  color: var(--cs-black);
+}
+
+.search-area-body {
+  display: flex;
+  gap: 28px;
+  padding-right: 32px;
+}
+
+.search-area-quote-col {
+  flex: 1.1;
+  min-width: 0;
+}
+
+.search-area-quote {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--cs-text-main);
+  margin: 0 0 18px;
+}
+
+.search-area-quote-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--cs-text-muted);
+  margin: 0;
+}
+
+.search-area-stats-col {
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--cs-map-gray);
+  padding-left: 24px;
+}
+
+.search-area-place-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--cs-black);
+  margin: 0 0 14px;
+}
+
+.search-area-decade-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--cs-map-gray);
+}
+
+.search-area-decade-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.search-area-decade-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cs-text-main);
   flex-shrink: 0;
 }
 
-.search-area-cta {
-  border: none;
-  background: var(--cs-orange);
-  color: #fff;
+.search-area-decade-stars {
+  flex: 1;
+  text-align: center;
+  color: var(--cs-orange);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.search-area-decade-count {
   font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--cs-radius-chip);
-  cursor: pointer;
+  color: var(--cs-text-muted);
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
-.search-area-cta:hover {
-  opacity: 0.85;
+.search-area-stats-empty {
+  font-size: 13px;
+  color: var(--cs-text-muted);
+  padding: 10px 0;
+}
+
+.search-area-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.search-area-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--cs-radius-card);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  border: 1.5px solid var(--cs-orange);
+  background: none;
+}
+
+.search-area-action-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.search-area-action-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cs-black);
+}
+
+.search-area-action-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--cs-text-muted);
+  margin-top: 2px;
+}
+
+.search-area-action:hover {
+  background: rgba(255, 90, 54, 0.06);
+}
+
+.search-area-action--primary {
+  background: var(--cs-orange);
+  border-color: var(--cs-orange);
+}
+
+.search-area-action--primary .search-area-action-title {
+  color: #fff;
+}
+
+.search-area-action--primary .search-area-action-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.search-area-action--primary:hover {
+  opacity: 0.9;
+  background: var(--cs-orange);
+}
+
+@media (max-width: 600px) {
+  .search-area-card-inner {
+    padding: 24px 16px 20px;
+  }
+  .search-area-body {
+    flex-direction: column;
+    gap: 20px;
+    padding-right: 0;
+  }
+  .search-area-stats-col {
+    border-left: none;
+    border-top: 1px solid var(--cs-map-gray);
+    padding-left: 0;
+    padding-top: 18px;
+  }
+  .search-area-actions {
+    flex-direction: column;
+  }
 }
 
 /* ------------------------------------------------------------
@@ -760,18 +941,21 @@ body {
    js/composer.js 참고), .sheet-scroll은 고정 비율(5%)을 쓴다.
    ------------------------------------------------------------ */
 .composer-card-inner,
-.sheet-scroll {
+.sheet-scroll,
+.search-area-card-inner {
   scrollbar-width: thin;
   scrollbar-color: rgb(157, 157, 157) rgb(232, 230, 227);
 }
 
 .composer-card-inner::-webkit-scrollbar,
-.sheet-scroll::-webkit-scrollbar {
+.sheet-scroll::-webkit-scrollbar,
+.search-area-card-inner::-webkit-scrollbar {
   width: 2.67px;
 }
 
 .composer-card-inner::-webkit-scrollbar-track,
-.sheet-scroll::-webkit-scrollbar-track {
+.sheet-scroll::-webkit-scrollbar-track,
+.search-area-card-inner::-webkit-scrollbar-track {
   background: rgb(232, 230, 227);
   border-radius: var(--cs-radius-chip);
 }
@@ -784,14 +968,20 @@ body {
   margin: 5% 0 10%;
 }
 
+.search-area-card-inner::-webkit-scrollbar-track {
+  margin: 24px 0 20px;
+}
+
 .composer-card-inner::-webkit-scrollbar-thumb,
-.sheet-scroll::-webkit-scrollbar-thumb {
+.sheet-scroll::-webkit-scrollbar-thumb,
+.search-area-card-inner::-webkit-scrollbar-thumb {
   background-color: rgb(157, 157, 157);
   border-radius: var(--cs-radius-chip);
 }
 
 .composer-card-inner::-webkit-scrollbar-thumb:hover,
-.sheet-scroll::-webkit-scrollbar-thumb:hover {
+.sheet-scroll::-webkit-scrollbar-thumb:hover,
+.search-area-card-inner::-webkit-scrollbar-thumb:hover {
   background-color: rgb(120, 120, 120);
 }
 

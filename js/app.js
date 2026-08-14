@@ -200,6 +200,8 @@ function goBackFromSheet() {
     openTodayMemoriesModal({ scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "mymemory") {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
+  } else if (returnTo.kind === "searchNearby") {
+    openNearbyMemoriesModal({ scrollTop: returnTo.scrollTop });
   }
 }
 

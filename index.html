@@ -63,8 +63,6 @@
 
       <!-- 전체 등록된 기억 수 — 워드마크 바로 아래, 숫자만 코랄 오렌지로 강조 -->
       <div class="total-count-banner hidden" id="total-count-banner"></div>
-      <!-- 검색한 동네에 남은 기억 개수/연도범위 — 검색 결과를 고르면 뜬다 -->
-      <div class="filter-banner search-area-banner hidden" id="search-area-banner"></div>
       <!-- 해시태그 칩 (많이 쓰인 순 상위 20개 + 더보기, 화면 폭에 맞춰 줄바꿈) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
       <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
@@ -131,6 +129,21 @@
     <!-- GNB — 내가 남긴/떠올린/전달한 기억 목록 -->
     <div class="overlay hidden" id="mymemory-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="mymemory-panel"></div></div>
+    </div>
+
+    <!-- 검색한 동네 발견 모달 — 검색 결과를 고르면(오늘의 질문 응답 흐름 제외) 뜬다.
+         닫기 버튼은 스크롤 영역(search-area-panel) 밖의 형제 요소로 둬서
+         내용이 길어 스크롤돼도 항상 우상단에 고정돼 보이게 한다. -->
+    <div class="overlay hidden" id="search-area-overlay">
+      <div class="search-area-card">
+        <button class="search-area-close" id="search-area-close" aria-label="닫기">✕</button>
+        <div class="search-area-card-inner" id="search-area-panel"></div>
+      </div>
+    </div>
+
+    <!-- 이 동네의 다른 기억 목록 (위 모달의 "다른 기억 둘러보기" 클릭 시) -->
+    <div class="overlay hidden" id="search-nearby-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="search-nearby-panel"></div></div>
     </div>
   </div>
 
