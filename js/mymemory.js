@@ -32,6 +32,10 @@ const MY_MEMORY_EMPTY = {
 // 삼는다 — 그 전까지는(예: 새로고침) 뱃지가 계속 떠 있어야 실제로 본 게
 // 된다.
 const NOTIF_SEEN_KEY = "concrete_sapiens_notif_seen_v1";
+// "장소는 달라도 걸어서 닿을 거리"의 기준(2026-08-14, storySheet.js
+// story-overlap-caption과는 별개 — 카드 캡션은 정확히 같은 장소만, 알림은
+// 반경까지 넓혀 "우연히 겹치는" 발견 범위를 키운다).
+const NEARBY_YEAR_RADIUS_METERS = 1000;
 let _pendingNotifState = null;
 
 function _getNotifSeenState() {
@@ -69,7 +73,8 @@ async function refreshNotificationBadge() {
   myStories.forEach((story) => {
     const reactionCount = story.reactionCount || 0;
     const addressCount = Storage.getStoriesAtSamePlace(story).length;
-    currentState[story.id] = { reactionCount, addressCount };
+    const nearbyYearCount = Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS).length;
+    currentState[story.id] = { reactionCount, addressCount, nearbyYearCount };
 
     const prev = seen[story.id];
     if (!prev) {
@@ -77,9 +82,20 @@ async function refreshNotificationBadge() {
       // 글이 전부 "새 알림"으로 한꺼번에 터지지 않도록, 알림 없이 지금
       // 값을 바로 확인된 기준값으로 저장해둔다(계정 메뉴를 열 때까지
       // 기다리면 그 사이엔 비교 기준이 아예 없어 늘어도 못 잡아낸다).
-      seen[story.id] = { reactionCount, addressCount };
+      seen[story.id] = { reactionCount, addressCount, nearbyYearCount };
       seenUpdated = true;
-    } else if (reactionCount > prev.reactionCount || addressCount > prev.addressCount) {
+      return;
+    }
+    if (reactionCount > prev.reactionCount || addressCount > prev.addressCount) {
+      hasNew = true;
+    }
+    if (prev.nearbyYearCount === undefined) {
+      // nearbyYearCount는 이 글에 이번에 처음 추가되는 지표(2026-08-14) —
+      // 그 전까지 쌓여있던 근처 겹침을 전부 "새 알림"으로 터뜨리지 않도록
+      // 위 !prev 분기와 같은 방식으로 기준값만 갱신한다.
+      seen[story.id] = { ...prev, nearbyYearCount };
+      seenUpdated = true;
+    } else if (nearbyYearCount > prev.nearbyYearCount) {
       hasNew = true;
     }
   });

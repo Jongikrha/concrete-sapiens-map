@@ -478,6 +478,37 @@ const Storage = {
   },
 
   /**
+   * 두 좌표 사이의 직선 거리(미터) — 하버사인 공식. "근처" 판단(장소가
+   * 달라도 걸어서 닿을 거리)에 쓴다(getNearbySameYearStories 참고).
+   */
+  _distanceMeters(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  },
+
+  /**
+   * 다른 장소라도 반경(미터) 안에 있고, 같은 해를 기억하는 다른 기억들 —
+   * "우연히 겹치는" 발견을 장소 단위(getStoriesAtSamePlace)보다 넓게
+   * 잡는다. 자기 자신은 제외, 연도를 모르는(dateMode "unknown") 기억은
+   * 비교 대상에서 제외한다.
+   */
+  getNearbySameYearStories(story, radiusMeters) {
+    const year = this.getStoryYear(story);
+    if (year === null) return [];
+    return this.getVisibleStories().filter((s) => {
+      if (s.id === story.id) return false;
+      if (this.getStoryYear(s) !== year) return false;
+      return this._distanceMeters(story.lat, story.lng, s.lat, s.lng) <= radiusMeters;
+    });
+  },
+
+  /**
    * 스팟의 대표 제목을 결정한다. 이 서비스는 지도 서비스가 아니라
    * 기억 서비스이므로, 사람이 실제로 기억하는 이름(검색형 장소의
    * 공식 이름, 또는 누군가 붙인 개인적 이름)을 도로명주소보다

@@ -380,6 +380,14 @@ function renderStoryItem(story, options = {}) {
        <button class="delete-link" data-id="${story.id}">삭제하기</button>`
     : `<button class="report-link" data-id="${story.id}">이 기록 신고하기</button>`;
 
+  // "우연히 겹치는 사람" 발견 — 같은 장소에서 같은 해를 기억하는 다른
+  // 기억이 있으면 조용히 알려준다. 누가인지는 밝히지 않고 개수만(느슨한
+  // SNS 톤, 2026-08-14 논의). 연도를 모르는 기억(numericYear === null)엔
+  // 표시하지 않는다 — 비교 기준 자체가 없다.
+  const overlapCount = numericYear !== null
+    ? Storage.getStoriesAtSamePlace(story).filter((s) => Storage.getStoryYear(s) === numericYear).length
+    : 0;
+
   return `
     <div class="story-item" data-story-id="${story.id}">
       <div class="story-date-block">
@@ -402,6 +410,7 @@ function renderStoryItem(story, options = {}) {
       </div>
       ${story.customName ? `<p class="story-custom-name">${escapeHtml(authorNameWithHonorific)}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
+      ${overlapCount > 0 ? `<p class="story-overlap-caption">같은 해의 기억이 이곳에 ${overlapCount}개 더 있어요</p>` : ""}
 
       <div class="action-row-split">
         <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
