@@ -30,6 +30,35 @@ function groupHasTodayStory(group) {
 const MEMORY_CORE = "#C9573D";
 const MEMORY_GLOW = "#E76D4F";
 
+// 중심부를 원이 아니라 4각 별(반짝임) 모양으로 그리기 위한 좌표 계산.
+// outerR(뾰족한 끝)과 innerR(안쪽으로 파인 지점)을 45도 간격으로 번갈아
+// 찍어서 흔한 "sparkle" 별 실루엣을 만든다 — innerR을 작게 잡을수록
+// 뾰족하고 가느다란 별이 된다.
+function starPoints(cx, cy, outerR, innerR) {
+  const pts = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = ((-90 + i * 45) * Math.PI) / 180;
+    const r = i % 2 === 0 ? outerR : innerR;
+    pts.push(`${(cx + r * Math.cos(angle)).toFixed(2)},${(cy + r * Math.sin(angle)).toFixed(2)}`);
+  }
+  return `M${pts.join("L")}Z`;
+}
+
+// 가장 큰 tier(4) 전용 — 별 주위로 뻗어나가는 가는 반짝임 선. 별의 꼭짓점
+// 사이(22.5도 오프셋)에 그려서 별 실루엣과 겹치지 않게 한다.
+function burstRays(cx, cy, innerR, outerR, count, color, opacity) {
+  let lines = "";
+  for (let i = 0; i < count; i++) {
+    const angle = ((i * (360 / count) + 22.5) * Math.PI) / 180;
+    const x1 = cx + innerR * Math.cos(angle);
+    const y1 = cy + innerR * Math.sin(angle);
+    const x2 = cx + outerR * Math.cos(angle);
+    const y2 = cy + outerR * Math.sin(angle);
+    lines += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${color}" stroke-width="1.2" stroke-linecap="round" opacity="${opacity}"/>`;
+  }
+  return lines;
+}
+
 /**
  * Memory Light — 핀이 아니라 "장소에 남겨진 기억을 작은 빛의 잔광으로
  * 표현"하는 컨셉의 마커(디자인 가이드 기준, 2026-08-13 개편). 중심부
@@ -75,10 +104,18 @@ function makeDotImage(tier, selected, isToday) {
     glow1Animate = `<animate attributeName="opacity" values="${glow1Opacity};${glow1PeakOpacity};${glow1Opacity}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
   }
 
+  // 가장 큰 tier만 별 주위로 반짝임 선을 추가 — 기억이 가장 많이 쌓인
+  // 곳이 "빛을 내뿜는" 느낌이 나도록.
+  const rays =
+    tier === 4
+      ? burstRays(c, c, (center / 2) * 1.15, glow2 / 2, 8, MEMORY_GLOW, selected ? 0.5 : 0.32)
+      : "";
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
-    <circle cx="${c}" cy="${c}" r="${center / 2}" fill="${MEMORY_CORE}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.5"/>
+    ${rays}
+    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.4)}" fill="${MEMORY_CORE}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/>
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
