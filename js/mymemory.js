@@ -230,7 +230,16 @@ function closeMyMemoryList() {
 
 async function handleLogout() {
   closeAccountMenu();
+  // 내 기억 모드는 계정으로 연결된 글(StoryAuthor)까지 합쳐서 켠 상태일
+  // 수 있는데, 로그아웃하면 그 연결이 끊기니 계속 켜진 채로 두면 안 된다
+  // — 켜져 있었으면 로그아웃과 함께 자동으로 끄고 일반 지도 화면으로
+  // 되돌린다(2026-08-14).
+  const wasMyMemoryActive = myMemoryModeActive;
   await Auth.signOut();
+  if (wasMyMemoryActive) {
+    closeMyMemoryMode();
+    renderMarkers();
+  }
   showToast("entry-toast", "로그아웃되었습니다", 2000);
 }
 

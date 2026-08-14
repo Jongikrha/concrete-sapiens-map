@@ -280,6 +280,13 @@ function goToRandomStory() {
     return;
   }
 
+  // 다른 모드 전환(exploreHashtag/setYearFilter/exploreSameYear/
+  // toggleSlider)은 전부 켜지기 전에 내 기억 모드를 끄는데, 여기만
+  // 빠져있어서 "내 기억"을 켠 채로 "어딘가의 기억"을 누르면 두 버튼이
+  // 동시에 활성 상태로 남는 버그가 있었다(2026-08-14).
+  closeMyMemoryMode();
+  renderMarkers();
+
   showToast("entry-toast", "어딘가에 남겨진 기억을 찾는 중…", 900);
 
   setTimeout(() => {
