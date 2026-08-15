@@ -251,6 +251,10 @@ function bindAccountMenuEvents() {
   document.getElementById("menu-posted").onclick = () => openMyMemoryList("posted");
   document.getElementById("menu-reacted").onclick = () => openMyMemoryList("reacted");
   document.getElementById("menu-shared").onclick = () => openMyMemoryList("shared");
+  document.getElementById("menu-changepw").onclick = () => {
+    closeAccountMenu();
+    openChangePasswordPanel();
+  };
   document.getElementById("menu-logout").onclick = handleLogout;
 
   document.addEventListener("click", (e) => {

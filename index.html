@@ -57,6 +57,7 @@
             <button class="account-menu-item" id="menu-reacted">내가 떠올린 기억</button>
             <button class="account-menu-item" id="menu-shared">전달한 기억</button>
             <div class="account-menu-divider"></div>
+            <button class="account-menu-item" id="menu-changepw">비밀번호 변경</button>
             <button class="account-menu-item account-menu-item--danger" id="menu-logout">로그아웃</button>
           </div>
         </div>
@@ -130,6 +131,12 @@
     <!-- GNB — 내가 남긴/떠올린/전달한 기억 목록 -->
     <div class="overlay hidden" id="mymemory-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="mymemory-panel"></div></div>
+    </div>
+
+    <!-- 비밀번호 변경(로그인 상태 전용) — 재설정과 달리 이메일 인증 코드 없이
+         현재 비밀번호로 바로 바꾼다. -->
+    <div class="overlay hidden" id="changepw-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="changepw-panel"></div></div>
     </div>
 
     <!-- 검색한 동네 발견 모달 — 검색 결과를 고르면(오늘의 질문 응답 흐름 제외) 뜬다.

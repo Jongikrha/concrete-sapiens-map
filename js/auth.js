@@ -118,6 +118,12 @@ const Auth = {
     await this._refreshCurrentUser();
   },
 
+  // 재설정(이메일 코드)과 달리 로그인 상태에서 현재 비밀번호로 바로
+  // 바꾸는 경로 — Cognito가 이미 발급한 세션을 그대로 쓴다.
+  async updatePassword({ oldPassword, newPassword }) {
+    return this._sdk.updatePassword({ oldPassword, newPassword });
+  },
+
   // Cognito 예외 이름을 기획서 17장 문구에 맞춰 한국어로 옮긴다.
   mapError(e) {
     const known = {
@@ -557,5 +563,90 @@ async function handleResetSubmit() {
     authBusy = false;
     authError = Auth.mapError(e);
     renderAuthPanel();
+  }
+}
+
+// ------------------------------------------------------------
+// 비밀번호 변경(로그인 상태) — 계정 메뉴에서 진입, 이메일 인증 코드 없이
+// 현재 비밀번호만 확인하고 바로 바꾼다.
+// ------------------------------------------------------------
+let changePwBusy = false;
+let changePwError = "";
+
+function openChangePasswordPanel() {
+  changePwBusy = false;
+  changePwError = "";
+  renderChangePasswordPanel();
+  document.getElementById("changepw-overlay").classList.remove("hidden");
+}
+
+function closeChangePasswordPanel() {
+  document.getElementById("changepw-overlay").classList.add("hidden");
+  changePwBusy = false;
+  changePwError = "";
+  // auth-overlay의 closeAuthOverlay와 같은 이유 — 비밀번호 입력값이 DOM에
+  // 남아있으면 브라우저가 무관한 다른 입력을 저장 후보로 오인할 수 있다.
+  renderChangePasswordPanel();
+}
+
+function renderChangePasswordPanel() {
+  const panel = document.getElementById("changepw-panel");
+  const errorHtml = changePwError ? `<p class="auth-error">${escapeHtml(changePwError)}</p>` : "";
+  panel.innerHTML = `
+    <h2 class="composer-title">비밀번호 변경</h2>
+    <label class="field-label">현재 비밀번호</label>
+    <input type="password" id="changepw-old" class="input-field" />
+    <label class="field-label">새 비밀번호</label>
+    <input type="password" id="changepw-new" class="input-field" placeholder="8자 이상" maxlength="128" />
+    <label class="field-label">새 비밀번호 확인</label>
+    <input type="password" id="changepw-confirm" class="input-field" maxlength="128" />
+    <p class="field-hint">8자 이상으로 만들어주세요.</p>
+    ${errorHtml}
+    <button class="btn-primary" id="changepw-submit">비밀번호 변경</button>
+    <button class="btn-secondary" id="changepw-cancel">취소</button>
+  `;
+  panel.querySelector("#changepw-submit").onclick = handleChangePasswordSubmit;
+  panel.querySelector("#changepw-cancel").onclick = closeChangePasswordPanel;
+  panel.querySelector("#changepw-submit").disabled = changePwBusy;
+}
+
+async function handleChangePasswordSubmit() {
+  const oldPassword = document.getElementById("changepw-old").value;
+  const newPassword = document.getElementById("changepw-new").value;
+  const confirmPassword = document.getElementById("changepw-confirm").value;
+
+  if (!oldPassword) {
+    changePwError = "현재 비밀번호를 입력해주세요.";
+    renderChangePasswordPanel();
+    return;
+  }
+  if (!isValidPassword(newPassword)) {
+    changePwError = "비밀번호는 8자 이상이어야 합니다.";
+    renderChangePasswordPanel();
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    changePwError = "비밀번호가 일치하지 않습니다.";
+    renderChangePasswordPanel();
+    return;
+  }
+
+  changePwBusy = true;
+  changePwError = "";
+  renderChangePasswordPanel();
+
+  try {
+    await Auth.updatePassword({ oldPassword, newPassword });
+    closeChangePasswordPanel();
+    showToast("entry-toast", "비밀번호가 변경되었습니다", 2500);
+  } catch (e) {
+    changePwBusy = false;
+    // 로그인 화면의 mapError는 NotAuthorizedException을 "이메일 또는
+    // 비밀번호가 올바르지 않습니다"로 안내하는데, 여기선 이메일 입력이
+    // 없으니 "현재 비밀번호가 올바르지 않습니다"로 바꿔준다.
+    changePwError = e?.name === "NotAuthorizedException"
+      ? "현재 비밀번호가 올바르지 않습니다."
+      : Auth.mapError(e);
+    renderChangePasswordPanel();
   }
 }
