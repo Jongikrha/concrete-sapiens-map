@@ -61,7 +61,9 @@ function buildSearchAreaDecadeBreakdown(stories) {
   return decades.map((decade) => ({
     label: `${decade}s`,
     count: counts[decade],
-    stars: maxCount > 0 ? Math.max(1, Math.round((counts[decade] / maxCount) * 5)) : 0,
+    // 상대 비율로 별을 매기되, 실제 기억 개수보다 별이 많아 보이면 안 되니
+    // 개수로 상한을 건다(예: 이 연대에 3개뿐인데 비율상 5개로 반올림되는 걸 방지).
+    stars: maxCount > 0 ? Math.min(counts[decade], Math.max(1, Math.round((counts[decade] / maxCount) * 5))) : 0,
   }));
 }
 
