@@ -133,6 +133,7 @@ function renderAccountAvatar() {
 
   wrap.classList.remove("hidden");
   avatar.textContent = (user.email || "?").charAt(0).toUpperCase();
+  document.getElementById("account-menu-email").textContent = user.email || "";
   refreshNotificationBadge();
 }
 
