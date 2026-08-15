@@ -132,11 +132,10 @@
     </div>
 
     <!-- 검색한 동네 발견 모달 — 검색 결과를 고르면(오늘의 질문 응답 흐름 제외) 뜬다.
-         닫기 버튼은 스크롤 영역(search-area-panel) 밖의 형제 요소로 둬서
-         내용이 길어 스크롤돼도 항상 우상단에 고정돼 보이게 한다. -->
+         전용 닫기 버튼 대신 오버레이(카드 바깥) 클릭으로 닫는다 — 모바일 폭에서
+         버튼이 인용구 텍스트와 겹쳐 안 보이는 문제가 있었다(2026-08-15). -->
     <div class="overlay hidden" id="search-area-overlay">
       <div class="search-area-card">
-        <button class="search-area-close" id="search-area-close" aria-label="닫기">✕</button>
         <div class="search-area-card-inner" id="search-area-panel"></div>
       </div>
     </div>

@@ -431,30 +431,9 @@ body {
   padding: 28px 24px 24px;
 }
 
-.search-area-close {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  color: var(--cs-text-muted);
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.search-area-close:hover {
-  color: var(--cs-black);
-}
-
 .search-area-body {
   display: flex;
   gap: 28px;
-  padding-right: 32px;
 }
 
 .search-area-quote-col {
