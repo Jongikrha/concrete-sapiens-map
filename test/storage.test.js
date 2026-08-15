@@ -206,6 +206,7 @@ test("abbreviateAddress는 시/도 풀네임만 축약하고 나머지는 그대
   assert.equal(Storage.abbreviateAddress("제주특별자치도 제주시 1100로 1"), "제주 제주시 1100로 1");
   assert.equal(Storage.abbreviateAddress("전북특별자치도 전주시 완산구 1"), "전북 전주시 완산구 1");
   assert.equal(Storage.abbreviateAddress("강원도 춘천시 1"), "강원 춘천시 1");
+  assert.equal(Storage.abbreviateAddress("전남광주통합특별시 동구 1"), "전남광주 동구 1");
 });
 
 test("abbreviateAddress는 매칭되는 시/도가 없으면 원본을 그대로 반환한다", () => {
