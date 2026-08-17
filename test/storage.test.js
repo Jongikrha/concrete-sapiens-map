@@ -403,6 +403,18 @@ test("sortStoriesForDisplay는 timetravel-reverse 모드에서 연도·월 내�
   assert.deepEqual(dated.map((s) => s.id), ["recent", "old"]);
 });
 
+test("sortStoriesForDisplay는 같은 연도·월끼리는 등록 시각으로 한 번 더 정렬한다(timetravel-reverse=최근 등록이 위)", () => {
+  const stories = [
+    createStory({ id: "olderPost", dateMode: "past", referenceDate: "2026-08", createdAt: "2026-08-01T00:00:00.000Z" }),
+    createStory({ id: "newerPost", dateMode: "past", referenceDate: "2026-08", createdAt: "2026-08-15T00:00:00.000Z" }),
+  ];
+  const reverse = Storage.sortStoriesForDisplay(stories, "timetravel-reverse").dated;
+  assert.deepEqual(reverse.map((s) => s.id), ["newerPost", "olderPost"]);
+
+  const forward = Storage.sortStoriesForDisplay(stories, "timetravel").dated;
+  assert.deepEqual(forward.map((s) => s.id), ["olderPost", "newerPost"]);
+});
+
 test("incrementViewCount는 조회수를 1 늘린다", () => {
   Storage._setCache([createStory({ id: "s1", viewCount: 2 })]);
   const updated = Storage.incrementViewCount("s1");

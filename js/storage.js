@@ -742,7 +742,13 @@ const Storage = {
       const ay = this.getStoryYear(a), by = this.getStoryYear(b);
       if (ay !== by) return dir * (ay - by);
       const am = this.getStoryMonth(a) || 0, bm = this.getStoryMonth(b) || 0;
-      return dir * (am - bm);
+      if (am !== bm) return dir * (am - bm);
+      // 연도·월까지 같으면(예: 이번 달 안에서) 등록 시각으로 한 번 더
+      // 갈라준다 — 안 그러면 같은 달로 묶인 기억들 사이의 순서가
+      // 정렬 전 배열 순서에 그대로 고정돼, 새로 올린 기억이 같은 달의
+      // 오래된 기억보다 항상 뒤로 밀려 보이지 않는 문제가 있었다
+      // (2026-08-17 확인 — "역시간여행순"이 며칠째 똑같아 보인다는 제보).
+      return dir * (new Date(a.createdAt) - new Date(b.createdAt));
     });
     undated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
