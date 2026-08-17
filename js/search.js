@@ -259,7 +259,9 @@ function bindSearchEvents() {
             return;
           }
 
-          openSearchAreaModal({ lat, lng, placeName, placeId, address });
+          const areaInfo = { lat, lng, placeName, placeId, address };
+          showSearchPin(lat, lng, areaInfo);
+          openSearchAreaModal(areaInfo);
         };
       });
     });

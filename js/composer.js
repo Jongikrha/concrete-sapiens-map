@@ -348,6 +348,7 @@ function openComposer(pin) {
     }
 
     closeComposer();
+    clearSearchPin();
     renderMarkers();
     renderHashtagChips();
     renderSearchAreaModal();

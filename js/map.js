@@ -8,6 +8,8 @@ let placesService;
 let geocoderService;
 let markers = []; // { marker, group }
 let highlightedMarker = null;
+let searchPinMarker = null;
+let searchPinInfo = null; // openSearchAreaModal에 그대로 넘길 { lat, lng, placeName, placeId, address }
 
 // ------------------------------------------------------------
 // Memory Light 이미지 — 기억 수에 따라 크기 차등(makeDotImage 아래 참고)
@@ -212,6 +214,36 @@ function spawnClickStamp(mouseEvent) {
   stamp.style.top = `${py}px`;
   document.body.appendChild(stamp);
   setTimeout(() => stamp.remove(), 500);
+}
+
+// ------------------------------------------------------------
+// 검색 위치 핀 — 주소 검색 결과를 고르면 지도가 그 좌표로 이동하는데,
+// "이 동네 기억" 카드를 바로 안 쓰고 다른 곳을 눌러 꺼버리면 방금 검색한
+// 위치가 지도 어디였는지 알 수 없어지는 문제가 있었다(2026-08-17). 카드
+// 열림/닫힘과 무관하게 좌표에 꽂힌 채로 남아있다가, 새로 검색하거나 그
+// 자리에 실제로 기억을 남기면(=진짜 마커가 생기면) 없어진다. 기본
+// Memory Light 점 이미지 대신 카카오 기본 마커를 그대로 써서 "아직 기억은
+// 없고 검색으로 짚어본 위치"라는 걸 시각적으로 구분한다.
+// ------------------------------------------------------------
+function showSearchPin(lat, lng, info) {
+  clearSearchPin();
+  searchPinInfo = info;
+  searchPinMarker = new kakao.maps.Marker({
+    map,
+    position: new kakao.maps.LatLng(lat, lng),
+    zIndex: 10,
+  });
+  kakao.maps.event.addListener(searchPinMarker, "click", () => {
+    if (searchPinInfo) openSearchAreaModal(searchPinInfo);
+  });
+}
+
+function clearSearchPin() {
+  if (searchPinMarker) {
+    searchPinMarker.setMap(null);
+    searchPinMarker = null;
+  }
+  searchPinInfo = null;
 }
 
 // address: 도로명/지번 주소 문자열. buildingName: 좌표가 등록된 건물(예: "서울역")
