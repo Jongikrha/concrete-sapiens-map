@@ -122,6 +122,108 @@ function markNotificationsSeen() {
   document.getElementById("account-notif-dot").classList.add("hidden");
 }
 
+// ------------------------------------------------------------
+// 근처 기억 발견 알림 — 아바타의 조용한 점 하나로는 "무엇을" 발견했는지
+// 알 수 없어서(2026-08-14 도입 당시부터 의도적으로 익명·저정보), 내
+// 기억 반경 1000m 안에 새로 생긴 같은 해의 기억은 따로 카드 토스트로
+// "연도 · 장소 · 거리 + 만나러 가기" 형태로 보여준다(2026-08-17). 뱃지의
+// notif-seen 상태와는 별개 저장소를 쓴다 — 뱃지는 "계정 메뉴를 열면
+// 전부 확인"이라는 다른 규칙이라 여기 섞으면 서로 꼬인다.
+// ------------------------------------------------------------
+const NEARBY_DISCOVERY_SEEN_KEY = "concrete_sapiens_nearby_discovery_seen_v1";
+// 한 세션에 몰아서 너무 많이 뜨지 않도록(예: 오래 쉬다 온 다작 작성자)
+// 한 번에 보여주는 개수에 상한을 둔다 — 못 보여준 나머지는 seen 처리를
+// 안 하니 다음 접속에서 이어서 뜬다.
+const NEARBY_DISCOVERY_MAX_PER_SESSION = 5;
+const NEARBY_DISCOVERY_DURATION_MS = 6000;
+let _discoveryQueue = [];
+let _discoveryTimer = null;
+
+function _getDiscoverySeenSet() {
+  try {
+    const raw = localStorage.getItem(NEARBY_DISCOVERY_SEEN_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function _saveDiscoverySeenSet(set) {
+  localStorage.setItem(NEARBY_DISCOVERY_SEEN_KEY, JSON.stringify([...set]));
+}
+
+// 내 기억마다 반경 안 같은 해 이웃을 찾고, 아직 안 보여준(=seen에 없는)
+// 이웃만 모아 큐를 만든다. 같은 이웃 기억이 내 기억 여러 개 근처에
+// 걸쳐도 한 번만 보여준다.
+async function buildNearbyDiscoveryQueue() {
+  const myStories = await buildMyMemoryList("posted");
+  const seen = _getDiscoverySeenSet();
+  const queue = [];
+  const queuedIds = new Set();
+
+  myStories.forEach((myStory) => {
+    Storage.getNearbySameYearStories(myStory, NEARBY_YEAR_RADIUS_METERS).forEach((neighbor) => {
+      if (seen.has(neighbor.id) || queuedIds.has(neighbor.id)) return;
+      queuedIds.add(neighbor.id);
+      queue.push({
+        neighborStory: neighbor,
+        distanceMeters: Math.round(Storage._distanceMeters(myStory.lat, myStory.lng, neighbor.lat, neighbor.lng)),
+      });
+    });
+  });
+
+  return queue.slice(0, NEARBY_DISCOVERY_MAX_PER_SESSION);
+}
+
+async function checkNearbyDiscoveries() {
+  _discoveryQueue = await buildNearbyDiscoveryQueue();
+  _showNextDiscoveryToast();
+}
+
+function _showNextDiscoveryToast() {
+  clearTimeout(_discoveryTimer);
+  const el = document.getElementById("nearby-discovery-toast");
+  if (!el || _discoveryQueue.length === 0) return;
+
+  const item = _discoveryQueue.shift();
+  // 보여주는 시점에 바로 seen 처리 — 도중에 새로고침해도 이미 본 카드가
+  // 다시 뜨지 않는다.
+  const seen = _getDiscoverySeenSet();
+  seen.add(item.neighborStory.id);
+  _saveDiscoverySeenSet(seen);
+
+  const year = Storage.getStoryYear(item.neighborStory);
+  const placeTitle = Storage.getGroupTitle({
+    placeId: item.neighborStory.placeId,
+    officialPlaceName: item.neighborStory.officialPlaceName,
+    customName: item.neighborStory.customName,
+    address: item.neighborStory.address,
+  });
+
+  el.innerHTML = `
+    <p class="nearby-discovery-headline">당신의 기억 근처에<br>새로운 기억이 도착했어요.</p>
+    <p class="nearby-discovery-meta">${year !== null ? `${year} · ` : ""}${escapeHtml(placeTitle)} · ${item.distanceMeters}m</p>
+    <button type="button" class="nearby-discovery-cta" id="nearby-discovery-cta">그 기억 만나러 가기 →</button>
+  `;
+  el.classList.remove("hidden");
+  requestAnimationFrame(() => el.classList.add("show"));
+
+  el.querySelector("#nearby-discovery-cta").onclick = () => {
+    clearTimeout(_discoveryTimer);
+    el.classList.remove("show");
+    el.classList.add("hidden");
+    navigateToStoryFromList(item.neighborStory.id, null);
+  };
+
+  _discoveryTimer = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => {
+      el.classList.add("hidden");
+      _showNextDiscoveryToast();
+    }, 300);
+  }, NEARBY_DISCOVERY_DURATION_MS);
+}
+
 function renderAccountAvatar() {
   const wrap = document.getElementById("account-menu-wrap");
   const avatar = document.getElementById("account-avatar");
@@ -137,6 +239,7 @@ function renderAccountAvatar() {
   avatar.textContent = (user.email || "?").charAt(0).toUpperCase();
   document.getElementById("account-menu-email").textContent = user.email || "";
   refreshNotificationBadge();
+  checkNearbyDiscoveries();
 }
 
 function toggleAccountMenu() {
