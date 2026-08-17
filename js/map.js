@@ -191,6 +191,7 @@ function initMap() {
   geocoderService = new kakao.maps.services.Geocoder();
 
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
+    clearSearchPin();
     if (sheetOpen) {
       closeSheetToUnfiltered();
       return;
@@ -200,6 +201,25 @@ function initMap() {
     const promptPrefill = consumePendingDailyPrompt();
     requireLogin(() => startFreePinComposer(latlng.getLat(), latlng.getLng(), promptPrefill));
   });
+
+  // 검색 위치 핀은 "다른 곳을 클릭하는 등 어떠한 액션"을 취하면 바로
+  // 사라져야 한다(2026-08-18) — 지도 자체 클릭(위 리스너)과 마커 클릭
+  // (renderMarkers)은 각자 clearSearchPin()을 직접 부르고, 그 외
+  // 나머지 UI 전반(하단 툴바/해시태그/계정 메뉴 등)은 여기서 한 번에
+  // 잡는다. 검색창(.search-box)과 검색으로 연 모달들(#search-area-overlay,
+  // #search-nearby-overlay) 안쪽 클릭은 핀을 보여주거나 그 핀을 기준으로
+  // 계속 탐색하는 흐름 자체라 제외한다. capture 단계라 지도/마커 자체
+  // 클릭이 버블링으로 여기 다시 걸릴 걱정은 없다(카카오 마커 클릭은
+  // 지도 click 이벤트로 전파되지 않음).
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (!searchPinMarker) return;
+      if (e.target.closest("#map, .search-box, #search-area-overlay, #search-nearby-overlay")) return;
+      clearSearchPin();
+    },
+    true
+  );
 }
 
 function spawnClickStamp(mouseEvent) {
@@ -218,19 +238,34 @@ function spawnClickStamp(mouseEvent) {
 
 // ------------------------------------------------------------
 // 검색 위치 핀 — 주소 검색 결과를 고르면 지도가 그 좌표로 이동하는데,
-// "이 동네 기억" 카드를 바로 안 쓰고 다른 곳을 눌러 꺼버리면 방금 검색한
-// 위치가 지도 어디였는지 알 수 없어지는 문제가 있었다(2026-08-17). 카드
-// 열림/닫힘과 무관하게 좌표에 꽂힌 채로 남아있다가, 새로 검색하거나 그
-// 자리에 실제로 기억을 남기면(=진짜 마커가 생기면) 없어진다. 기본
-// Memory Light 점 이미지 대신 카카오 기본 마커를 그대로 써서 "아직 기억은
+// "이 동네 기억" 카드를 바로 안 쓰고 모달 바깥을 눌러 꺼버리면 방금
+// 검색한 위치가 지도 어디였는지 알 수 없어지는 문제가 있었다
+// (2026-08-17). 모달을 닫아도 좌표에 꽂힌 채로 남아있다가, 새로
+// 검색하거나 그 자리에 실제로 기억을 남기거나(=진짜 마커가 생기면),
+// 지도/다른 UI에서 다른 액션을 하나라도 취하면 바로 사라진다(2026-08-18,
+// initMap의 전역 클릭 리스너 참고 — 처음엔 어떤 액션을 취해도 안
+// 사라지게 했었는데, 오히려 계속 남아있는 게 거슬린다는 피드백으로
+// "다음 액션 전까지만" 보이는 걸로 좁혔다). 카카오 기본 파란 마커 대신
+// 커스텀 깃발 아이콘(assets/search-pin-marker.png)을 써서 "아직 기억은
 // 없고 검색으로 짚어본 위치"라는 걸 시각적으로 구분한다.
 // ------------------------------------------------------------
+const SEARCH_PIN_IMAGE_SRC = "assets/search-pin-marker.png";
+
+function buildSearchPinImage() {
+  return new kakao.maps.MarkerImage(
+    SEARCH_PIN_IMAGE_SRC,
+    new kakao.maps.Size(32, 45),
+    { offset: new kakao.maps.Point(16, 45) }
+  );
+}
+
 function showSearchPin(lat, lng, info) {
   clearSearchPin();
   searchPinInfo = info;
   searchPinMarker = new kakao.maps.Marker({
     map,
     position: new kakao.maps.LatLng(lat, lng),
+    image: buildSearchPinImage(),
     zIndex: 10,
   });
   kakao.maps.event.addListener(searchPinMarker, "click", () => {
@@ -338,7 +373,10 @@ function renderMarkers() {
       title: Storage.getGroupTitle(group),
       image: makeDotImage(tier, false, lit),
     });
-    kakao.maps.event.addListener(marker, "click", () => openSheet(group));
+    kakao.maps.event.addListener(marker, "click", () => {
+      clearSearchPin();
+      openSheet(group);
+    });
     markers.push({ marker, group });
     kakaoMarkers.push(marker);
   });
