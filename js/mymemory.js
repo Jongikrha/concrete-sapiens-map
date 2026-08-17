@@ -10,12 +10,14 @@
 
 const MY_MEMORY_TITLES = {
   posted: "내가 남긴 기억",
+  recalled: "나를 떠올린 기억",
   reacted: "내가 떠올린 기억",
   shared: "전달한 기억",
 };
 
 const MY_MEMORY_EMPTY = {
   posted: "아직 남긴 기억이 없습니다.",
+  recalled: "아직 다른 사람이 떠올린 내 기억이 없습니다.",
   reacted: "아직 떠올린 기억이 없습니다.",
   shared: "아직 전달한 기억이 없습니다.",
 };
@@ -166,6 +168,15 @@ async function buildMyMemoryList(kind) {
     const myStoryIds = new Set(myAuthorRecords.map((r) => r.storyId));
     return all.filter((s) => myStoryIds.has(s.id) && s.status !== "DELETED");
   }
+  // "나를 떠올린 기억" — 내가 남긴 글 중 다른 사람이 "떠올랐어요"를 누른
+  // 것만 추려서 보여준다. reactionCount는 원래 "누가"는 절대 기록하지
+  // 않는 익명 카운터라(storage.js toggleReaction 참고), 여기서도 반응자
+  // 신원은 노출하지 않고 "내 글이 반응을 받았다"는 사실 + 그 글 내용만
+  // 보여준다(2026-08-17, 익명성 유지 방향으로 결정).
+  if (kind === "recalled") {
+    const posted = await buildMyMemoryList("posted");
+    return posted.filter((s) => (s.reactionCount || 0) > 0);
+  }
   if (kind === "reacted") return all.filter((s) => Storage.hasReacted(s.id));
   if (kind === "shared") return all.filter((s) => Storage.hasShared(s.id));
   return [];
@@ -189,11 +200,13 @@ async function openMyMemoryList(kind, opts = {}) {
           customName: story.customName,
           address: story.address,
         });
+        const reactionCount = story.reactionCount || 0;
         return `
           <div class="recent-item" data-id="${story.id}">
             <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
             <p class="recent-item-content">${escapeHtml(story.content)}</p>
             <p class="recent-item-place">${escapeHtml(title)}</p>
+            ${reactionCount > 0 ? `<p class="recent-item-reaction">♡ ${reactionCount}명이 떠올랐어요</p>` : ""}
           </div>
         `;
       }).join("")
@@ -249,6 +262,7 @@ function bindAccountMenuEvents() {
     toggleAccountMenu();
   };
   document.getElementById("menu-posted").onclick = () => openMyMemoryList("posted");
+  document.getElementById("menu-recalled").onclick = () => openMyMemoryList("recalled");
   document.getElementById("menu-reacted").onclick = () => openMyMemoryList("reacted");
   document.getElementById("menu-shared").onclick = () => openMyMemoryList("shared");
   document.getElementById("menu-changepw").onclick = () => {

@@ -1862,6 +1862,12 @@ button.story-place-line:hover {
   margin: 0 0 10px;
 }
 
+.recent-item-reaction {
+  font-size: 12px;
+  color: #FF5A3C;
+  margin: -6px 0 10px;
+}
+
 /* ------------------------------------------------------------
    기억 전달하기(공유) — "기억 전하기" 버튼을 누르면 카드 안에서
    펼쳐지는 인라인 패널(모달 아님). 링크를 보여주고 복사만 하는
