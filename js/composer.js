@@ -56,7 +56,9 @@ function buildYearOptions(selectedYear) {
 function buildMonthOptions(selectedMonth) {
   let opts = `<option value="">월</option>`;
   for (let m = 1; m <= 12; m++) {
-    opts += `<option value="${m}" ${String(m) === String(selectedMonth) ? "selected" : ""}>${m}월</option>`;
+    // referenceDate("YYYY-MM")에서 온 selectedMonth는 "07"처럼 0으로 채워져
+    // 있어 문자열로 그대로 비교하면 옵션 값(7)과 안 맞는다 — 숫자로 비교.
+    opts += `<option value="${m}" ${Number(m) === Number(selectedMonth) ? "selected" : ""}>${m}월</option>`;
   }
   return opts;
 }
