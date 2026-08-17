@@ -224,7 +224,9 @@ function openComposer(pin) {
       };
     });
     const entry = document.getElementById("tag-entry");
-    const commitEntry = () => {
+    // refocus는 Enter/","로 직접 커밋할 때만 켠다 — blur(다른 곳 클릭)로
+    // 커밋할 때 다시 포커스를 뺏으면 그 클릭(예: 제출 버튼)이 씹힌다.
+    const commitEntry = ({ refocus } = {}) => {
       const parts = entry.value.trim().split(/\s+/).filter(Boolean);
       if (!parts.length) return;
       if (tagChips.length >= MAX_HASHTAGS) {
@@ -238,14 +240,19 @@ function openComposer(pin) {
       });
       syncTagsHiddenInput();
       renderTagChips();
-      document.getElementById("tag-entry").focus();
+      if (refocus) document.getElementById("tag-entry").focus();
     };
     entry.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
-        commitEntry();
+        commitEntry({ refocus: true });
       }
     });
+    // 태그를 쳐놓고 Enter/","를 안 누른 채 다른 필드를 클릭하거나 바로
+    // 제출하면 글자만 남고 칩(둥근 박스)이 안 생기는 문제가 있었다 —
+    // 포커스를 잃는 순간에도 커밋해서 항상 칩으로 보이게 한다
+    // (2026-08-17 확인).
+    entry.addEventListener("blur", () => commitEntry());
     syncTagsHiddenInput();
   }
 
