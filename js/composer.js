@@ -26,10 +26,18 @@ function startFreePinComposer(lat, lng, prefillContent) {
     prefillContent: prefillContent || "",
   });
 
-  reverseGeocode(lat, lng).then((address) => {
+  reverseGeocode(lat, lng).then(({ address, buildingName }) => {
     const addrEl = document.getElementById("composer-address-value");
     if (addrEl) {
       addrEl.textContent = address || "주소를 확인할 수 없습니다";
+    }
+    // 아직 아무것도 안 적은 상태(사용자가 미리 타이핑하지 않은 경우)에만
+    // 채워준다 — 값을 덮어써서 이미 입력한 이름을 지우면 안 되기 때문.
+    // 등록된 건물명(예: "서울역")이 있으면 그걸 우선, 없으면 주소로 채운다.
+    const nameInput = document.getElementById("input-place-name");
+    if (nameInput && !nameInput.value.trim()) {
+      const prefillName = buildingName || address;
+      if (prefillName) nameInput.value = prefillName;
     }
     if (pendingPin) pendingPin.address = address || null;
     updateComposerScrollbarBounds();
@@ -82,12 +90,12 @@ function openComposer(pin) {
     : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
   const nameValue = pin.isFreePin ? (pin.customName || "") : (pin.officialPlaceName || "");
   const nameHint = pin.isFreePin
-    ? `<div class="field-hint">지번 주소만으로는 다른 사람이 어딘지 알아보기 어려워요. 자유롭게 붙여주세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
+    ? `<div class="field-hint">장소 이름을 기본으로 채워뒀어요. 다른 사람이 알아보기 쉽도록 자유롭게 고쳐 써보세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
     : "";
 
   const whereHtml = `
     <div class="input-with-icon">
-      <span class="input-icon">🔍</span>
+      <span class="input-icon">${pin.isFreePin ? "✏️" : "🔍"}</span>
       <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(nameValue)}" maxlength="40" />
     </div>
     ${nameHint}
@@ -163,6 +171,15 @@ function openComposer(pin) {
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
   });
+
+  // 자유 핀은 이름을 자동 채워두므로, 처음 포커스할 때 전체 선택해
+  // 바로 타이핑으로 덮어쓸 수 있다는 걸(=수정 가능하다는 걸) 느끼게 한다.
+  if (pin.isFreePin) {
+    const nameInput = panel.querySelector("#input-place-name");
+    if (nameInput) {
+      nameInput.addEventListener("focus", () => nameInput.select(), { once: true });
+    }
+  }
 
   panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((btn) => {
     btn.onclick = () => {

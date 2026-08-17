@@ -214,19 +214,24 @@ function spawnClickStamp(mouseEvent) {
   setTimeout(() => stamp.remove(), 500);
 }
 
+// address: 도로명/지번 주소 문자열. buildingName: 좌표가 등록된 건물(예: "서울역")
+// 위일 때만 채워지는 건물명 — 없는 좌표가 대부분이라 항상 null일 수 있다.
 function reverseGeocode(lat, lng) {
   return new Promise((resolve) => {
     if (!geocoderService) {
-      resolve(null);
+      resolve({ address: null, buildingName: null });
       return;
     }
     geocoderService.coord2Address(lng, lat, (result, status) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const road = result[0].road_address;
         const jibun = result[0].address;
-        resolve((road && road.address_name) || (jibun && jibun.address_name) || null);
+        resolve({
+          address: (road && road.address_name) || (jibun && jibun.address_name) || null,
+          buildingName: (road && road.building_name) || null,
+        });
       } else {
-        resolve(null);
+        resolve({ address: null, buildingName: null });
       }
     });
   });
