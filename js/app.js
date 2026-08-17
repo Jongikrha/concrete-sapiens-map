@@ -219,6 +219,7 @@ function goBackFromSheet() {
 function handleInitialEntry() {
   const params = new URLSearchParams(window.location.search);
   const storyPublicId = params.get("story");
+  const placeKey = params.get("place");
 
   if (storyPublicId) {
     const story = Storage.getStoryByPublicId(storyPublicId);
@@ -227,6 +228,16 @@ function handleInitialEntry() {
       return;
     }
     showGoneState();
+    return;
+  }
+
+  if (placeKey) {
+    const group = Storage.getGroupByKey(placeKey);
+    if (group && group.stories.length > 0) {
+      flyToPlace(group);
+      return;
+    }
+    showGoneState("이 장소의 기억은 더 이상<br />지도에 남아 있지 않습니다.");
     return;
   }
 
@@ -249,6 +260,14 @@ function flyToStory(story, openSheetAfter) {
       setTimeout(() => openSheet(group), 250);
     }
   }
+}
+
+// ?place= 딥링크 전용 — 특정 기억이 아니라 장소(스팟) 자체로 진입한다.
+function flyToPlace(group) {
+  map.setLevel(4);
+  map.panTo(new kakao.maps.LatLng(group.lat, group.lng));
+  highlightMarkerForStory(group.stories[0]);
+  setTimeout(() => openSheet(group), 250);
 }
 
 /**

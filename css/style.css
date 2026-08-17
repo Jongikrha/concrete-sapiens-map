@@ -1727,6 +1727,49 @@ button.story-place-line:hover {
   margin-top: 1px;
 }
 
+/* 장소 단위 공유(2026-08-18) — 기억이 2개 이상 쌓인 스팟에서만 뜬다.
+   개별 기억 공유(.share-btn 등)와 클래스를 겹치지 않게 분리해, 카드
+   목록 전체를 스캔하는 bindStoryItemEvents가 이 헤더 버튼까지 잘못
+   집어가지 않도록 한다. */
+.spot-share-toggle {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  background: none;
+  font-family: var(--font-pretendard);
+  color: var(--cs-text-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0;
+  margin: 12px 0 0;
+  text-align: left;
+}
+
+.spot-share-toggle:hover {
+  color: var(--cs-orange);
+}
+
+.spot-share-copy-btn {
+  flex-shrink: 0;
+  border: none;
+  background: var(--cs-black);
+  color: var(--cs-paper);
+  font-family: var(--font-pretendard);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.spot-share-copy-btn:hover {
+  background: #1c1d1e;
+}
+
 .input-field {
   width: 100%;
   border: 1px solid var(--cs-gray);

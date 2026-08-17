@@ -57,11 +57,11 @@ function closeSheetToUnfiltered() {
   }
 }
 
-function showGoneState() {
+function showGoneState(message = "이 기억은 더 이상<br />지도에 남아 있지 않습니다.") {
   const content = document.getElementById("sheet-content");
   content.innerHTML = `
     <div class="gone-state-content">
-      <p>이 기억은 더 이상<br />지도에 남아 있지 않습니다.</p>
+      <p>${message}</p>
       <button class="btn-primary" id="btn-find-another">어딘가의 기억 발견하기</button>
     </div>
   `;
@@ -114,6 +114,20 @@ function renderSheetContent(group) {
           </div>
         `
         : `<span class="story-spot-count">${group.stories.length}개의 기억</span>`}
+      ${group.stories.length > 1
+        ? `
+          <button type="button" class="spot-share-toggle" id="spot-share-toggle">↗ 이 장소 기억 전부 공유</button>
+          <div class="share-panel-inline hidden" id="spot-share-panel">
+            <p class="share-panel-title">이 장소의 기억들을 전할게요</p>
+            <div class="share-link-row">
+              <input type="text" class="share-link-input" id="spot-share-link-input" value="${buildPlaceUrl(group.key)}" readonly />
+              <button type="button" class="spot-share-copy-btn" id="spot-share-copy-btn">복사</button>
+            </div>
+            <button type="button" class="btn-secondary" id="spot-share-card-btn">🖼️ 카드 이미지로 공유</button>
+            <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
+          </div>
+        `
+        : ""}
     </div>
     ${displayStories.length > 1 ? SORT_TOGGLE_HTML(currentSort) : ""}
     <div class="story-list">${listHtml}</div>
@@ -165,6 +179,17 @@ function renderSheetContent(group) {
       });
     });
   };
+
+  const spotShareToggle = content.querySelector("#spot-share-toggle");
+  if (spotShareToggle) {
+    spotShareToggle.onclick = () => {
+      document.getElementById("spot-share-panel").classList.toggle("hidden");
+    };
+  }
+  const spotShareCopyBtn = content.querySelector("#spot-share-copy-btn");
+  if (spotShareCopyBtn) spotShareCopyBtn.onclick = () => copyPlaceShareLink(group);
+  const spotShareCardBtn = content.querySelector("#spot-share-card-btn");
+  if (spotShareCardBtn) spotShareCardBtn.onclick = () => sharePlaceCard(group);
 
   const backLink = content.querySelector("#sheet-back-link");
   if (backLink) backLink.onclick = goBackFromSheet;
@@ -453,6 +478,16 @@ function buildStoryUrl(publicId) {
   return `${base}?story=${publicId}`;
 }
 
+// 장소(스팟) 단위 공유 링크 — 개별 기억이 아니라 그 장소에 쌓인 기억
+// 전체(그룹 시트)로 바로 진입한다(2026-08-18, js/app.js handleInitialEntry
+// 의 ?place= 처리와 짝을 이룬다). group.key는 Storage._groupKeyFor가 만드는
+// "place:<placeId>" 또는 "pin:<lat>,<lng>" 형식이라 그대로 노출해도
+// 안전하지만(작성자 신원과 무관), ':'/',' 때문에 인코딩은 해둔다.
+function buildPlaceUrl(groupKey) {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}?place=${encodeURIComponent(groupKey)}`;
+}
+
 function toggleSharePanel(storyId) {
   const panel = document.getElementById(`share-panel-${storyId}`);
   if (panel) panel.classList.toggle("hidden");
@@ -474,6 +509,19 @@ async function copyShareLink(storyId) {
   }
   Storage.incrementShareCount(storyId);
   Storage.markShared(storyId);
+}
+
+async function copyPlaceShareLink(group) {
+  const url = buildPlaceUrl(group.key);
+  const linkInput = document.getElementById("spot-share-link-input");
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("share-toast", "링크가 복사되었습니다.", 2000);
+  } catch (e) {
+    if (linkInput) linkInput.select();
+    showToast("share-toast", "링크를 직접 선택해 복사해주세요.", 2000);
+  }
 }
 
 // ------------------------------------------------------------
@@ -500,6 +548,30 @@ function wrapCanvasText(ctx, text, maxWidth) {
   return lines;
 }
 
+// 두 공유 카드(개별 기억/장소)가 공유하는 배경판 + 브랜드 마크.
+function drawShareCardBase(ctx, canvas) {
+  ctx.fillStyle = "#2F3031";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#FF5A36";
+  ctx.beginPath();
+  ctx.arc(96, 140, 12, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// 두 공유 카드가 공유하는 하단 브랜드 푸터 — footerY 기준선을 돌려줘서
+// 호출부가 그 위에 CTA 문구를 올릴 수 있게 한다.
+function drawShareCardBrandFooter(ctx, canvas, marginX) {
+  const footerY = canvas.height - 200;
+  ctx.font = "700 30px sans-serif";
+  ctx.fillStyle = "#FF5A36";
+  ctx.fillText("CONCRETE SAPIENS", marginX, footerY + 120);
+  ctx.font = "400 24px sans-serif";
+  ctx.fillStyle = "#B9B9B5";
+  ctx.fillText("MEMORY MAP", marginX, footerY + 150);
+  return footerY;
+}
+
 // 인스타그램 스토리에 그대로 채워지는 9:16 세로 카드. 연도·장소·인용구는
 // 콘텐츠 길이에 따라 세로 위치가 밀리고, CTA/로고는 항상 하단에 고정한다.
 function generateShareCard(story) {
@@ -508,13 +580,7 @@ function generateShareCard(story) {
   canvas.height = 1920;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#2F3031";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "#FF5A36";
-  ctx.beginPath();
-  ctx.arc(96, 140, 12, 0, Math.PI * 2);
-  ctx.fill();
+  drawShareCardBase(ctx, canvas);
 
   const year = Storage.getStoryYear(story);
   const groupLike = {
@@ -571,12 +637,72 @@ function generateShareCard(story) {
   ctx.fillText("이 기억의 장소를 지도에서", marginX, footerY);
   ctx.fillText("열어보세요 →", marginX, footerY + 52);
 
-  ctx.font = "700 30px sans-serif";
+  drawShareCardBrandFooter(ctx, canvas, marginX);
+
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
+}
+
+// 장소(스팟) 단위 공유 카드 — 개별 기억 인용구는 작성자 동의 없이 노출하지
+// 않는 원칙이라(2026-08-18), 큰 숫자(개수)와 연도 범위만 보여준다.
+function generatePlaceShareCard(group) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext("2d");
+
+  drawShareCardBase(ctx, canvas);
+
+  const title = Storage.getGroupTitle(group);
+  const addressCaption = Storage.getGroupAddressCaption(group);
+  const distinctYears = [...new Set(group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null))].sort((a, b) => a - b);
+  const yearRangeLabel = distinctYears.length === 0
+    ? null
+    : distinctYears.length === 1
+      ? `${distinctYears[0]}년의 기록`
+      : `${distinctYears[0]} – ${distinctYears[distinctYears.length - 1]}년의 기록`;
+
+  const marginX = 96;
+  const maxWidth = canvas.width - marginX * 2;
+  let cursorY = 340;
+
   ctx.fillStyle = "#FF5A36";
-  ctx.fillText("CONCRETE SAPIENS", marginX, footerY + 120);
-  ctx.font = "400 24px sans-serif";
-  ctx.fillStyle = "#B9B9B5";
-  ctx.fillText("MEMORY MAP", marginX, footerY + 150);
+  ctx.font = "700 168px sans-serif";
+  ctx.fillText(String(group.stories.length), marginX, cursorY);
+  cursorY += 84;
+
+  ctx.font = "700 44px sans-serif";
+  ctx.fillStyle = "#F4F3EF";
+  ctx.fillText("개의 기억이 쌓여 있습니다", marginX, cursorY);
+  cursorY += 92;
+
+  ctx.font = "700 56px sans-serif";
+  ctx.fillStyle = "#F4F3EF";
+  const titleLines = wrapCanvasText(ctx, title, maxWidth).slice(0, 2);
+  titleLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 68));
+  cursorY += titleLines.length * 68 + 8;
+
+  if (addressCaption) {
+    ctx.font = "400 30px sans-serif";
+    ctx.fillStyle = "#B9B9B5";
+    const addrLines = wrapCanvasText(ctx, addressCaption, maxWidth).slice(0, 2);
+    addrLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * 40));
+    cursorY += addrLines.length * 40;
+  }
+  cursorY += 60;
+
+  if (yearRangeLabel) {
+    ctx.font = "400 44px serif";
+    ctx.fillStyle = "#F4F3EF";
+    ctx.fillText(yearRangeLabel, marginX, cursorY);
+  }
+
+  const footerY = canvas.height - 200;
+  ctx.font = "700 38px sans-serif";
+  ctx.fillStyle = "#F4F3EF";
+  ctx.fillText("이 장소의 기억들을 지도에서", marginX, footerY);
+  ctx.fillText("열어보세요 →", marginX, footerY + 52);
+
+  drawShareCardBrandFooter(ctx, canvas, marginX);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
@@ -633,4 +759,45 @@ async function shareStoryCard(storyId) {
   showToast("share-toast", "카드 이미지가 다운로드되었습니다.", 2000);
   Storage.incrementShareCount(storyId);
   Storage.markShared(storyId);
+}
+
+async function sharePlaceCard(group) {
+  const btn = document.getElementById("spot-share-card-btn");
+  if (btn) btn.disabled = true;
+
+  let blob;
+  try {
+    blob = await generatePlaceShareCard(group);
+  } catch (e) {
+    showToast("share-toast", "카드 이미지를 만들지 못했어요.", 2000);
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (btn) btn.disabled = false;
+  if (!blob) return;
+
+  const url = buildPlaceUrl(group.key);
+  const title = Storage.getGroupTitle(group);
+  const shareText = `여기 ${group.stories.length}개의 기억이 쌓여 있어.\n${title}`;
+  const file = new File([blob], "concrete-sapiens-place.png", { type: "image/png" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
+      return;
+    } catch (e) {
+      // 공유 시트를 취소했거나 실패 — 아래 다운로드로 넘어가지 않고 그냥 종료
+      return;
+    }
+  }
+
+  // navigator.share(파일 첨부)를 지원하지 않는 환경(대부분의 PC 브라우저)
+  // — 이미지를 바로 다운로드해준다.
+  const imgUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = imgUrl;
+  a.download = "concrete-sapiens-place.png";
+  a.click();
+  URL.revokeObjectURL(imgUrl);
+  showToast("share-toast", "카드 이미지가 다운로드되었습니다.", 2000);
 }

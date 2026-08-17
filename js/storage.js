@@ -509,6 +509,14 @@ const Storage = {
   },
 
   /**
+   * 장소 그룹 키(_groupKeyFor 형식)로 그룹을 찾는다 — 장소 단위 공유
+   * 링크(?place=)가 도착 지점을 찾을 때 쓴다.
+   */
+  getGroupByKey(key) {
+    return this.getGroupedByPlace().find((g) => g.key === key) || null;
+  },
+
+  /**
    * 같은 장소(스팟)에 남겨진 다른 기억들 — 자기 자신은 제외. 알림 뱃지가
    * "내 기억이 있는 주소에 새 기억이 생겼는지" 판단할 때 쓴다(js/mymemory.js).
    */
