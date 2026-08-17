@@ -21,7 +21,15 @@ function renderTotalCountBanner() {
   const el = document.getElementById("total-count-banner");
   if (!el) return;
 
-  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive || searchAreaActive) {
+  // searchAreaActive는 마커를 걸러내지 않고 반짝임 효과만 주는 상태라
+  // 여기서는 제외한다 — 예전엔 여기 포함돼 있었는데, 검색 결과 카드에서
+  // "다른 기억 둘러보기"/"내 기억으로 남기기"로 넘어가면 오버레이는
+  // 사라져도 ✕를 눌러 명시적으로 닫기 전까진 searchAreaActive가 계속
+  // true로 남아(search.js clearSearchArea 참고), 사용자는 검색한 걸
+  // 잊은 채 정상 화면으로 돌아왔는데도 이 배너만 계속 숨어 있는 문제가
+  // 있었다("가끔 없어져" 버그, 모바일에서 더 자주 검색을 쓰다 보니 눈에
+  // 띔, 2026-08-17 확인).
+  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive) {
     el.classList.add("hidden");
     return;
   }
