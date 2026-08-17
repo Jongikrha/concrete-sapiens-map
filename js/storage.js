@@ -51,7 +51,7 @@ const SIDO_ABBR = [
   ["제주특별자치도", "제주"],
 ];
 
-// 오늘의 질문 프롬프트 목록 (매일 오전 6시에 하나씩 결정론적으로 노출) —
+// 오늘의 질문 프롬프트 목록 (매일 자정에 하나씩 결정론적으로 노출) —
 // 데이터 의존 없음. 한 번 만들었다가(2026-08-11) 없앴는데(2026-08-12),
 // 해시태그 칩과 같은 크기의 칩으로 다시 살렸다(2026-08-14).
 const DAILY_PROMPTS = [
@@ -700,14 +700,11 @@ const Storage = {
 
   /**
    * 오늘의 질문 — 날짜 문자열을 시드로 DAILY_PROMPTS 중 하나를 결정론적으로
-   * 고른다(같은 날 여러 번 불러도 항상 같은 질문). 요청대로(2026-08-14)
-   * 자정이 아니라 오전 6시를 하루 경계로 쓴다 — 6시 이전이면 "어제"로
-   * 쳐서 전날 질문을 그대로 이어간다.
+   * 고른다(같은 날 여러 번 불러도 항상 같은 질문). 자정을 하루 경계로 쓴다
+   * (2026-08-18, 기존 오전 6시 경계에서 변경).
    */
   getDailyPrompt() {
-    const now = new Date();
-    const effective = new Date(now);
-    if (now.getHours() < 6) effective.setDate(effective.getDate() - 1);
+    const effective = new Date();
     const seed = `${effective.getFullYear()}-${String(effective.getMonth() + 1).padStart(2, "0")}-${String(effective.getDate()).padStart(2, "0")}`;
     let hash = 0;
     for (let i = 0; i < seed.length; i++) {
@@ -718,14 +715,11 @@ const Storage = {
 
   /**
    * "오늘의 미션" 4종(질문/시간/장소/이번 주)이 공유하는 날짜 경계 —
-   * getDailyPrompt와 동일하게 오전 6시를 하루 경계로 쓴다(2026-08-17,
-   * 요일별로 다른 미션을 보여주되 하루 안에서는 흔들리면 안 되므로).
+   * getDailyPrompt와 동일하게 자정을 하루 경계로 쓴다(2026-08-18, 기존
+   * 오전 6시 경계에서 변경).
    */
   _missionEffectiveDate() {
-    const now = new Date();
-    const effective = new Date(now);
-    if (now.getHours() < 6) effective.setDate(effective.getDate() - 1);
-    return effective;
+    return new Date();
   },
 
   /** getDailyPrompt와 같은 해시 방식 — suffix로 미션 종류별 시드를 분리한다. */
