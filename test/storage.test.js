@@ -361,6 +361,82 @@ test("getDailyPrompt는 항상 DAILY_PROMPTS 중 하나를, 같은 날엔 같은
   assert.equal(first, second);
 });
 
+test("_missionTypeForDay는 요일 숫자를 4종 미션으로 매핑한다(월목=질문,화금=시간,수토=장소,일=이번 주)", () => {
+  assert.equal(Storage._missionTypeForDay(1), "question");
+  assert.equal(Storage._missionTypeForDay(4), "question");
+  assert.equal(Storage._missionTypeForDay(2), "year");
+  assert.equal(Storage._missionTypeForDay(5), "year");
+  assert.equal(Storage._missionTypeForDay(3), "place");
+  assert.equal(Storage._missionTypeForDay(6), "place");
+  assert.equal(Storage._missionTypeForDay(0), "week");
+});
+
+test("getTodayMissionYear는 실제 기억이 있는 연도 중에서만, 매번 같은 값을 반환한다", () => {
+  Storage._setCache([
+    createStory({ id: "a", dateMode: "past", referenceDate: "1998-03" }),
+    createStory({ id: "b", dateMode: "past", referenceDate: "2010-07" }),
+    createStory({ id: "c", dateMode: "unknown", referenceDate: null }),
+  ]);
+  const first = Storage.getTodayMissionYear();
+  const second = Storage.getTodayMissionYear();
+  assert.ok([1998, 2010].includes(first));
+  assert.equal(first, second);
+});
+
+test("getTodayMissionYear는 연도 정보가 있는 기억이 없으면 null을 반환한다", () => {
+  Storage._setCache([createStory({ id: "a", dateMode: "unknown", referenceDate: null })]);
+  assert.equal(Storage.getTodayMissionYear(), null);
+});
+
+test("getTodayMissionPlace는 기억이 3개 이상인 스팟이 있으면 그 안에서만 고른다", () => {
+  Storage._setCache([
+    createStory({ id: "a1", placeId: "p1", lat: 37.1, lng: 127.1 }),
+    createStory({ id: "a2", placeId: "p1", lat: 37.1, lng: 127.1 }),
+    createStory({ id: "a3", placeId: "p1", lat: 37.1, lng: 127.1 }),
+    createStory({ id: "b1", placeId: "p2", lat: 37.2, lng: 127.2 }),
+  ]);
+  const place = Storage.getTodayMissionPlace();
+  assert.equal(place.placeId, "p1");
+  assert.equal(place.stories.length, 3);
+});
+
+test("getTodayMissionPlace는 3개 이상인 스팟이 없으면 아무 스팟이나 고른다", () => {
+  Storage._setCache([
+    createStory({ id: "a1", placeId: "p1", lat: 37.1, lng: 127.1 }),
+    createStory({ id: "b1", placeId: "p2", lat: 37.2, lng: 127.2 }),
+  ]);
+  const place = Storage.getTodayMissionPlace();
+  assert.ok(["p1", "p2"].includes(place.placeId));
+});
+
+test("getTodayMissionPlace는 등록된 기억이 없으면 null을 반환한다", () => {
+  Storage._setCache([]);
+  assert.equal(Storage.getTodayMissionPlace(), null);
+});
+
+test("getWeekOldestStory는 이번 주(월요일 0시~) 등록된 기억 중 연도가 가장 오래된 것을 반환한다", () => {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  weekStart.setHours(0, 0, 0, 0);
+  const thisWeekIso = new Date(weekStart.getTime() + 60 * 60 * 1000).toISOString();
+  Storage._setCache([
+    createStory({ id: "old", dateMode: "past", referenceDate: "1974-01", createdAt: thisWeekIso }),
+    createStory({ id: "recent", dateMode: "past", referenceDate: "2020-01", createdAt: thisWeekIso }),
+    createStory({ id: "lastWeek", dateMode: "past", referenceDate: "1900-01", createdAt: "2000-01-01T00:00:00.000Z" }),
+  ]);
+  const result = Storage.getWeekOldestStory();
+  assert.equal(result.id, "old");
+});
+
+test("getWeekOldestStory는 이번 주 등록된 기억이 없으면 null을 반환한다", () => {
+  Storage._setCache([
+    createStory({ id: "old", dateMode: "past", referenceDate: "1974-01", createdAt: "2000-01-01T00:00:00.000Z" }),
+  ]);
+  assert.equal(Storage.getWeekOldestStory(), null);
+});
+
 test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {
   const now = new Date();
   const todayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0).toISOString();

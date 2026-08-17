@@ -331,7 +331,7 @@ function bindUIEvents() {
     if (e.target.id === "today-overlay") closeTodayMemoriesModal();
   });
   document.getElementById("daily-prompt-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "daily-prompt-overlay") closeDailyPrompt();
+    if (e.target.id === "daily-prompt-overlay") closeTodayMission();
   });
   document.getElementById("changepw-overlay").addEventListener("click", (e) => {
     if (e.target.id === "changepw-overlay") closeChangePasswordPanel();
@@ -365,7 +365,7 @@ function bindUIEvents() {
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
       else if (!document.getElementById("today-overlay").classList.contains("hidden")) closeTodayMemoriesModal();
-      else if (!document.getElementById("daily-prompt-overlay").classList.contains("hidden")) closeDailyPrompt();
+      else if (!document.getElementById("daily-prompt-overlay").classList.contains("hidden")) closeTodayMission();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
     }
   });

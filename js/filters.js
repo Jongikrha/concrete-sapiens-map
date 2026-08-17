@@ -27,7 +27,7 @@ function consumePendingDailyPrompt() {
 }
 
 // ------------------------------------------------------------
-// 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 질문" + 상위 N개 + 더보기)
+// 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 미션" + 상위 N개 + 더보기)
 // ------------------------------------------------------------
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
@@ -61,8 +61,8 @@ function renderHashtagChips() {
   // 색만 다르게 다시 살렸다(2026-08-14).
   const promptChip = document.createElement("button");
   promptChip.className = "chip chip--prompt";
-  promptChip.textContent = "오늘의 질문";
-  promptChip.onclick = openDailyPrompt;
+  promptChip.textContent = "오늘의 미션";
+  promptChip.onclick = openTodayMission;
   wrap.appendChild(promptChip);
 
   const allTags = Storage.getAllHashtagsWithCounts();
@@ -91,34 +91,105 @@ function renderHashtagChips() {
 }
 
 /**
- * 오늘의 질문 칩 클릭 — 전용 모달로 질문을 보여준다. "확인"을 누르면
- * 그 질문을 pendingDailyPrompt에 담아두고, 사용자가 다음에 지도를
- * 클릭하거나 검색 결과를 골라 장소를 직접 정하는 순간 작성폼에 미리
- * 채워 넣는다(consumePendingDailyPrompt 참고, 2026-08-14 논의 결과).
+ * 오늘의 미션 칩 클릭 — 요일별로 4종(질문/시간/장소/이번 주) 중 하나를
+ * 같은 모달에 보여준다(2026-08-17, Storage.getTodayMissionType 참고).
+ * 매일 같은 형식이면 설문조사처럼 지겨워진다는 이유로 도입 — "질문"만
+ * 응답을 작성폼에 프리필하는 기존 흐름(pendingDailyPrompt)을 그대로
+ * 쓰고, 나머지 3종은 눌렀을 때 그 연도/장소/기억으로 바로 데려간다.
+ * 해당 종류를 보여줄 데이터가 없는 날(예: 이번 주 등록된 기억이 없는
+ * 일요일)은 항상 답을 줄 수 있는 "질문"으로 조용히 대체한다.
  */
-function openDailyPrompt() {
-  const prompt = Storage.getDailyPrompt();
+function openTodayMission() {
   const panel = document.getElementById("daily-prompt-panel");
+  let type = Storage.getTodayMissionType();
+
+  let year = null, place = null, weekStory = null;
+  if (type === "year") {
+    year = Storage.getTodayMissionYear();
+    if (year === null) type = "question";
+  } else if (type === "place") {
+    place = Storage.getTodayMissionPlace();
+    if (!place) type = "question";
+  } else if (type === "week") {
+    weekStory = Storage.getWeekOldestStory();
+    if (!weekStory) type = "question";
+  }
+
+  let label, bodyHtml, hintHtml, ctaLabel, onConfirm;
+
+  if (type === "year") {
+    label = "오늘의 시간";
+    bodyHtml = `<p class="daily-prompt-quote">오늘은 ${year}년의 기억을<br>열어봅니다.</p>`;
+    hintHtml = `<p class="daily-prompt-hint">그 해에 남겨진 기억들을 만나보세요.</p>`;
+    ctaLabel = "그 해로 가기";
+    onConfirm = () => {
+      closeTodayMission();
+      exploreSameYear(year, null);
+    };
+  } else if (type === "place") {
+    const title = Storage.getGroupTitle(place);
+    bodyHtml = `<p class="daily-prompt-quote">오늘은 ${escapeHtml(title)}에 남은<br>${place.stories.length}개의 기억을 만나보세요.</p>`;
+    label = "오늘의 장소";
+    hintHtml = `<p class="daily-prompt-hint">그 장소에 쌓인 기억들을 둘러보세요.</p>`;
+    ctaLabel = "만나러 가기";
+    onConfirm = () => {
+      closeTodayMission();
+      clearFilters();
+      closeSlider();
+      closeMyMemoryMode();
+      flyToStory(place.stories[0], true);
+    };
+  } else if (type === "week") {
+    const year2 = Storage.getStoryYear(weekStory);
+    const title = Storage.getGroupTitle({
+      placeId: weekStory.placeId,
+      officialPlaceName: weekStory.officialPlaceName,
+      customName: weekStory.customName,
+      address: weekStory.address,
+    });
+    label = "이번 주의 기억";
+    bodyHtml = `
+      <p class="daily-prompt-hint" style="margin-bottom:6px;">이번 주 가장 오래된 기억</p>
+      <p class="daily-prompt-quote">${year2} · ${escapeHtml(title)}</p>
+    `;
+    hintHtml = "";
+    ctaLabel = "만나러 가기";
+    onConfirm = () => {
+      closeTodayMission();
+      clearFilters();
+      closeSlider();
+      closeMyMemoryMode();
+      flyToStory(weekStory, true);
+    };
+  } else {
+    const prompt = Storage.getDailyPrompt();
+    label = "오늘의 질문";
+    bodyHtml = `<p class="daily-prompt-quote">&ldquo;${escapeHtml(prompt)}&rdquo;</p>`;
+    hintHtml = `<p class="daily-prompt-hint">이 질문에 답한 기억을 남겨보세요.</p>`;
+    ctaLabel = "확인";
+    onConfirm = () => {
+      pendingDailyPrompt = prompt;
+      closeTodayMission();
+      showToast("entry-toast", "지도에서 장소를 눌러 이 질문에 답해보세요", 3200);
+    };
+  }
+
   panel.innerHTML = `
     <div class="daily-prompt-header">
-      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>오늘의 질문</span>
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>${label}</span>
       <button class="daily-prompt-close" id="daily-prompt-close" aria-label="닫기">✕</button>
     </div>
-    <p class="daily-prompt-quote">&ldquo;${escapeHtml(prompt)}&rdquo;</p>
-    <p class="daily-prompt-hint">이 질문에 답한 기억을 남겨보세요.</p>
+    ${bodyHtml}
+    ${hintHtml}
     <div class="daily-prompt-divider"></div>
-    <button class="btn-primary" id="daily-prompt-confirm">확인</button>
+    <button class="btn-primary" id="daily-prompt-confirm">${ctaLabel}</button>
   `;
-  panel.querySelector("#daily-prompt-close").onclick = closeDailyPrompt;
-  panel.querySelector("#daily-prompt-confirm").onclick = () => {
-    pendingDailyPrompt = prompt;
-    closeDailyPrompt();
-    showToast("entry-toast", "지도에서 장소를 눌러 이 질문에 답해보세요", 3200);
-  };
+  panel.querySelector("#daily-prompt-close").onclick = closeTodayMission;
+  panel.querySelector("#daily-prompt-confirm").onclick = onConfirm;
   document.getElementById("daily-prompt-overlay").classList.remove("hidden");
 }
 
-function closeDailyPrompt() {
+function closeTodayMission() {
   document.getElementById("daily-prompt-overlay").classList.add("hidden");
 }
 

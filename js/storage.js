@@ -717,6 +717,90 @@ const Storage = {
   },
 
   /**
+   * "오늘의 미션" 4종(질문/시간/장소/이번 주)이 공유하는 날짜 경계 —
+   * getDailyPrompt와 동일하게 오전 6시를 하루 경계로 쓴다(2026-08-17,
+   * 요일별로 다른 미션을 보여주되 하루 안에서는 흔들리면 안 되므로).
+   */
+  _missionEffectiveDate() {
+    const now = new Date();
+    const effective = new Date(now);
+    if (now.getHours() < 6) effective.setDate(effective.getDate() - 1);
+    return effective;
+  },
+
+  /** getDailyPrompt와 같은 해시 방식 — suffix로 미션 종류별 시드를 분리한다. */
+  _missionSeedIndex(suffix, mod) {
+    if (mod <= 0) return 0;
+    const d = this._missionEffectiveDate();
+    const seed = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}-${suffix}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) % mod;
+    }
+    return Math.abs(hash) % mod;
+  },
+
+  /**
+   * 요일별로 오늘의 미션 종류를 정한다 — 월·목 질문, 화·금 시간, 수·토
+   * 장소, 일 이번 주(2026-08-17 논의). 매일 같은 형식(설문조사처럼)이면
+   * 지겨워진다는 이유로 4종을 번갈아 보여주기로 함.
+   */
+  getTodayMissionType() {
+    return this._missionTypeForDay(this._missionEffectiveDate().getDay());
+  },
+
+  /** getTodayMissionType의 순수 매핑 부분만 떼어낸 것 — 테스트가 실제
+   * 오늘 요일에 의존하지 않고 이 매핑 자체를 검증할 수 있게 한다. */
+  _missionTypeForDay(day) { // 0=일 ... 6=토
+    if (day === 1 || day === 4) return "question";
+    if (day === 2 || day === 5) return "year";
+    if (day === 3 || day === 6) return "place";
+    return "week";
+  },
+
+  /** 실제 기억이 존재하는 연도 중에서만 고른다 — 데이터 없는 해를 보여주면 막다른 길이 된다. */
+  getTodayMissionYear() {
+    const years = [...new Set(
+      this.getVisibleStories().map((s) => this.getStoryYear(s)).filter((y) => y !== null)
+    )].sort((a, b) => a - b);
+    if (years.length === 0) return null;
+    return years[this._missionSeedIndex("year", years.length)];
+  },
+
+  /**
+   * 기억이 3개 이상 모인 "인기 스팟" 중에서 우선 고르고(예시처럼 "37개의
+   * 기억"이 의미 있으려면), 그런 곳이 아직 없으면 아무 스팟이나. 기기별로
+   * 캐시 순서가 다를 수 있어 key로 정렬해 모든 사용자가 같은 날 같은
+   * 장소를 보게 한다.
+   */
+  getTodayMissionPlace() {
+    const groups = this.getGroupedByPlace();
+    if (groups.length === 0) return null;
+    const POPULAR_MIN = 3;
+    const popular = groups.filter((g) => g.stories.length >= POPULAR_MIN);
+    const pool = (popular.length > 0 ? popular : groups).slice().sort((a, b) => a.key.localeCompare(b.key));
+    return pool[this._missionSeedIndex("place", pool.length)];
+  },
+
+  /**
+   * 이번 주(월요일 0시~) 등록된 기억 중 연도가 가장 오래된 것 — "이번 주의
+   * 기억"(일요일 미션)에 쓴다. 이번 주에 등록된 게 없으면 null.
+   */
+  getWeekOldestStory() {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? 6 : day - 1;
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const candidates = this.getVisibleStories().filter(
+      (s) => new Date(s.createdAt) >= weekStart && this.getStoryYear(s) !== null
+    );
+    if (candidates.length === 0) return null;
+    return candidates.reduce((oldest, s) => (this.getStoryYear(s) < this.getStoryYear(oldest) ? s : oldest));
+  },
+
+  /**
    * 목록 정렬 공통 로직 — "지금까지 쌓인 기억"/"오늘의 기억" 모달과 기억
    * 카드(스팟/해시태그) 목록이 전부 같은 3가지 정렬을 쓴다:
    * - "latest"(최신 등록순): createdAt 내림차순, 시점 유무 구분 없음
