@@ -17,6 +17,12 @@ const schema = a.schema({
       customName: a.string(),
       content: a.string().required(),
       youtubeUrl: a.string(),
+      // 유튜브 oEmbed로 자동 추출한 원본 제목을 작성 폼에서 파싱한 뒤 사용자가
+      // 확인/수정한 값 — 카드와 미니 플레이어가 재생 전에도 바로 "🎧 아티스트 ·
+      // 곡명"을 보여줄 수 있게 저장해둔다. 둘 다 optional: 이 기능 이전 기억엔
+      // 없고, 파싱이 아티스트를 못 찾으면 musicTitle만 채워진다.
+      musicArtist: a.string(),
+      musicTitle: a.string(),
       hashtags: a.string().array(),
       authorMode: a.string().required(),
       displayAuthorName: a.string().required(),

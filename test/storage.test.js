@@ -579,3 +579,27 @@ test("extractYoutubeVideoId는 못 알아보는 형태/빈 값이면 null을 반
   assert.equal(Storage.extractYoutubeVideoId(null), null);
   assert.equal(Storage.extractYoutubeVideoId("https://example.com/song"), null);
 });
+
+test("parseYoutubeMusicTitle은 \"아티스트 - 곡명\" 형태에서 둘을 분리하고 괄호/비괄호 노이즈를 제거한다", () => {
+  assert.deepEqual(
+    Storage.parseYoutubeMusicTitle("Brown Eyes - 벌써 일년 (Already One Year) Official MV"),
+    { artist: "Brown Eyes", title: "벌써 일년 (Already One Year)" }
+  );
+  assert.deepEqual(
+    Storage.parseYoutubeMusicTitle("아이유(IU) - 밤편지 [Official Music Video]"),
+    { artist: "아이유(IU)", title: "밤편지" }
+  );
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("BTS - Dynamite"), { artist: "BTS", title: "Dynamite" });
+});
+
+test("parseYoutubeMusicTitle은 구분자가 없으면 아티스트 없이 정리된 제목만 반환한다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("좋은 노래 모음 (Lyrics)"), {
+    artist: null,
+    title: "좋은 노래 모음",
+  });
+});
+
+test("parseYoutubeMusicTitle은 빈 값이면 둘 다 null을 반환한다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle(""), { artist: null, title: null });
+  assert.deepEqual(Storage.parseYoutubeMusicTitle(null), { artist: null, title: null });
+});

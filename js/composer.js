@@ -160,6 +160,13 @@ function openComposer(pin) {
       <p class="field-desc">그 시절 들었던 노래가 있다면, 유튜브 링크를 붙여보세요.</p>
       <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml((editing && editing.youtubeUrl) || "")}" />
       <div class="field-hint" id="youtube-url-hint"></div>
+      <div class="music-meta-preview hidden" id="music-meta-preview">
+        <p class="field-hint">이 노래가 맞나요? 다르면 고쳐주세요.</p>
+        <div class="music-meta-row">
+          <input type="text" id="input-music-artist" class="input-field input-field--sm" placeholder="아티스트" maxlength="60" value="${escapeHtml((editing && editing.musicArtist) || "")}" />
+          <input type="text" id="input-music-title" class="input-field input-field--sm" placeholder="곡명" maxlength="80" value="${escapeHtml((editing && editing.musicTitle) || "")}" />
+        </div>
+      </div>
     </div>
 
     <div class="field-heading"><span class="field-num">06</span><span class="field-label-text">NAME</span></div>
@@ -181,10 +188,45 @@ function openComposer(pin) {
     document.getElementById("char-count-num").textContent = e.target.value.length;
   });
 
+  // 유튜브 URL을 붙이면 oEmbed로 원본 제목을 가져와 아티스트/곡명을 추정해
+  // 미리 채워준다 — 제목 형식이 제각각이라 100% 정확하진 않아서 사용자가
+  // 그대로 두거나 고쳐 쓰는 걸 전제로 한다(추측이 아니라 확인용 초안).
+  let lastFetchedVideoId = null;
+
+  function updateMusicMetaVisibility(videoId) {
+    const box = document.getElementById("music-meta-preview");
+    if (box) box.classList.toggle("hidden", !videoId);
+  }
+
+  updateMusicMetaVisibility(Storage.extractYoutubeVideoId((editing && editing.youtubeUrl) || ""));
+
   panel.querySelector("#input-youtube-url").addEventListener("input", (e) => {
     const raw = e.target.value.trim();
     const hint = document.getElementById("youtube-url-hint");
-    hint.textContent = raw && !Storage.extractYoutubeVideoId(raw) ? "유튜브 링크 형식을 확인해주세요." : "";
+    const videoId = Storage.extractYoutubeVideoId(raw);
+    hint.textContent = raw && !videoId ? "유튜브 링크 형식을 확인해주세요." : "";
+    updateMusicMetaVisibility(videoId);
+
+    if (!videoId) {
+      lastFetchedVideoId = null;
+      return;
+    }
+    if (videoId === lastFetchedVideoId) return;
+    lastFetchedVideoId = videoId;
+
+    Storage.fetchYoutubeTitle(videoId).then((rawTitle) => {
+      // 그 사이 URL이 바뀌었거나 이 작성 폼이 닫혔으면(다른 핀으로 재사용됐어도
+      // pendingPin이 달라짐) 반영하지 않는다. 사용자가 이미 아티스트/곡명을
+      // 직접 손댄 경우에도 자동으로 덮어쓰지 않는다.
+      if (!rawTitle || videoId !== lastFetchedVideoId || pendingPin !== pin) return;
+      const artistInput = document.getElementById("input-music-artist");
+      const titleInput = document.getElementById("input-music-title");
+      if (!artistInput || !titleInput) return;
+      if (artistInput.value.trim() || titleInput.value.trim()) return;
+      const parsed = Storage.parseYoutubeMusicTitle(rawTitle);
+      if (parsed.artist) artistInput.value = parsed.artist;
+      if (parsed.title) titleInput.value = parsed.title;
+    });
   });
 
   // 자유 핀은 이름을 자동 채워두므로, 처음 포커스할 때 전체 선택해
@@ -285,6 +327,8 @@ function openComposer(pin) {
     const nameInput = document.getElementById("input-place-name");
     const enteredName = nameInput ? nameInput.value.trim() : "";
     const youtubeUrlInput = document.getElementById("input-youtube-url").value.trim();
+    const musicArtistInput = document.getElementById("input-music-artist").value.trim();
+    const musicTitleInput = document.getElementById("input-music-title").value.trim();
 
     if (youtubeUrlInput && !Storage.extractYoutubeVideoId(youtubeUrlInput)) {
       alert("유튜브 링크 형식을 확인해주세요. 예) https://youtube.com/watch?v=...");
@@ -342,6 +386,8 @@ function openComposer(pin) {
       customName: !pendingPin.placeId && enteredName ? enteredName : null,
       content,
       youtubeUrl: youtubeUrlInput || null,
+      musicArtist: youtubeUrlInput ? (musicArtistInput || null) : null,
+      musicTitle: youtubeUrlInput ? (musicTitleInput || null) : null,
       hashtags,
       authorMode,
       displayAuthorName: authorMode === "custom" ? authorInput : "익명",

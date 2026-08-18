@@ -61,7 +61,7 @@ function closeSheet() {
 // 다시 그리거나 닫으면 재생이 끊겼는데(2026-08-18 논의), 재생 중에도 지도를
 // 계속 둘러볼 수 있길 바란다는 피드백으로 시트 생명주기와 분리했다.
 // ------------------------------------------------------------
-function playMiniPlayerVideo(videoId) {
+function playMiniPlayerVideo(videoId, musicLabel) {
   activeMiniPlayerVideoId = videoId;
   setMiniPlayerPaused(false);
   // enablejsapi=1 + origin은 postMessage로 pauseVideo/playVideo 명령을 보내기
@@ -76,12 +76,17 @@ function playMiniPlayerVideo(videoId) {
   const origin = encodeURIComponent(window.location.origin);
   document.getElementById("mini-player-frame-mount").innerHTML =
     `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&enablejsapi=1&origin=${origin}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-  document.getElementById("mini-player-title").textContent = "노래 재생 중";
   document.getElementById("mini-player").classList.remove("hidden");
 
-  // 곡 제목은 API 키가 필요 없는 유튜브 oEmbed로 최선을 다해 가져온다 —
-  // 실패해도(네트워크 문제 등) 위의 기본 문구가 그대로 남아 기능엔 지장 없다.
-  fetchYoutubeTitle(videoId).then((title) => {
+  // 작성 시 사용자가 확인/수정한 곡 정보(musicLabel)가 있으면 그대로 쓴다 —
+  // 없으면(이 기능 이전에 저장된 옛 기억) API 키 없이 쓸 수 있는 유튜브
+  // oEmbed로 원본 제목만 최선을 다해 가져온다(실패해도 기능엔 지장 없음).
+  if (musicLabel) {
+    document.getElementById("mini-player-title").textContent = musicLabel;
+    return;
+  }
+  document.getElementById("mini-player-title").textContent = "노래 재생 중";
+  Storage.fetchYoutubeTitle(videoId).then((title) => {
     // 응답이 오는 사이 다른 곡으로 넘어갔거나 정지됐을 수 있어 videoId가
     // 여전히 지금 재생 중인 곡일 때만 반영한다.
     if (title && activeMiniPlayerVideoId === videoId) {
@@ -118,18 +123,6 @@ function setMiniPlayerPaused(paused) {
   const btn = document.getElementById("mini-player-pause");
   btn.textContent = paused ? "▶" : "⏸";
   btn.setAttribute("aria-label", paused ? "재생" : "일시정지");
-}
-
-async function fetchYoutubeTitle(videoId) {
-  try {
-    const watchUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
-    const res = await fetch(`https://www.youtube.com/oembed?url=${watchUrl}&format=json`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.title || null;
-  } catch (e) {
-    return null;
-  }
 }
 
 /**
@@ -340,9 +333,10 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
   // 미니 플레이어 하나만 존재해서 여러 iframe이 동시에 로드될 일도 없다.
   content.querySelectorAll(".story-youtube-thumb").forEach((btn) => {
     btn.onclick = () => {
-      const videoId = btn.closest(".story-youtube").dataset.videoId;
+      const container = btn.closest(".story-youtube");
+      const videoId = container.dataset.videoId;
       if (activeMiniPlayerVideoId === videoId) stopMiniPlayer();
-      else playMiniPlayerVideo(videoId);
+      else playMiniPlayerVideo(videoId, container.dataset.musicLabel || null);
       onChange();
     };
   });
@@ -507,11 +501,20 @@ function renderYoutubeEmbed(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return "";
   const playing = videoId === activeMiniPlayerVideoId;
+  // 작성 시 확인/수정한 곡 정보가 있으면 "🎧 아티스트 · 곡명"으로, 아티스트를
+  // 못 찾았으면 곡명만 보여준다 — 이 기능 이전 기억은 musicTitle이 없어 표시가
+  // 통째로 생략된다(재생하면 미니 플레이어가 oEmbed로 폴백해서 채워줌).
+  const musicLabel = story.musicTitle
+    ? story.musicArtist
+      ? `${story.musicArtist} · ${story.musicTitle}`
+      : story.musicTitle
+    : "";
   return `
-    <div class="story-youtube" data-video-id="${videoId}">
+    <div class="story-youtube" data-video-id="${videoId}" data-music-label="${escapeHtml(musicLabel)}">
       <button type="button" class="story-youtube-thumb ${playing ? "story-youtube-thumb--playing" : ""}" style="background-image:url('https://i.ytimg.com/vi/${videoId}/hqdefault.jpg')" aria-label="${playing ? "노래 정지" : "노래 재생"}">
         <span class="story-youtube-play">${playing ? "⏸" : "▶"}</span>
       </button>
+      ${musicLabel ? `<div class="story-youtube-label">🎧 ${escapeHtml(musicLabel)}</div>` : ""}
     </div>
   `;
 }

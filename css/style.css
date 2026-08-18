@@ -1612,6 +1612,23 @@ button.story-place-line:hover {
   padding-left: 0;
 }
 
+.story-youtube-label {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 4px 10px;
+  border-radius: var(--cs-radius-chip);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .story-tags {
   display: flex;
   gap: 8px;
@@ -2107,6 +2124,30 @@ button.story-place-line:hover {
   color: var(--cs-text-muted);
   margin-top: 6px;
   line-height: 1.5;
+}
+
+.music-meta-preview {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--cs-map-gray);
+}
+
+.music-meta-preview .field-hint {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.music-meta-row {
+  display: flex;
+  gap: 8px;
+}
+
+.input-field--sm {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 /* ------------------------------------------------------------

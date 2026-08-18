@@ -668,6 +668,54 @@ const Storage = {
     return match ? match[1] : null;
   },
 
+  /**
+   * 유튜브 영상 제목("아티스트 - 곡명 (Official MV)" 같은 형태)에서 아티스트/곡명을
+   * 추정해 분리한다. 영상 제목 형식이 제각각이라 100% 정확할 수 없어 작성 폼에서
+   * 사용자가 확인/수정하는 걸 전제로 한다 — 여기선 "그럴듯한 초안"만 만든다.
+   */
+  parseYoutubeMusicTitle(rawTitle) {
+    if (!rawTitle) return { artist: null, title: null };
+
+    // 괄호 안에 노이즈 키워드가 있는 경우(예: "(Official MV)")와, 괄호 없이
+    // 제목 끝에 그냥 붙는 경우(예: "... Official MV") 둘 다 흔해서 따로 처리한다.
+    const BRACKET_NOISE =
+      /[([][^)\]]*\b(official|m\/?v|music\s*video|lyrics?|audio|live|teaser|visualizer|hd|4k)\b[^)\]]*[)\]]/gi;
+    const TRAILING_NOISE =
+      /\s*[-–—|]?\s*\b(official\s*(music\s*)?video|official\s*audio|official\s*m\/?v|m\/v|mv|lyrics?|teaser|visualizer)\b\s*$/i;
+    const trim = (s) =>
+      s
+        .replace(/^[\s"'“”'‘]+|[\s"'“”'‘]+$/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+    const withoutNoise = trim(rawTitle.replace(BRACKET_NOISE, "").replace(TRAILING_NOISE, ""));
+    const parts = withoutNoise.split(/\s+[-–—~]\s+/);
+
+    if (parts.length >= 2) {
+      const artist = trim(parts[0]);
+      const title = trim(parts.slice(1).join(" - "));
+      if (artist && title) return { artist, title };
+    }
+
+    return { artist: null, title: withoutNoise || null };
+  },
+
+  /**
+   * API 키 없이 쓸 수 있는 유튜브 oEmbed로 영상 제목을 가져온다. 작성 폼(제목
+   * 미리보기)과 미니 플레이어(저장된 곡 정보가 없는 옛 기억의 폴백)가 공유해서 쓴다.
+   */
+  async fetchYoutubeTitle(videoId) {
+    try {
+      const watchUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
+      const res = await fetch(`https://www.youtube.com/oembed?url=${watchUrl}&format=json`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.title || null;
+    } catch (e) {
+      return null;
+    }
+  },
+
   getStoryMonth(story) {
     if (story.dateMode === "past" && story.referenceDate) {
       const parts = story.referenceDate.split("-");
