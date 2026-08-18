@@ -1921,22 +1921,6 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-.spot-share-copy-btn {
-  flex-shrink: 0;
-  border: none;
-  background: var(--cs-black);
-  color: var(--cs-paper);
-  font-family: var(--font-pretendard);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 0 16px;
-  cursor: pointer;
-}
-
-.spot-share-copy-btn:hover {
-  background: #1c1d1e;
-}
-
 .input-field {
   width: 100%;
   border: 1px solid var(--cs-gray);
@@ -2089,20 +2073,66 @@ button.story-place-line:hover {
   border-top: 1px solid var(--cs-map-gray);
 }
 
-.share-panel-title {
+.share-privacy-box {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
+  border-radius: 16px;
+  padding: 14px 40px 14px 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.share-privacy-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--cs-map-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  filter: grayscale(1) contrast(0.9) opacity(0.75);
+}
+
+.share-privacy-text {
   font-family: var(--font-pretendard);
   font-weight: 600;
   font-size: 13.5px;
+  line-height: 1.5;
   color: var(--cs-text-main);
-  margin: 0 0 12px;
+  margin: 3px 0 0;
+}
+
+.share-privacy-deco {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 22px;
+  filter: grayscale(1) contrast(0.9) opacity(0.3);
+  transform: rotate(10deg);
 }
 
 .share-link-row {
   display: flex;
-  background: var(--cs-map-gray);
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
   border-radius: var(--cs-radius-card);
+  padding: 0 4px 0 12px;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.share-link-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+  filter: grayscale(1) contrast(0.9) opacity(0.6);
 }
 
 .share-link-input {
@@ -2110,7 +2140,7 @@ button.story-place-line:hover {
   min-width: 0;
   border: none;
   background: transparent;
-  padding: 10px 12px;
+  padding: 10px 0;
   font-family: var(--font-pretendard);
   font-size: 13px;
   color: var(--cs-text-main);
@@ -2120,12 +2150,14 @@ button.story-place-line:hover {
 .share-copy-btn {
   flex-shrink: 0;
   border: none;
+  border-radius: 5px;
   background: var(--cs-black);
   color: var(--cs-paper);
   font-family: var(--font-pretendard);
   font-size: 13px;
   font-weight: 500;
-  padding: 0 16px;
+  padding: 7px 14px;
+  margin: 4px 0;
   cursor: pointer;
 }
 
@@ -2133,12 +2165,46 @@ button.story-place-line:hover {
   background: #1c1d1e;
 }
 
-.share-panel-privacy {
+.share-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+  padding: 12px 14px;
   font-family: var(--font-pretendard);
-  font-size: 11.5px;
+  font-size: 13.5px;
+  color: var(--cs-text-main);
+  cursor: pointer;
+}
+
+.share-card-btn:hover {
+  border-color: var(--cs-text-muted);
+}
+
+.share-card-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.share-card-btn-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  filter: grayscale(1) contrast(0.9) opacity(0.6);
+}
+
+.share-card-btn-label {
+  flex: 1;
+  text-align: left;
+}
+
+.share-card-btn-chevron {
+  flex-shrink: 0;
   color: var(--cs-text-muted);
-  text-align: center;
-  margin: 0;
+  font-size: 16px;
 }
 
 .date-mode-toggle,

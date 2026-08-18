@@ -142,13 +142,17 @@ function renderSheetContent(group) {
         ? `
           <button type="button" class="spot-share-toggle" id="spot-share-toggle">↗ 이 장소 기억 전부 공유</button>
           <div class="share-panel-inline hidden" id="spot-share-panel">
-            <p class="share-panel-title">이 장소의 기억들을 전할게요</p>
+            ${renderSharePrivacyBox()}
             <div class="share-link-row">
+              <span class="share-link-icon">🔗</span>
               <input type="text" class="share-link-input" id="spot-share-link-input" value="${buildPlaceUrl(group.key)}" readonly />
-              <button type="button" class="spot-share-copy-btn" id="spot-share-copy-btn">복사</button>
+              <button type="button" class="share-copy-btn" id="spot-share-copy-btn">복사</button>
             </div>
-            <button type="button" class="btn-secondary" id="spot-share-card-btn">🖼️ 카드 이미지로 공유</button>
-            <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
+            <button type="button" class="share-card-btn" id="spot-share-card-btn">
+              <span class="share-card-btn-icon">🖼️</span>
+              <span class="share-card-btn-label">카드 이미지로 공유하기</span>
+              <span class="share-card-btn-chevron">›</span>
+            </button>
           </div>
         `
         : ""}
@@ -537,13 +541,17 @@ function renderStoryItem(story, options = {}) {
       </div>
 
       <div class="share-panel-inline hidden" id="share-panel-${story.id}">
-        <p class="share-panel-title">이 기억을 전할게요</p>
+        ${renderSharePrivacyBox()}
         <div class="share-link-row">
+          <span class="share-link-icon">🔗</span>
           <input type="text" class="share-link-input" id="share-link-input-${story.id}" value="${buildStoryUrl(story.publicId)}" readonly />
           <button class="share-copy-btn" data-id="${story.id}">복사</button>
         </div>
-        <button type="button" class="btn-secondary share-card-btn" data-id="${story.id}">🖼️ 카드 이미지로 공유</button>
-        <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
+        <button type="button" class="share-card-btn" data-id="${story.id}">
+          <span class="share-card-btn-icon">🖼️</span>
+          <span class="share-card-btn-label">카드 이미지로 공유하기</span>
+          <span class="share-card-btn-chevron">›</span>
+        </button>
       </div>
 
       ${numericYear !== null
@@ -569,8 +577,20 @@ function getStoryYearLabel(story) {
 
 // ------------------------------------------------------------
 // 기억 전달하기 — 카드 안에서 펼쳐지는 링크 패널(2026-08-13, 카카오톡
-// 공유 버튼은 제거하고 링크 보여주기+복사로 단순화).
+// 공유 버튼은 제거하고 링크 보여주기+복사로 단순화). 개별 기억/스팟 전체
+// 공유 패널이 똑같은 안내 박스를 쓴다(2026-08-18 리디자인) — 중복 방지로
+// 공통 함수 하나로 뺐다.
 // ------------------------------------------------------------
+function renderSharePrivacyBox() {
+  return `
+    <div class="share-privacy-box">
+      <span class="share-privacy-icon">🔒</span>
+      <p class="share-privacy-text">기억만 전해지고,<br />작성자는 익명으로 남습니다.</p>
+      <span class="share-privacy-deco" aria-hidden="true">✈️</span>
+    </div>
+  `;
+}
+
 function buildStoryUrl(publicId) {
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?story=${publicId}`;
