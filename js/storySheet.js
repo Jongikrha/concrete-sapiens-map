@@ -156,11 +156,29 @@ function renderSheetContent(group) {
     </div>
     ${displayStories.length > 1 ? SORT_TOGGLE_HTML(currentSort) : ""}
     <div class="story-list">${listHtml}</div>
-    ${distinctYears.length > 1 ? `<button class="spot-timeline-toggle" id="spot-timeline-toggle">${isTimelineOpen ? "시간연대표 접기" : spotCountLabel + " · 연대표 보기"} →</button>` : ""}
+    ${distinctYears.length > 1
+      ? `
+        <button type="button" class="spot-banner spot-banner--year" id="spot-timeline-toggle">
+          <span class="spot-banner-icon">📅</span>
+          <span class="spot-banner-text">
+            <span class="spot-banner-title">${isTimelineOpen ? "시간연대표 접기" : "시간연대표로 보기"}</span>
+            <span class="spot-banner-subtitle">${escapeHtml(spotCountLabel)}</span>
+          </span>
+          <span class="spot-banner-chevron">${isTimelineOpen ? "⌃" : "›"}</span>
+        </button>
+      `
+      : ""}
     ${timelineHtml}
     ${nearbyStories.length > 0
       ? `
-        <button class="spot-timeline-toggle" id="spot-nearby-toggle">${isNearbyOpen ? "근처의 기억 접기" : `근처의 기억 ${nearbyStories.length}개 보기(300m 이내)`} →</button>
+        <button type="button" class="spot-banner spot-banner--nearby" id="spot-nearby-toggle">
+          <span class="spot-banner-icon">📍</span>
+          <span class="spot-banner-text">
+            <span class="spot-banner-title">${isNearbyOpen ? "근처의 기억 접기" : `근처의 기억 ${nearbyStories.length}개 보기`}</span>
+            <span class="spot-banner-subtitle">이 주변에 남겨진 다른 기억을 찾아보세요</span>
+          </span>
+          <span class="spot-banner-chevron">${isNearbyOpen ? "⌃" : "›"}</span>
+        </button>
         <div class="story-list">${nearbyListHtml}</div>
       `
       : ""}
@@ -498,7 +516,18 @@ function renderStoryItem(story, options = {}) {
         <p class="share-panel-privacy">🔒 공유해도 작성자는 익명으로 유지됩니다</p>
       </div>
 
-      ${numericYear !== null ? `<button class="year-explore-link" data-year="${numericYear}" data-story-id="${story.id}">${numericYear}년의 다른 기억 둘러보기 →</button>` : ""}
+      ${numericYear !== null
+        ? `
+          <button type="button" class="spot-banner spot-banner--year year-explore-link" data-year="${numericYear}" data-story-id="${story.id}">
+            <span class="spot-banner-icon">📅</span>
+            <span class="spot-banner-text">
+              <span class="spot-banner-title">${numericYear}년 다른 기억 둘러보기</span>
+              <span class="spot-banner-subtitle">이 해에 남겨진 다른 기억으로 이동해요</span>
+            </span>
+            <span class="spot-banner-chevron">›</span>
+          </button>
+        `
+        : ""}
     </div>
   `;
 }

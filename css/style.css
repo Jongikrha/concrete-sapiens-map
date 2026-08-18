@@ -21,6 +21,9 @@
   /* 지도 위 Memory Light 점 전용 톤(js/map.js의 MEMORY_CORE와 같은 값) —
      UI 전반의 --cs-orange보다 차분하다. "내 기억" 모드 강조색으로도 쓴다. */
   --cs-memory-core: #C9573D;
+  /* 스팟 카드 하단 배너(spot-banner) 중 "근처의 기억" 전용 색 — 연도 계열
+     배너(주황)와 구분되는 두 번째 액센트로만 쓴다. */
+  --cs-teal: #3D8577;
 
   --cs-text-main: #2F3031;
   --cs-text-muted: #777875;
@@ -1386,28 +1389,74 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-.year-explore-link {
-  display: block;
+/* ------------------------------------------------------------
+   스팟 배너 — 연대표/근처의 기억/이 해의 다른 기억처럼 "더 둘러볼
+   곳"으로 안내하는 카드형 버튼. 아이콘 + 제목 + 부제 + 화살표 구조로,
+   성격에 따라 색만 다르게 쓴다(연도 계열=주황, 근처=청록). 예전엔
+   가는 텍스트 링크였는데 2026-08-18에 눈에 띄는 배너로 바꿨다.
+   ------------------------------------------------------------ */
+.spot-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   box-sizing: border-box;
   appearance: none;
   -webkit-appearance: none;
   border: none;
-  border-top: 1px solid var(--cs-map-gray);
-  border-radius: 0;
+  border-radius: 14px;
   outline: none;
-  background: none;
-  font-family: var(--font-pretendard);
-  color: var(--cs-text-muted);
-  font-size: 12.5px;
+  padding: 14px 16px;
+  margin: 10px 0 0;
   cursor: pointer;
-  padding: 14px 0 0;
-  margin: 0;
   text-align: left;
+  font-family: var(--font-pretendard);
 }
 
-.year-explore-link:hover {
+.spot-banner-icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.spot-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spot-banner-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.spot-banner-subtitle {
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
+.spot-banner-chevron {
+  flex-shrink: 0;
+  font-size: 16px;
+  opacity: 0.55;
+}
+
+.spot-banner--year {
+  background: rgba(255, 90, 54, 0.08);
+}
+
+.spot-banner--year .spot-banner-title {
   color: var(--cs-orange);
+}
+
+.spot-banner--nearby {
+  background: rgba(61, 133, 119, 0.1);
+}
+
+.spot-banner--nearby .spot-banner-title {
+  color: var(--cs-teal);
 }
 
 .share-btn--emphasized {
@@ -1418,24 +1467,6 @@ button.story-place-line:hover {
 /* ------------------------------------------------------------
    장소의 시간연대표
    ------------------------------------------------------------ */
-.spot-timeline-toggle {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: none;
-  color: var(--cs-text-muted);
-  font-size: 12.5px;
-  cursor: pointer;
-  padding: 10px 0;
-  border-top: 1px solid var(--cs-map-gray);
-  margin-top: 8px;
-}
-
-.spot-timeline-toggle:hover {
-  color: var(--cs-black);
-}
-
 .spot-timeline {
   display: flex;
   gap: 8px;
