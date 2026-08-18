@@ -47,6 +47,10 @@ function closeSheet() {
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
+  // 시트를 CSS로 숨기기만 하고 iframe은 그대로 두면 유튜브 재생이 백그라운드
+  // 에서 계속된다 — 닫을 때 재생 중이던 임베드를 제거해 확실히 멈춘다.
+  // 다시 열릴 땐 항상 renderSheetContent가 새로 그려서 썸네일 상태로 복원된다.
+  document.querySelectorAll("#sheet-content .story-youtube-frame").forEach((f) => f.remove());
 }
 
 /**
