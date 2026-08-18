@@ -686,6 +686,12 @@ body {
   cursor: pointer;
 }
 
+.time-slider-mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .time-slider-input {
   width: 100%;
   accent-color: var(--cs-orange);

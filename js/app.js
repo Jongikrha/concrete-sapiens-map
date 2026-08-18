@@ -365,6 +365,8 @@ function bindUIEvents() {
   document.getElementById("btn-timeslider").onclick = toggleSlider;
   document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;
   document.getElementById("time-slider-close").onclick = closeSlider;
+  document.getElementById("time-slider-mode-cumulative").onclick = () => setSliderMode("cumulative");
+  document.getElementById("time-slider-mode-exact").onclick = () => setSliderMode("exact");
   document.getElementById("time-slider-input").addEventListener("input", (e) => {
     sliderYear = parseInt(e.target.value, 10);
     updateSliderLabel();

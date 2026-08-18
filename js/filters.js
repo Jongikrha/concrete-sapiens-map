@@ -6,6 +6,9 @@ let activeHashtagFilter = null;
 let activeYearFilter = null;
 let sliderActive = false;
 let sliderYear = null;
+// "cumulative"(누적, ~이 해까지) | "exact"(이 해만) — toggleSlider가 열 때마다
+// 누적으로 초기화한다(2026-08-18, 기존 기본 동작 유지).
+let sliderMode = "cumulative";
 let myMemoryModeActive = false;
 // 로그인 계정으로 연결된(기기 무관) storyId 집합 — startMyMemoryMode가
 // 켤 때 한 번 채워서 map.js renderMarkers()가 동기적으로 읽는다
@@ -276,11 +279,13 @@ function toggleSlider() {
   const range = Storage.getYearRange();
   sliderActive = true;
   sliderYear = range.max;
+  sliderMode = "cumulative";
 
   const input = document.getElementById("time-slider-input");
   input.min = range.min;
   input.max = range.max;
   input.value = range.max;
+  updateSliderModeButtons();
   updateSliderLabel();
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
@@ -293,6 +298,19 @@ function closeSlider() {
   sliderYear = null;
   document.getElementById("time-slider-panel").classList.add("hidden");
   renderTotalCountBanner();
+}
+
+function setSliderMode(mode) {
+  if (sliderMode === mode) return;
+  sliderMode = mode;
+  updateSliderModeButtons();
+  updateSliderLabel();
+  renderMarkers();
+}
+
+function updateSliderModeButtons() {
+  document.getElementById("time-slider-mode-cumulative").classList.toggle("sort-btn--active", sliderMode === "cumulative");
+  document.getElementById("time-slider-mode-exact").classList.toggle("sort-btn--active", sliderMode === "exact");
 }
 
 // ------------------------------------------------------------
@@ -351,5 +369,6 @@ function closeMyMemoryMode() {
 }
 
 function updateSliderLabel() {
-  document.getElementById("time-slider-year-label").textContent = `~ ${sliderYear}년까지의 기억`;
+  const text = sliderMode === "exact" ? `${sliderYear}년의 기억` : `~ ${sliderYear}년까지의 기억`;
+  document.getElementById("time-slider-year-label").textContent = text;
 }

@@ -335,6 +335,7 @@ function renderMarkers() {
         ...g,
         stories: g.stories.filter((s) => {
           const y = Storage.getStoryYear(s);
+          if (sliderMode === "exact") return y === sliderYear;
           return y === null || y <= sliderYear;
         }),
       }))
