@@ -853,6 +853,7 @@ body {
   text-overflow: ellipsis;
 }
 
+.mini-player-pause,
 .mini-player-stop {
   flex-shrink: 0;
   width: 26px;
@@ -868,6 +869,7 @@ body {
   justify-content: center;
 }
 
+.mini-player-pause:hover,
 .mini-player-stop:hover {
   background: var(--cs-gray);
   color: var(--cs-black);

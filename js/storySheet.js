@@ -26,6 +26,8 @@ let sheetHighlightStoryId = null;
 // 지금 미니 플레이어(#mini-player)에서 재생 중인 유튜브 video ID —
 // 카드 썸네일의 재생/정지 아이콘을 그리는 기준이기도 하다(renderYoutubeEmbed).
 let activeMiniPlayerVideoId = null;
+// 일시정지 상태 — 새 곡을 틀 때마다 autoplay로 시작하니 false로 리셋된다.
+let miniPlayerPaused = false;
 
 function openSheet(group, options = {}) {
   currentSort = "latest";
@@ -65,8 +67,13 @@ function closeSheet() {
 // ------------------------------------------------------------
 function playMiniPlayerVideo(videoId) {
   activeMiniPlayerVideoId = videoId;
+  setMiniPlayerPaused(false);
+  // enablejsapi=1 + origin은 postMessage로 pauseVideo/playVideo 명령을 보내기
+  // 위한 조건이다(toggleMiniPlayerPause) — 별도 iframe_api.js 로드 없이도
+  // 이 "커맨드 채널"만으로 재생/일시정지 제어가 된다.
+  const origin = encodeURIComponent(window.location.origin);
   document.getElementById("mini-player-frame-mount").innerHTML =
-    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1&origin=${origin}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   document.getElementById("mini-player-title").textContent = "노래 재생 중";
   document.getElementById("mini-player").classList.remove("hidden");
 
@@ -83,8 +90,32 @@ function playMiniPlayerVideo(videoId) {
 
 function stopMiniPlayer() {
   activeMiniPlayerVideoId = null;
+  setMiniPlayerPaused(false);
   document.getElementById("mini-player-frame-mount").innerHTML = "";
   document.getElementById("mini-player").classList.add("hidden");
+}
+
+/**
+ * 일시정지 ⇄ 재생 토글 — iframe을 만들거나 지우지 않고, 유튜브가 지원하는
+ * postMessage 커맨드(pauseVideo/playVideo)만 보낸다. 그래서 ✕(stopMiniPlayer)
+ * 와 달리 곡이 처음부터 다시 시작되지 않고 멈춘 지점에서 이어진다.
+ */
+function toggleMiniPlayerPause() {
+  const iframe = document.querySelector("#mini-player-frame-mount iframe");
+  if (!iframe || !iframe.contentWindow) return;
+  const nextPaused = !miniPlayerPaused;
+  iframe.contentWindow.postMessage(
+    JSON.stringify({ event: "command", func: nextPaused ? "pauseVideo" : "playVideo", args: "" }),
+    "*"
+  );
+  setMiniPlayerPaused(nextPaused);
+}
+
+function setMiniPlayerPaused(paused) {
+  miniPlayerPaused = paused;
+  const btn = document.getElementById("mini-player-pause");
+  btn.textContent = paused ? "▶" : "⏸";
+  btn.setAttribute("aria-label", paused ? "재생" : "일시정지");
 }
 
 async function fetchYoutubeTitle(videoId) {
