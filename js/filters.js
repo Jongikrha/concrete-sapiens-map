@@ -288,6 +288,7 @@ function toggleSlider() {
   updateSliderModeButtons();
   updateSliderLabel();
   updateSliderInfoBox();
+  updateSliderFillStyle();
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
@@ -331,6 +332,17 @@ function updateSliderInfoBox() {
     : `${sliderYear}년까지 남겨진 기억들을 만나보세요.`;
   box.innerHTML = `<span class="time-slider-info-icon">💡</span><span>${desc}<br><span class="time-slider-info-count">총 ${count.toLocaleString()}개의 기억이 있습니다.</span></span>`;
   box.classList.toggle("visible", count > 0);
+}
+
+// 슬라이더 트랙의 채워진(주황) 구간 % — css/style.css의 .time-slider-input이
+// 이 값을 --slider-fill-pct로 읽어 그라디언트를 그린다(네이티브 range는
+// 진행률을 자체적으로 그려주지 않는다).
+function updateSliderFillStyle() {
+  const input = document.getElementById("time-slider-input");
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const pct = max > min ? ((Number(input.value) - min) / (max - min)) * 100 : 100;
+  input.style.setProperty("--slider-fill-pct", `${pct}%`);
 }
 
 // ------------------------------------------------------------

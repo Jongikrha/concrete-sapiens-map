@@ -665,31 +665,50 @@ body {
   align-self: center;
   background: var(--cs-paper);
   border: 1px solid var(--cs-gray);
-  border-radius: var(--cs-radius-card);
-  padding: 10px 16px 14px;
+  border-radius: 20px;
+  padding: 18px 18px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .time-slider-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 6px;
+  gap: 8px;
+  font-family: var(--font-pretendard);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--cs-text-main);
+  margin-bottom: 16px;
+}
+
+.time-slider-title-icon {
+  font-size: 18px;
+  line-height: 1;
+  filter: grayscale(1) contrast(0.9) opacity(0.75);
+}
+
+#time-slider-year-label {
+  flex: 1;
 }
 
 .time-slider-close {
+  flex-shrink: 0;
   border: none;
   background: none;
-  color: var(--cs-text-muted);
-  font-size: 14px;
+  color: var(--cs-black);
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
 }
 
 .time-slider-mode-toggle {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 3px;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-chip);
+  padding: 3px;
+  margin-bottom: 18px;
 }
 
 .time-slider-mode-btn {
@@ -699,43 +718,95 @@ body {
   justify-content: center;
   gap: 6px;
   font-family: var(--font-pretendard);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-radius: var(--cs-radius-chip);
-  border: 1px solid var(--cs-gray);
-  background: #fff;
+  border: none;
+  background: transparent;
   color: var(--cs-text-muted);
   cursor: pointer;
+  transition: background var(--cs-transition-fast), color var(--cs-transition-fast);
 }
 
 .time-slider-mode-btn--active {
-  border-color: var(--cs-orange);
   background: var(--cs-orange);
   color: #fff;
+  box-shadow: 0 3px 10px rgba(255, 90, 54, 0.35);
 }
 
 .time-slider-mode-icon {
   font-size: 12px;
   line-height: 1;
+  filter: grayscale(1) contrast(0.9) opacity(0.75);
 }
 
+.time-slider-mode-btn--active .time-slider-mode-icon {
+  filter: none;
+  opacity: 1;
+}
+
+/* 네이티브 range 입력은 진행률(채워진 구간)을 CSS만으로 표현하지 못해
+   실측 % 없이는 항상 트랙 전체가 같은 색으로 보인다 — js/filters.js가
+   value가 바뀔 때마다 --slider-fill-pct(0~100)를 인라인으로 계산해 넣고,
+   아래 background가 그 값 기준으로 주황(채움)/회색(남은 구간)을 가른다. */
 .time-slider-input {
+  --slider-fill-pct: 100%;
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
-  accent-color: var(--cs-orange);
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--cs-orange) 0%,
+    var(--cs-orange) var(--slider-fill-pct),
+    var(--cs-map-gray) var(--slider-fill-pct),
+    var(--cs-map-gray) 100%
+  );
+  cursor: pointer;
+}
+
+.time-slider-input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.time-slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.time-slider-input::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .time-slider-info {
   display: none;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: var(--cs-radius-card);
-  background: rgba(255, 90, 54, 0.08);
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
   font-family: var(--font-pretendard);
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 13.5px;
+  line-height: 1.6;
   color: var(--cs-text-main);
 }
 
@@ -745,7 +816,14 @@ body {
 
 .time-slider-info-icon {
   flex-shrink: 0;
-  font-size: 13px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 90, 54, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
 }
 
 .time-slider-info-count {
@@ -754,9 +832,18 @@ body {
 }
 
 .time-slider-view-btn {
-  margin-top: 12px;
-  font-size: 13.5px;
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 14.5px;
+  padding: 13px;
+  border-radius: 14px;
+}
+
+.time-slider-view-btn-chevron {
+  font-size: 15px;
 }
 
 /* ------------------------------------------------------------

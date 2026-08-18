@@ -380,6 +380,7 @@ function bindUIEvents() {
     sliderYear = parseInt(e.target.value, 10);
     updateSliderLabel();
     updateSliderInfoBox();
+    updateSliderFillStyle();
     renderMarkers();
   });
 
