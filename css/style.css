@@ -1082,6 +1082,13 @@ body {
   border-top: 1px solid var(--cs-map-gray);
 }
 
+/* 마지막 카드 바로 뒤에 스팟 배너가 오면 카드의 padding-bottom과
+   배너의 margin-top이 이중으로 더해져 간격이 의도보다 훨씬 벌어진다
+   — 이 경우 카드 쪽 여백을 없애고 배너의 margin-top만 남긴다. */
+.story-list:has(+ .spot-banner) .story-item:last-child {
+  padding-bottom: 0;
+}
+
 .story-item:first-child {
   border-top: none;
   padding-top: 0;
