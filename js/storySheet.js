@@ -66,10 +66,16 @@ function playMiniPlayerVideo(videoId) {
   setMiniPlayerPaused(false);
   // enablejsapi=1 + origin은 postMessage로 pauseVideo/playVideo 명령을 보내기
   // 위한 조건이다(toggleMiniPlayerPause) — 별도 iframe_api.js 로드 없이도
-  // 이 "커맨드 채널"만으로 재생/일시정지 제어가 된다.
+  // 이 "커맨드 채널"만으로 재생/일시정지 제어가 된다. playsinline=1은
+  // iOS Safari에서 재생이 강제 전체화면으로 튀지 않고 미니 플레이어
+  // 안에서 그대로 재생되게 한다. 모바일은 소리 있는 자동재생을 데스크톱
+  // 보다 훨씬 엄격히 막아 autoplay=1이 조용히 실패할 수 있는데, 그때도
+  // 사용자가 iframe 안의 유튜브 재생 버튼을 직접 눌러 틀 수 있어야 해서
+  // (2026-08-18 확인 — pointer-events:none이 이 수동 재생 경로를 막고
+  // 있었다) 이 iframe엔 포인터 이벤트를 막지 않는다.
   const origin = encodeURIComponent(window.location.origin);
   document.getElementById("mini-player-frame-mount").innerHTML =
-    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1&origin=${origin}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&enablejsapi=1&origin=${origin}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   document.getElementById("mini-player-title").textContent = "노래 재생 중";
   document.getElementById("mini-player").classList.remove("hidden");
 

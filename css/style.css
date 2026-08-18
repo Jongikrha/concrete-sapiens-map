@@ -923,9 +923,6 @@ body {
   width: 100%;
   height: 100%;
   border: none;
-  /* 44px 원형 안의 유튜브 자체 컨트롤을 눌러도 조작이 안 먹어 혼란만
-     주므로, 조작은 ✕(정지)로만 받는다 — 이 iframe은 시각적 표시 용도. */
-  pointer-events: none;
 }
 
 .mini-player-title {
