@@ -78,10 +78,12 @@
           <button class="time-slider-close" id="time-slider-close">✕</button>
         </div>
         <div class="time-slider-mode-toggle">
-          <button class="sort-btn sort-btn--active" id="time-slider-mode-cumulative">~ 이 해까지</button>
-          <button class="sort-btn" id="time-slider-mode-exact">이 해만</button>
+          <button class="time-slider-mode-btn time-slider-mode-btn--active" id="time-slider-mode-cumulative"><span class="time-slider-mode-icon">📅</span>~ 이 해까지</button>
+          <button class="time-slider-mode-btn" id="time-slider-mode-exact"><span class="time-slider-mode-icon">📅</span>이 해만</button>
         </div>
         <input type="range" id="time-slider-input" class="time-slider-input" />
+        <div class="time-slider-info" id="time-slider-info"></div>
+        <button class="btn-primary time-slider-view-btn" id="time-slider-view-btn">이 기간으로 보기</button>
       </div>
     </div>
 
@@ -121,6 +123,11 @@
     <!-- 오늘의 기억 목록 (해시태그 칩 줄의 "오늘의 기억" 칩 클릭 시) -->
     <div class="overlay hidden" id="today-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="today-panel"></div></div>
+    </div>
+
+    <!-- 시간여행 기간 목록 ("이 기간으로 보기" 버튼 클릭 시) -->
+    <div class="overlay hidden" id="slider-period-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="slider-period-panel"></div></div>
     </div>
 
     <!-- 오늘의 미션 (해시태그 칩 줄의 "오늘의 미션" 칩 클릭 시 — 질문/시간/장소/이번 주 중 요일별로 하나) -->

@@ -287,6 +287,7 @@ function toggleSlider() {
   input.value = range.max;
   updateSliderModeButtons();
   updateSliderLabel();
+  updateSliderInfoBox();
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
@@ -305,12 +306,31 @@ function setSliderMode(mode) {
   sliderMode = mode;
   updateSliderModeButtons();
   updateSliderLabel();
+  updateSliderInfoBox();
   renderMarkers();
 }
 
 function updateSliderModeButtons() {
-  document.getElementById("time-slider-mode-cumulative").classList.toggle("sort-btn--active", sliderMode === "cumulative");
-  document.getElementById("time-slider-mode-exact").classList.toggle("sort-btn--active", sliderMode === "exact");
+  document.getElementById("time-slider-mode-cumulative").classList.toggle("time-slider-mode-btn--active", sliderMode === "cumulative");
+  document.getElementById("time-slider-mode-exact").classList.toggle("time-slider-mode-btn--active", sliderMode === "exact");
+}
+
+// 현재 슬라이더 값/모드에 맞는 기억 개수 — map.js renderMarkers의 필터
+// 조건과 동일한 기준(누적: null 포함 y<=sliderYear, 이 해만: y===sliderYear)
+// 으로 센다. 목록은 getSliderMatchStories 참고.
+function getSliderMatchCount() {
+  return getSliderMatchStories().length;
+}
+
+function updateSliderInfoBox() {
+  const box = document.getElementById("time-slider-info");
+  if (!box || sliderYear === null) return;
+  const count = getSliderMatchCount();
+  const desc = sliderMode === "exact"
+    ? `${sliderYear}년에 남겨진 기억들을 만나보세요.`
+    : `${sliderYear}년까지 남겨진 기억들을 만나보세요.`;
+  box.innerHTML = `<span class="time-slider-info-icon">💡</span><span>${desc}<br><span class="time-slider-info-count">총 ${count.toLocaleString()}개의 기억이 있습니다.</span></span>`;
+  box.classList.toggle("visible", count > 0);
 }
 
 // ------------------------------------------------------------
@@ -368,7 +388,61 @@ function closeMyMemoryMode() {
   renderTotalCountBanner();
 }
 
+function getSliderPeriodTitle() {
+  return sliderMode === "exact" ? `${sliderYear}년의 기억` : `~ ${sliderYear}년까지의 기억`;
+}
+
 function updateSliderLabel() {
-  const text = sliderMode === "exact" ? `${sliderYear}년의 기억` : `~ ${sliderYear}년까지의 기억`;
-  document.getElementById("time-slider-year-label").textContent = text;
+  document.getElementById("time-slider-year-label").textContent = getSliderPeriodTitle();
+}
+
+// 현재 슬라이더 값/모드에 맞는 이야기 목록 — getSliderMatchCount와 같은
+// 기준을 그대로 재사용한다.
+function getSliderMatchStories() {
+  return Storage.getVisibleStories().filter((s) => {
+    const y = Storage.getStoryYear(s);
+    if (sliderMode === "exact") return y === sliderYear;
+    return y === null || y <= sliderYear;
+  });
+}
+
+// "이 기간으로 보기" — 지금 슬라이더로 고른 기간(누적/이 해만)에 해당하는
+// 기억들을 목록 모달로 훑어본다. "지금까지 쌓인 기억"(openRecentMemoriesModal,
+// js/app.js)과 같은 패턴이지만 대상 목록만 다르다.
+function openSliderPeriodModal(opts = {}) {
+  if (!sliderActive || sliderYear === null) return;
+  const panel = document.getElementById("slider-period-panel");
+  const stories = getSliderMatchStories();
+  const listHtml = stories.length
+    ? buildSortedListHtml(stories, "timetravel-reverse", renderRecentListItem, { cap: 50 })
+    : `<p class="recent-empty">이 기간에 남겨진 기억이 없습니다.</p>`;
+
+  panel.innerHTML = `
+    <div class="recent-header">
+      <h2 class="composer-title" style="margin:0;">${escapeHtml(getSliderPeriodTitle())}</h2>
+      <button class="recent-close" id="slider-period-close">✕</button>
+    </div>
+    ${listHtml}
+  `;
+
+  panel.querySelector("#slider-period-close").onclick = closeSliderPeriodModal;
+
+  panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
+    item.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      closeSliderPeriodModal();
+      navigateToStoryFromList(item.dataset.id, {
+        kind: "sliderPeriod",
+        scrollTop,
+        label: getSliderPeriodTitle(),
+      });
+    };
+  });
+
+  document.getElementById("slider-period-overlay").classList.remove("hidden");
+  panel.scrollTop = opts.scrollTop || 0;
+}
+
+function closeSliderPeriodModal() {
+  document.getElementById("slider-period-overlay").classList.add("hidden");
 }

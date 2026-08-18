@@ -183,7 +183,8 @@ function closeTodayMemoriesModal() {
 // 목록(최근 기억 / 오늘의 기억 / 내 기억)에서 항목을 눌러 지도 이동 +
 // 카드 오픈까지 한번에 처리하는 공용 흐름. returnTo는 카드의
 // 뒤로가기(←)가 어느 목록을 어떤 스크롤 위치로 다시 열어야 하는지를
-// 담는다 — { kind: "recent" }, { kind: "today" } 또는
+// 담는다 — { kind: "recent" }, { kind: "today" }, { kind: "searchNearby" },
+// { kind: "sliderPeriod" } 또는
 // { kind: "mymemory", listKind: "posted"|"reacted"|"shared" }.
 // ------------------------------------------------------------
 function navigateToStoryFromList(storyId, returnTo) {
@@ -210,6 +211,8 @@ function goBackFromSheet() {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "searchNearby") {
     openNearbyMemoriesModal({ scrollTop: returnTo.scrollTop });
+  } else if (returnTo.kind === "sliderPeriod") {
+    openSliderPeriodModal({ scrollTop: returnTo.scrollTop });
   }
 }
 
@@ -349,6 +352,9 @@ function bindUIEvents() {
   document.getElementById("today-overlay").addEventListener("click", (e) => {
     if (e.target.id === "today-overlay") closeTodayMemoriesModal();
   });
+  document.getElementById("slider-period-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "slider-period-overlay") closeSliderPeriodModal();
+  });
   document.getElementById("daily-prompt-overlay").addEventListener("click", (e) => {
     if (e.target.id === "daily-prompt-overlay") closeTodayMission();
   });
@@ -367,9 +373,11 @@ function bindUIEvents() {
   document.getElementById("time-slider-close").onclick = closeSlider;
   document.getElementById("time-slider-mode-cumulative").onclick = () => setSliderMode("cumulative");
   document.getElementById("time-slider-mode-exact").onclick = () => setSliderMode("exact");
+  document.getElementById("time-slider-view-btn").onclick = () => openSliderPeriodModal();
   document.getElementById("time-slider-input").addEventListener("input", (e) => {
     sliderYear = parseInt(e.target.value, 10);
     updateSliderLabel();
+    updateSliderInfoBox();
     renderMarkers();
   });
 
@@ -386,6 +394,7 @@ function bindUIEvents() {
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
       else if (!document.getElementById("today-overlay").classList.contains("hidden")) closeTodayMemoriesModal();
+      else if (!document.getElementById("slider-period-overlay").classList.contains("hidden")) closeSliderPeriodModal();
       else if (!document.getElementById("daily-prompt-overlay").classList.contains("hidden")) closeTodayMission();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
     }
