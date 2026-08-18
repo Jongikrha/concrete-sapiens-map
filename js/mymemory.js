@@ -62,11 +62,13 @@ function _saveNotifSeenState(state) {
 // renderAccountAvatar) 뱃지를 붙일 자리가 없다.
 async function refreshNotificationBadge() {
   const dot = document.getElementById("account-notif-dot");
+  const recalledDot = document.getElementById("menu-recalled-dot");
   if (!dot) return;
 
   const user = Auth.getCurrentUser();
   if (!user) {
     dot.classList.add("hidden");
+    if (recalledDot) recalledDot.classList.add("hidden");
     _pendingNotifState = null;
     return;
   }
@@ -75,6 +77,9 @@ async function refreshNotificationBadge() {
   const seen = _getNotifSeenState();
   const currentState = {};
   let hasNew = false;
+  // "나를 떠올린 기억" 메뉴 항목 전용 — 새 반응만 추적한다(같은 장소/근처
+  // 발견은 이 항목과 무관해서 뺀다).
+  let hasNewReaction = false;
   let seenUpdated = false;
 
   myStories.forEach((story) => {
@@ -99,6 +104,7 @@ async function refreshNotificationBadge() {
       if (nearbyYearCount > 0) hasNew = true;
       return;
     }
+    if (reactionCount > prev.reactionCount) hasNewReaction = true;
     if (
       reactionCount > prev.reactionCount ||
       addressCount > prev.addressCount ||
@@ -113,6 +119,7 @@ async function refreshNotificationBadge() {
   if (seenUpdated) _saveNotifSeenState(seen);
   _pendingNotifState = currentState;
   dot.classList.toggle("hidden", !hasNew);
+  if (recalledDot) recalledDot.classList.toggle("hidden", !hasNewReaction);
 }
 
 // 계정 메뉴를 열어야 "확인했다"로 치고 스냅샷을 저장한다 — 아바타만
@@ -120,6 +127,8 @@ async function refreshNotificationBadge() {
 function markNotificationsSeen() {
   if (_pendingNotifState) _saveNotifSeenState(_pendingNotifState);
   document.getElementById("account-notif-dot").classList.add("hidden");
+  const recalledDot = document.getElementById("menu-recalled-dot");
+  if (recalledDot) recalledDot.classList.add("hidden");
 }
 
 function renderAccountAvatar() {

@@ -310,6 +310,7 @@ body {
 }
 
 .account-menu-item {
+  position: relative;
   display: block;
   width: 100%;
   text-align: left;
@@ -321,6 +322,20 @@ body {
   color: var(--cs-text-main);
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* "나를 떠올린 기억"에 새 반응(떠올랐어요)이 생겼을 때만 켜지는 점 —
+   아바타 전체 알림(account-notif-dot)과 별개로, 이 항목에 한정해서
+   보여준다(2026-08-18). */
+.menu-item-notif-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  vertical-align: middle;
+  pointer-events: none;
 }
 
 .account-menu-item:hover {
