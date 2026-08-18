@@ -16,6 +16,7 @@ const schema = a.schema({
       address: a.string(),
       customName: a.string(),
       content: a.string().required(),
+      youtubeUrl: a.string(),
       hashtags: a.string().array(),
       authorMode: a.string().required(),
       displayAuthorName: a.string().required(),

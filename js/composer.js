@@ -149,13 +149,20 @@ function openComposer(pin) {
       </div>
     </div>
 
-    <div class="field-heading"><span class="field-num">04</span><span class="field-label-text">TAGS</span></div>
+    <div class="composer-field-group">
+      <div class="field-heading"><span class="field-num">04</span><span class="field-label-text">MUSIC</span></div>
+      <p class="field-desc">그 시절 들었던 노래가 있다면, 유튜브 링크를 붙여보세요.</p>
+      <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml((editing && editing.youtubeUrl) || "")}" />
+      <div class="field-hint" id="youtube-url-hint"></div>
+    </div>
+
+    <div class="field-heading"><span class="field-num">05</span><span class="field-label-text">TAGS</span></div>
     <p class="field-desc">띄어쓰기로 구분하여 여러 개 입력할 수 있어요.</p>
     <div class="tag-input-row" id="tag-input-row"></div>
     <input type="hidden" id="input-tags" value="${escapeHtml(initialTags)}" />
     <div class="field-hint">예) 첫사랑 그리움 이사 — # 없이 단어만 적어도 자동으로 붙어요.</div>
 
-    <div class="field-heading"><span class="field-num">05</span><span class="field-label-text">NAME</span></div>
+    <div class="field-heading"><span class="field-num">06</span><span class="field-label-text">NAME</span></div>
     <div class="author-mode-toggle">
       <button class="mode-btn ${authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">🐱 익명으로 남기기</button>
       <button class="mode-btn ${authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">👤 이름 또는 닉네임</button>
@@ -172,6 +179,12 @@ function openComposer(pin) {
 
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
+  });
+
+  panel.querySelector("#input-youtube-url").addEventListener("input", (e) => {
+    const raw = e.target.value.trim();
+    const hint = document.getElementById("youtube-url-hint");
+    hint.textContent = raw && !Storage.extractYoutubeVideoId(raw) ? "유튜브 링크 형식을 확인해주세요." : "";
   });
 
   // 자유 핀은 이름을 자동 채워두므로, 처음 포커스할 때 전체 선택해
@@ -271,6 +284,13 @@ function openComposer(pin) {
     const tagsInput = `${document.getElementById("input-tags").value} ${pendingTagEntry}`.trim();
     const nameInput = document.getElementById("input-place-name");
     const enteredName = nameInput ? nameInput.value.trim() : "";
+    const youtubeUrlInput = document.getElementById("input-youtube-url").value.trim();
+
+    if (youtubeUrlInput && !Storage.extractYoutubeVideoId(youtubeUrlInput)) {
+      alert("유튜브 링크 형식을 확인해주세요. 예) https://youtube.com/watch?v=...");
+      document.getElementById("input-youtube-url").focus();
+      return;
+    }
 
     if (pendingPin.isFreePin && !enteredName) {
       alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 우리의 따뜻한 신혼집");
@@ -321,6 +341,7 @@ function openComposer(pin) {
       address: pendingPin.address || null,
       customName: !pendingPin.placeId && enteredName ? enteredName : null,
       content,
+      youtubeUrl: youtubeUrlInput || null,
       hashtags,
       authorMode,
       displayAuthorName: authorMode === "custom" ? authorInput : "익명",

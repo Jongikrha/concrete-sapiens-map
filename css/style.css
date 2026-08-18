@@ -1398,6 +1398,48 @@ button.story-place-line:hover {
   white-space: pre-wrap;
 }
 
+.story-youtube {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  background: var(--cs-map-gray);
+}
+
+.story-youtube-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+}
+
+.story-youtube-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 18px;
+  padding-left: 3px;
+}
+
+.story-youtube-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 .story-tags {
   display: flex;
   gap: 8px;

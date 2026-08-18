@@ -565,3 +565,17 @@ test("addMyStoryId는 refreshMyStoryIds가 아직 한 번도 안 불린 상태(�
   Storage.addMyStoryId("orphan-story");
   assert.equal(Storage.isMyStory("orphan-story"), false);
 });
+
+test("extractYoutubeVideoId는 watch/youtu.be/shorts/embed 형태에서 11자리 video ID를 뽑아낸다", () => {
+  assert.equal(Storage.extractYoutubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(Storage.extractYoutubeVideoId("https://youtu.be/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(Storage.extractYoutubeVideoId("https://youtube.com/shorts/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(Storage.extractYoutubeVideoId("https://www.youtube.com/embed/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(Storage.extractYoutubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s"), "dQw4w9WgXcQ");
+});
+
+test("extractYoutubeVideoId는 못 알아보는 형태/빈 값이면 null을 반환한다", () => {
+  assert.equal(Storage.extractYoutubeVideoId(""), null);
+  assert.equal(Storage.extractYoutubeVideoId(null), null);
+  assert.equal(Storage.extractYoutubeVideoId("https://example.com/song"), null);
+});

@@ -655,6 +655,19 @@ const Storage = {
     return null;
   },
 
+  /**
+   * 유튜브 링크(watch?v=, youtu.be, shorts, embed 등 흔한 형태)에서
+   * 11자리 video ID만 뽑아낸다. 못 알아보는 형태면 null — 작성 폼에서
+   * 미리보기/검증에, 카드 렌더링에서 embed URL 조립에 쓴다.
+   */
+  extractYoutubeVideoId(url) {
+    if (!url) return null;
+    const match = String(url).match(
+      /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+    );
+    return match ? match[1] : null;
+  },
+
   getStoryMonth(story) {
     if (story.dateMode === "past" && story.referenceDate) {
       const parts = story.referenceDate.split("-");

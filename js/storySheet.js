@@ -294,6 +294,17 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
     };
   });
 
+  // 유튜브 임베드는 썸네일 버튼으로만 렌더해뒀다가 클릭 시점에 iframe으로
+  // 바꿔 끼운다 — 카드가 여러 개 쌓인 목록에서 iframe을 한꺼번에 다 로드하면
+  // 무거워지고, 브라우저 자동재생 정책상 어차피 소리 없이는 못 켜진다.
+  content.querySelectorAll(".story-youtube-thumb").forEach((btn) => {
+    btn.onclick = () => {
+      const wrap = btn.closest(".story-youtube");
+      const videoId = wrap.dataset.videoId;
+      wrap.innerHTML = `<iframe class="story-youtube-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    };
+  });
+
   content.querySelectorAll(".reaction-btn").forEach((btn) => {
     btn.onclick = () => { Storage.toggleReaction(btn.dataset.id); onChange(); };
   });
@@ -450,6 +461,18 @@ function renderHashtagSheetContent() {
   });
 }
 
+function renderYoutubeEmbed(story) {
+  const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
+  if (!videoId) return "";
+  return `
+    <div class="story-youtube" data-video-id="${videoId}">
+      <button type="button" class="story-youtube-thumb" style="background-image:url('https://i.ytimg.com/vi/${videoId}/hqdefault.jpg')" aria-label="노래 재생">
+        <span class="story-youtube-play">▶</span>
+      </button>
+    </div>
+  `;
+}
+
 function renderStoryItem(story, options = {}) {
   const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
@@ -488,6 +511,7 @@ function renderStoryItem(story, options = {}) {
       </div>
       ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
+      ${renderYoutubeEmbed(story)}
       <div class="story-author-row">
         <div class="story-author-identity">
           <span class="story-avatar">🙂</span>
