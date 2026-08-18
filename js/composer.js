@@ -149,18 +149,18 @@ function openComposer(pin) {
       </div>
     </div>
 
-    <div class="composer-field-group">
-      <div class="field-heading"><span class="field-num">04</span><span class="field-label-text">MUSIC</span></div>
-      <p class="field-desc">그 시절 들었던 노래가 있다면, 유튜브 링크를 붙여보세요.</p>
-      <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml((editing && editing.youtubeUrl) || "")}" />
-      <div class="field-hint" id="youtube-url-hint"></div>
-    </div>
-
-    <div class="field-heading"><span class="field-num">05</span><span class="field-label-text">TAGS</span></div>
+    <div class="field-heading"><span class="field-num">04</span><span class="field-label-text">TAGS</span></div>
     <p class="field-desc">띄어쓰기로 구분하여 여러 개 입력할 수 있어요.</p>
     <div class="tag-input-row" id="tag-input-row"></div>
     <input type="hidden" id="input-tags" value="${escapeHtml(initialTags)}" />
     <div class="field-hint">예) 첫사랑 그리움 이사 — # 없이 단어만 적어도 자동으로 붙어요.</div>
+
+    <div class="composer-field-group">
+      <div class="field-heading"><span class="field-num">05</span><span class="field-label-text">MUSIC</span><span class="field-optional-label">선택</span></div>
+      <p class="field-desc">그 시절 들었던 노래가 있다면, 유튜브 링크를 붙여보세요.</p>
+      <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml((editing && editing.youtubeUrl) || "")}" />
+      <div class="field-hint" id="youtube-url-hint"></div>
+    </div>
 
     <div class="field-heading"><span class="field-num">06</span><span class="field-label-text">NAME</span></div>
     <div class="author-mode-toggle">
