@@ -1073,6 +1073,10 @@ body {
   flex-direction: column;
 }
 
+.spot-banner + .story-list {
+  margin-top: 12px;
+}
+
 .story-item {
   padding: 24px 0;
   border-top: 1px solid var(--cs-map-gray);
@@ -1407,7 +1411,7 @@ button.story-place-line:hover {
   border-radius: 14px;
   outline: none;
   padding: 14px 16px;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   cursor: pointer;
   text-align: left;
   font-family: var(--font-pretendard);
