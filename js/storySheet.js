@@ -5,12 +5,11 @@
 let sheetOpen = false;
 let spotTimelineOpen = {};
 let spotTimelineFocusYear = {};
-// 이 스팟(정확히 같은 장소) 기억 아래, 반경 300m 안의 다른 기억들을
-// "근처의 기억"으로 접어서 보여준다(2026-08-18). 1000m는 이미 "우연히
-// 겹치는" 알림(같은 해 한정, js/mymemory.js)에 쓰고 있어서 겹치지 않게,
-// 여기는 "사실상 같은 장소로 느껴지는" 더 좁은 300m로 의도적으로 다르게
-// 잡았다 — 연도 제한 없이 전부 보여준다.
-const NEARBY_STORIES_RADIUS_METERS = 300;
+// 이 스팟(정확히 같은 장소) 기억 아래, 반경 500m 안의 다른 기억들을
+// "근처의 기억"으로 접어서 보여준다(2026-08-18, 반경은 2026-08-18 300m→500m로
+// 조정). 1000m는 이미 "우연히 겹치는" 알림(같은 해 한정, js/mymemory.js)에
+// 쓰고 있어서 겹치지 않게, 여기는 연도 제한 없이 전부 보여준다.
+const NEARBY_STORIES_RADIUS_METERS = 500;
 const NEARBY_STORIES_CAP = 30;
 let spotNearbyOpen = {};
 let currentSort = "latest";
@@ -95,7 +94,7 @@ function renderSheetContent(group) {
 
   const listHtml = buildSortedListHtml(displayStories, currentSort, (s) => renderStoryItem(s));
 
-  // "근처의 기억" — 이 스팟과 정확히 같은 장소가 아니라도 반경 300m 안에
+  // "근처의 기억" — 이 스팟과 정확히 같은 장소가 아니라도 반경 500m 안에
   // 있는 기억들. 연도 필터는 걸지 않는다(우연히 겹치는 알림과 달리 그냥
   // "이 동네를 둘러보는" 발견 섹션이라 활성 해시태그/연도 필터도 여기까지
   // 좁히지 않는다 — 지금 보고 있는 태그와 무관하게 근처엔 뭐가 있는지
