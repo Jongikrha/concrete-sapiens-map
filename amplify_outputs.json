@@ -107,6 +107,13 @@
               "isRequired": true,
               "attributes": []
             },
+            "youtubeUrl": {
+              "name": "youtubeUrl",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "hashtags": {
               "name": "hashtags",
               "isArray": true,
