@@ -226,14 +226,21 @@ function renderSheetContent(group) {
   content.querySelector("#btn-add-story").onclick = () => {
     requireLogin(() => {
       closeSheet();
-      openComposer({
-        lat: group.lat,
-        lng: group.lng,
-        officialPlaceName: group.officialPlaceName,
-        placeId: group.placeId,
-        address: group.address || null,
-        isFreePin: !group.placeId,
-      });
+      if (group.placeId) {
+        openComposer({
+          lat: group.lat,
+          lng: group.lng,
+          officialPlaceName: group.officialPlaceName,
+          placeId: group.placeId,
+          address: group.address || null,
+          isFreePin: false,
+        });
+      } else {
+        // 자유 핀 스팟 — 새 자유 핀 작성과 동일하게 주소/건물명을
+        // 다시 조회해서 채워준다(그룹엔 customName을 안 남기므로
+        // 재사용할 이전 이름이 없다).
+        startFreePinComposer(group.lat, group.lng);
+      }
     });
   };
 
