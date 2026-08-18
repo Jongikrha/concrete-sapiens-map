@@ -1784,6 +1784,14 @@ button.story-place-line:hover {
   color: var(--cs-teal);
 }
 
+.spot-banner--song {
+  background: rgba(201, 87, 61, 0.1);
+}
+
+.spot-banner--song .spot-banner-title {
+  color: var(--cs-memory-core);
+}
+
 .share-btn--emphasized {
   font-weight: 500;
   color: var(--cs-black);

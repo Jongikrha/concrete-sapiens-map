@@ -4,6 +4,9 @@
 
 let activeHashtagFilter = null;
 let activeYearFilter = null;
+// { artist, title } | null — 해시태그/연도 필터와 상호 배타적으로 켜진다
+// (exploreSong 참고). artist는 파싱 실패 시 null일 수 있다.
+let activeSongFilter = null;
 let sliderActive = false;
 let sliderYear = null;
 // "cumulative"(누적, ~이 해까지) | "exact"(이 해만) — toggleSlider가 열 때마다
@@ -36,8 +39,12 @@ function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
   wrap.innerHTML = "";
 
-  if (activeYearFilter !== null || activeHashtagFilter) {
-    const label = activeYearFilter !== null ? `${activeYearFilter}년` : activeHashtagFilter;
+  if (activeYearFilter !== null || activeHashtagFilter || activeSongFilter) {
+    const label = activeYearFilter !== null
+      ? `${activeYearFilter}년`
+      : activeHashtagFilter
+        ? activeHashtagFilter
+        : `🎧 ${buildSongLabel(activeSongFilter)}`;
     const clearChip = document.createElement("button");
     clearChip.className = "chip chip--active";
     clearChip.textContent = `${label} ✕`;
@@ -203,6 +210,7 @@ function closeTodayMission() {
 function exploreHashtag(tag) {
   activeHashtagFilter = tag;
   activeYearFilter = null;
+  activeSongFilter = null;
   closeSlider();
   closeMyMemoryMode();
   renderHashtagChips();
@@ -213,10 +221,32 @@ function exploreHashtag(tag) {
 function setYearFilter(year) {
   activeYearFilter = year;
   activeHashtagFilter = null;
+  activeSongFilter = null;
   closeSlider();
   closeMyMemoryMode();
   renderHashtagChips();
   renderMarkers();
+}
+
+function buildSongLabel(songFilter) {
+  return songFilter.artist ? `${songFilter.artist} · ${songFilter.title}` : songFilter.title;
+}
+
+/**
+ * 카드의 "이 노래와 함께 남겨진 기억" 배너 — exploreHashtag와 같은 패턴으로
+ * 전국 필터를 걸어 지도 마커도 같은 곡으로 좁히고, 목록(openSongSheet)을 바로
+ * 보여준다. 아티스트/곡명은 작성 시 사용자가 확인/수정한 값을 그대로 키로
+ * 쓴다(Storage.normalizeSongKey로 대소문자/공백만 무시하고 비교).
+ */
+function exploreSong(artist, title) {
+  activeSongFilter = { artist: artist || null, title };
+  activeHashtagFilter = null;
+  activeYearFilter = null;
+  closeSlider();
+  closeMyMemoryMode();
+  renderHashtagChips();
+  renderMarkers();
+  openSongSheet(artist, title);
 }
 
 /**
@@ -228,6 +258,7 @@ function exploreSameYear(year, excludeStoryId) {
   closeSheet();
   activeYearFilter = year;
   activeHashtagFilter = null;
+  activeSongFilter = null;
   closeSlider();
   closeMyMemoryMode();
   renderHashtagChips();
@@ -245,6 +276,7 @@ function exploreSameYear(year, excludeStoryId) {
 function clearFilters() {
   activeHashtagFilter = null;
   activeYearFilter = null;
+  activeSongFilter = null;
   renderHashtagChips();
   renderMarkers();
 }
@@ -259,6 +291,9 @@ function renderFilterBanner() {
   } else if (activeHashtagFilter) {
     const count = Storage.getHashtagCount(activeHashtagFilter);
     text = `대한민국에 남겨진 ${activeHashtagFilter} 기억 ${count.toLocaleString()}개`;
+  } else if (activeSongFilter) {
+    const count = Storage.getSongMemoryCount(activeSongFilter.artist, activeSongFilter.title);
+    text = `🎧 ${buildSongLabel(activeSongFilter)}와 함께 남겨진 기억 ${count.toLocaleString()}개`;
   }
 
   banner.innerHTML = `<span>${escapeHtml(text)}</span><button class="filter-banner-clear" id="filter-banner-clear">지우기 ✕</button>`;

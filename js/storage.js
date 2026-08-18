@@ -701,6 +701,34 @@ const Storage = {
   },
 
   /**
+   * 아티스트+곡명을 대소문자/공백 무시하고 비교하는 정규화 키 — "같은 노래"인지
+   * 판단하는 유일한 기준이다. 15명이 각자 다른 유튜브 URL을 붙여도 이 키가
+   * 같으면 하나의 곡으로 묶인다. 아티스트를 못 찾은 기억(파싱 실패)은 곡명만으로
+   * 묶는다.
+   */
+  normalizeSongKey(artist, title) {
+    const norm = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, "");
+    return `${norm(artist)}::${norm(title)}`;
+  },
+
+  /**
+   * 같은 노래(아티스트+곡명)를 가진 공개 스토리 전체 — 카드의 "이 노래와 함께
+   * 남겨진 기억" 배너, 곡 목록 시트, 지도 필터(filters.js exploreSong)가
+   * 공유해서 쓴다.
+   */
+  getStoriesForSong(artist, title) {
+    if (!title) return [];
+    const key = this.normalizeSongKey(artist, title);
+    return this.getVisibleStories().filter(
+      (s) => s.musicTitle && this.normalizeSongKey(s.musicArtist, s.musicTitle) === key
+    );
+  },
+
+  getSongMemoryCount(artist, title) {
+    return this.getStoriesForSong(artist, title).length;
+  },
+
+  /**
    * API 키 없이 쓸 수 있는 유튜브 oEmbed로 영상 제목을 가져온다. 작성 폼(제목
    * 미리보기)과 미니 플레이어(저장된 곡 정보가 없는 옛 기억의 폴백)가 공유해서 쓴다.
    */

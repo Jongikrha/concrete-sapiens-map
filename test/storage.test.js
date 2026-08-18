@@ -603,3 +603,27 @@ test("parseYoutubeMusicTitle은 빈 값이면 둘 다 null을 반환한다", () 
   assert.deepEqual(Storage.parseYoutubeMusicTitle(""), { artist: null, title: null });
   assert.deepEqual(Storage.parseYoutubeMusicTitle(null), { artist: null, title: null });
 });
+
+test("normalizeSongKey는 대소문자/공백을 무시하고 같은 곡이면 같은 키를 만든다", () => {
+  assert.equal(
+    Storage.normalizeSongKey("Brown Eyes", "벌써 일년"),
+    Storage.normalizeSongKey("brown eyes", " 벌써  일년 ")
+  );
+  assert.notEqual(Storage.normalizeSongKey("Brown Eyes", "벌써 일년"), Storage.normalizeSongKey("IU", "밤편지"));
+});
+
+test("getStoriesForSong은 같은 아티스트·곡명(정규화 기준)을 가진 공개 스토리만 반환한다", () => {
+  Storage._setCache([
+    createStory({ id: "a", musicArtist: "Brown Eyes", musicTitle: "벌써 일년" }),
+    createStory({ id: "b", musicArtist: "brown eyes", musicTitle: " 벌써 일년 " }),
+    createStory({ id: "c", musicArtist: "IU", musicTitle: "밤편지" }),
+    createStory({ id: "d", musicArtist: "Brown Eyes", musicTitle: "벌써 일년", status: "HIDDEN" }),
+  ]);
+  const result = Storage.getStoriesForSong("Brown Eyes", "벌써 일년");
+  assert.deepEqual(result.map((s) => s.id).sort(), ["a", "b"]);
+});
+
+test("getStoriesForSong은 곡명이 없으면 빈 배열을 반환한다", () => {
+  assert.deepEqual(Storage.getStoriesForSong("Artist", ""), []);
+  assert.deepEqual(Storage.getStoriesForSong("Artist", null), []);
+});

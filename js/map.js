@@ -319,7 +319,7 @@ function highlightMarkerForStory(story) {
 }
 
 // ------------------------------------------------------------
-// 마커 렌더링 (해시태그 / 연도 / 시간 슬라이더 / 내 기억 필터 적용)
+// 마커 렌더링 (해시태그 / 연도 / 노래 / 시간 슬라이더 / 내 기억 필터 적용)
 // ------------------------------------------------------------
 function renderMarkers() {
   clusterer.clear();
@@ -347,6 +347,13 @@ function renderMarkers() {
   } else if (activeHashtagFilter) {
     groups = groups
       .map((g) => ({ ...g, stories: g.stories.filter((s) => s.hashtags.includes(activeHashtagFilter)) }))
+      .filter((g) => g.stories.length > 0);
+  } else if (activeSongFilter) {
+    const songStoryIds = new Set(
+      Storage.getStoriesForSong(activeSongFilter.artist, activeSongFilter.title).map((s) => s.id)
+    );
+    groups = groups
+      .map((g) => ({ ...g, stories: g.stories.filter((s) => songStoryIds.has(s.id)) }))
       .filter((g) => g.stories.length > 0);
   } else if (myMemoryModeActive) {
     // 계정(StoryAuthor) 연결만 본다 — 브라우저 기기ID는 안 쓴다(2026-08-14,

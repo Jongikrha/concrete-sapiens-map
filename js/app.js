@@ -29,7 +29,7 @@ function renderTotalCountBanner() {
   // 잊은 채 정상 화면으로 돌아왔는데도 이 배너만 계속 숨어 있는 문제가
   // 있었다("가끔 없어져" 버그, 모바일에서 더 자주 검색을 쓰다 보니 눈에
   // 띔, 2026-08-17 확인).
-  if (activeHashtagFilter || activeYearFilter !== null || sliderActive || myMemoryModeActive) {
+  if (activeHashtagFilter || activeYearFilter !== null || activeSongFilter || sliderActive || myMemoryModeActive) {
     el.classList.add("hidden");
     return;
   }
@@ -274,7 +274,7 @@ function flyToPlace(group) {
 }
 
 /**
- * 특정 이야기가 속한 스팟을 찾되, 지금 활성화된 필터(해시태그/연도)가
+ * 특정 이야기가 속한 스팟을 찾되, 지금 활성화된 필터(해시태그/연도/노래)가
  * 있으면 그 필터에 맞는 이야기만 담아서 반환한다. 예를 들어 #첫사랑
  * 필터를 타고 이동했는데, 우연히 같은 좌표에 태그와 무관한 다른
  * 이야기가 함께 있다고 해서 그것까지 섞여 보이면 안 되기 때문이다.
@@ -291,6 +291,12 @@ function applyActiveFilterToGroup(rawGroup) {
   }
   if (activeHashtagFilter) {
     return { ...rawGroup, stories: rawGroup.stories.filter((s) => (s.hashtags || []).includes(activeHashtagFilter)) };
+  }
+  if (activeSongFilter) {
+    const songStoryIds = new Set(
+      Storage.getStoriesForSong(activeSongFilter.artist, activeSongFilter.title).map((s) => s.id)
+    );
+    return { ...rawGroup, stories: rawGroup.stories.filter((s) => songStoryIds.has(s.id)) };
   }
   return rawGroup;
 }

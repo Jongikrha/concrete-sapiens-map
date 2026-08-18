@@ -13,6 +13,9 @@ let spotNearbyOpen = {};
 let currentSort = "latest";
 let hashtagSheetTag = null;
 let hashtagSheetSort = "latest";
+let songSheetArtist = null;
+let songSheetTitle = null;
+let songSheetSort = "latest";
 // 목록(최근 기억/내 기억)에서 항목을 눌러 들어온 경우, 뒤로가기(←)로 그
 // 목록으로 복귀하기 위해 어디서 왔는지를 기억해둔다. 마커를 직접 눌러
 // 들어온 경우엔 null이라 뒤로가기 버튼 자체가 숨겨진다.
@@ -135,7 +138,7 @@ function setMiniPlayerPaused(paused) {
  */
 function closeSheetToUnfiltered() {
   closeSheet();
-  if (activeHashtagFilter || activeYearFilter !== null) {
+  if (activeHashtagFilter || activeYearFilter !== null || activeSongFilter) {
     clearFilters();
   }
 }
@@ -314,6 +317,10 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
 
   content.querySelectorAll(".year-explore-link").forEach((link) => {
     link.onclick = () => exploreSameYear(parseInt(link.dataset.year, 10), link.dataset.storyId);
+  });
+
+  content.querySelectorAll(".song-explore-link").forEach((link) => {
+    link.onclick = () => exploreSong(link.dataset.musicArtist || null, link.dataset.musicTitle);
   });
 
   // 태그 전체 목록처럼 여러 스팟이 섞여 있는 화면에서만 렌더되는 장소 이동 링크
@@ -497,6 +504,49 @@ function renderHashtagSheetContent() {
   });
 }
 
+/**
+ * 카드의 "이 노래와 함께 남겨진 기억" 배너 / 지도 필터 배너에서 들어온다 —
+ * openHashtagSheet와 같은 패턴으로 같은 곡(아티스트+곡명)을 가진 기억 전체를
+ * 전국에서 한 목록으로 보여준다.
+ */
+function openSongSheet(artist, title) {
+  songSheetArtist = artist || null;
+  songSheetTitle = title;
+  songSheetSort = "latest";
+  sheetReturnTo = null;
+  renderSongSheetContent();
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  document.getElementById("sheet-content").scrollTop = 0;
+  sheetOpen = true;
+}
+
+function renderSongSheetContent() {
+  const content = document.getElementById("sheet-content");
+  const stories = Storage.getStoriesForSong(songSheetArtist, songSheetTitle);
+  const label = songSheetArtist ? `${songSheetArtist} · ${songSheetTitle}` : songSheetTitle;
+
+  const listHtml = buildSortedListHtml(stories, songSheetSort, (s) => renderStoryItem(s, { showLocation: true }));
+
+  content.innerHTML = `
+    <div class="story-spot-header">
+      <div class="story-spot-name">🎧 ${escapeHtml(label)}</div>
+      <span class="story-spot-count">${stories.length}개의 기억</span>
+    </div>
+    ${stories.length > 1 ? SORT_TOGGLE_HTML(songSheetSort) : ""}
+    <div class="story-list">${listHtml || `<p class="story-list-empty">아직 이 노래와 함께 남은 기억이 없습니다.</p>`}</div>
+  `;
+
+  content.querySelectorAll(".sort-btn").forEach((btn) => {
+    btn.onclick = () => { songSheetSort = btn.dataset.sort; renderSongSheetContent(); };
+  });
+
+  bindStoryItemEvents(content, {
+    onChange: renderSongSheetContent,
+    onRemove: renderSongSheetContent,
+  });
+}
+
 function renderYoutubeEmbed(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return "";
@@ -548,6 +598,11 @@ function renderStoryItem(story, options = {}) {
   const overlapCount = numericYear !== null
     ? Storage.getStoriesAtSamePlace(story).filter((s) => Storage.getStoryYear(s) === numericYear).length
     : 0;
+
+  // "같은 노래, 다른 장소" — 이 기억과 같은 곡(아티스트+곡명)을 가진 다른
+  // 기억이 있으면 배너로 알려준다. 자기 자신도 포함된 개수라 1개면(=자기 자신뿐)
+  // 안 보여준다.
+  const songCount = story.musicTitle ? Storage.getSongMemoryCount(story.musicArtist, story.musicTitle) : 0;
 
   return `
     <div class="story-item" data-story-id="${story.id}">
@@ -603,6 +658,18 @@ function renderStoryItem(story, options = {}) {
             <span class="spot-banner-text">
               <span class="spot-banner-title">${numericYear}년 다른 기억 둘러보기</span>
               <span class="spot-banner-subtitle">이 해에 남겨진 다른 기억으로 이동해요</span>
+            </span>
+            <span class="spot-banner-chevron">›</span>
+          </button>
+        `
+        : ""}
+      ${songCount > 1
+        ? `
+          <button type="button" class="spot-banner spot-banner--song song-explore-link" data-music-artist="${escapeHtml(story.musicArtist || "")}" data-music-title="${escapeHtml(story.musicTitle)}">
+            <span class="spot-banner-icon">🎧</span>
+            <span class="spot-banner-text">
+              <span class="spot-banner-title">이 노래와 함께 남겨진 기억 ${songCount}개</span>
+              <span class="spot-banner-subtitle">같은 노래를 들은 다른 기억을 만나보세요</span>
             </span>
             <span class="spot-banner-chevron">›</span>
           </button>
