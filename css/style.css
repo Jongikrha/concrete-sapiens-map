@@ -1688,32 +1688,6 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
-/* ------------------------------------------------------------
-   장소의 시간연대표
-   ------------------------------------------------------------ */
-.spot-timeline {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 4px 0 16px;
-}
-
-.timeline-pill {
-  border: 1px solid var(--cs-gray);
-  background: #fff;
-  color: var(--cs-text-muted);
-  font-size: 12px;
-  padding: 6px 13px;
-  border-radius: var(--cs-radius-chip);
-  cursor: pointer;
-}
-
-.timeline-pill--active {
-  background: var(--cs-black);
-  color: var(--cs-paper);
-  border-color: var(--cs-black);
-}
-
 .btn-add-story {
   width: 100%;
   margin-top: 20px;

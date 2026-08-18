@@ -3,8 +3,6 @@
 // ============================================================
 
 let sheetOpen = false;
-let spotTimelineOpen = {};
-let spotTimelineFocusYear = {};
 // 이 스팟(정확히 같은 장소) 기억 아래, 반경 500m 안의 다른 기억들을
 // "근처의 기억"으로 접어서 보여준다(2026-08-18, 반경은 2026-08-18 300m→500m로
 // 조정). 1000m는 이미 "우연히 겹치는" 알림(같은 해 한정, js/mymemory.js)에
@@ -31,8 +29,6 @@ let miniPlayerPaused = false;
 
 function openSheet(group, options = {}) {
   currentSort = "latest";
-  spotTimelineOpen[group.key] = false;
-  spotTimelineFocusYear[group.key] = null;
   sheetReturnTo = options.returnTo || null;
   sheetHighlightStoryId = options.highlightStoryId || null;
   // scrollIntoView를 걸려면 시트가 먼저 화면에 붙어(display 전환) 레이아웃을
@@ -167,12 +163,7 @@ function renderSheetContent(group) {
   const content = document.getElementById("sheet-content");
   const title = Storage.getGroupTitle(group);
 
-  let displayStories = group.stories;
-  const focusYear = spotTimelineFocusYear[group.key];
-  if (focusYear !== null && focusYear !== undefined) {
-    displayStories = group.stories.filter((s) => Storage.getStoryYear(s) === focusYear);
-  }
-
+  const displayStories = group.stories;
   const listHtml = buildSortedListHtml(displayStories, currentSort, (s) => renderStoryItem(s));
 
   // "근처의 기억" — 이 스팟과 정확히 같은 장소가 아니라도 반경 500m 안에
@@ -190,19 +181,6 @@ function renderSheetContent(group) {
   const isNearbyOpen = !!spotNearbyOpen[group.key];
   const nearbyListHtml = isNearbyOpen
     ? buildSortedListHtml(nearbyStories, currentSort, (s) => renderStoryItem(s, { showLocation: true }))
-    : "";
-
-  const distinctYears = [...new Set(group.stories.map((s) => Storage.getStoryYear(s)).filter((y) => y !== null))].sort((a, b) => a - b);
-  const isTimelineOpen = !!spotTimelineOpen[group.key];
-  const spotCountLabel = group.stories.length > 1 ? `이곳에 ${group.stories.length}개의 기억이 쌓여 있습니다` : `${group.stories.length}개의 기억`;
-
-  const timelineHtml = isTimelineOpen && distinctYears.length > 0
-    ? `
-      <div class="spot-timeline">
-        <button class="timeline-pill ${focusYear === null || focusYear === undefined ? "timeline-pill--active" : ""}" data-year="">전체</button>
-        ${distinctYears.map((y) => `<button class="timeline-pill ${focusYear === y ? "timeline-pill--active" : ""}" data-year="${y}">${y}</button>`).join("")}
-      </div>
-    `
     : "";
 
   const addressCaption = Storage.getGroupAddressCaption(group);
@@ -240,19 +218,6 @@ function renderSheetContent(group) {
     </div>
     ${displayStories.length > 1 ? SORT_TOGGLE_HTML(currentSort) : ""}
     <div class="story-list">${listHtml}</div>
-    ${distinctYears.length > 1
-      ? `
-        <button type="button" class="spot-banner spot-banner--year" id="spot-timeline-toggle">
-          <span class="spot-banner-icon">📅</span>
-          <span class="spot-banner-text">
-            <span class="spot-banner-title">${isTimelineOpen ? "시간연대표 접기" : "시간연대표로 보기"}</span>
-            <span class="spot-banner-subtitle">${escapeHtml(spotCountLabel)}</span>
-          </span>
-          <span class="spot-banner-chevron">${isTimelineOpen ? "⌃" : "›"}</span>
-        </button>
-      `
-      : ""}
-    ${timelineHtml}
     ${nearbyStories.length > 0
       ? `
         <button type="button" class="spot-banner spot-banner--nearby" id="spot-nearby-toggle">
@@ -281,22 +246,6 @@ function renderSheetContent(group) {
       if (refreshed && refreshed.stories.length > 0) renderSheetContent(refreshed);
       else closeSheet();
     },
-  });
-
-  const timelineToggle = content.querySelector("#spot-timeline-toggle");
-  if (timelineToggle) {
-    timelineToggle.onclick = () => {
-      spotTimelineOpen[group.key] = !spotTimelineOpen[group.key];
-      renderSheetContent(group);
-    };
-  }
-
-  content.querySelectorAll(".timeline-pill").forEach((pill) => {
-    pill.onclick = () => {
-      const y = pill.dataset.year;
-      spotTimelineFocusYear[group.key] = y === "" ? null : parseInt(y, 10);
-      renderSheetContent(group);
-    };
   });
 
   const nearbyToggle = content.querySelector("#spot-nearby-toggle");
