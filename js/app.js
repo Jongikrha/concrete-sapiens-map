@@ -15,6 +15,11 @@ async function initApp() {
   renderMarkers();
   renderTotalCountBanner();
   handleInitialEntry();
+  // 유튜브 IFrame Player API를 미리 받아둔다(fire-and-forget) — 사용자가
+  // 실제로 재생을 누를 때쯤엔 이미 로드가 끝나 있어야 그 탭과 같은 이벤트
+  // 틱 안에서 동기적으로 재생을 시작할 수 있다(storySheet.js
+  // playMiniPlayerVideo 설명 참고, 모바일 소리 없는 자동재생 문제 대응).
+  loadYoutubeIframeApi();
 }
 
 function renderTotalCountBanner() {

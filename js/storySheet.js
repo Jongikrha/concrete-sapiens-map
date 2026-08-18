@@ -29,6 +29,34 @@ let sheetHighlightStoryId = null;
 let activeMiniPlayerVideoId = null;
 // 일시정지 상태 — 새 곡을 틀 때마다 autoplay로 시작하니 false로 리셋된다.
 let miniPlayerPaused = false;
+// 세션 내내 재사용하는 단일 유튜브 IFrame Player 인스턴스 —
+// playMiniPlayerVideo 아래 설명 참고.
+let ytPlayer = null;
+let ytPlayerCreating = false;
+let ytApiReadyPromise = null;
+
+/**
+ * 유튜브 IFrame Player API(공식 JS API)를 준비해둔다. app.js initApp()이
+ * 부팅 시 미리 한 번 호출해서, 사용자가 실제로 재생 버튼을 누르는 시점엔
+ * 이미 로드가 끝나 있게 한다 — 그래야 재생이 사용자의 탭 이벤트와 같은
+ * 틱 안에서 동기적으로 시작되고, 모바일 브라우저가 이걸 진짜 "사용자가
+ * 지금 누른" 재생으로 인정해 소리를 허용한다(아래 playMiniPlayerVideo 설명).
+ */
+function loadYoutubeIframeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (ytApiReadyPromise) return ytApiReadyPromise;
+  ytApiReadyPromise = new Promise((resolve) => {
+    const prevCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (prevCallback) prevCallback();
+      resolve();
+    };
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(script);
+  });
+  return ytApiReadyPromise;
+}
 
 function openSheet(group, options = {}) {
   currentSort = "latest";
@@ -63,22 +91,20 @@ function closeSheet() {
 // 요소)를 조작한다. 카드 안에 직접 iframe을 심었던 이전 방식은 시트를
 // 다시 그리거나 닫으면 재생이 끊겼는데(2026-08-18 논의), 재생 중에도 지도를
 // 계속 둘러볼 수 있길 바란다는 피드백으로 시트 생명주기와 분리했다.
+//
+// 곡을 바꿀 때마다 iframe을 통째로 새로 만들면(예전 방식 — src를 매번
+// 새로 조립해 innerHTML로 갈아끼움) 그 iframe은 브라우저 입장에서 매번
+// "한 번도 상호작용한 적 없는 새 프레임"이라 모바일의 소리 있는 자동재생
+// 차단이 매번 새로 걸린다 — 기억카드에서 첫 재생은 소리가 안 나오고, 미니
+// 플레이어의 재생/일시정지를 여러 번 눌러야 겨우 소리가 나오던 문제가
+// 바로 이거였다(2026-08-19 확인). 대신 유튜브 공식 IFrame Player API로
+// 프레임 하나를 세션 내내 재사용하고, 곡만 loadVideoById로 바꾼다 — 그러면
+// 두 번째 곡부터는(그리고 API가 미리 로드돼 있으면 첫 곡부터도) 재생이
+// 사용자의 탭과 같은 이벤트 틱 안에서 동기적으로 시작된다.
 // ------------------------------------------------------------
 function playMiniPlayerVideo(videoId, musicLabel) {
   activeMiniPlayerVideoId = videoId;
   setMiniPlayerPaused(false);
-  // enablejsapi=1 + origin은 postMessage로 pauseVideo/playVideo 명령을 보내기
-  // 위한 조건이다(toggleMiniPlayerPause) — 별도 iframe_api.js 로드 없이도
-  // 이 "커맨드 채널"만으로 재생/일시정지 제어가 된다. playsinline=1은
-  // iOS Safari에서 재생이 강제 전체화면으로 튀지 않고 미니 플레이어
-  // 안에서 그대로 재생되게 한다. 모바일은 소리 있는 자동재생을 데스크톱
-  // 보다 훨씬 엄격히 막아 autoplay=1이 조용히 실패할 수 있는데, 그때도
-  // 사용자가 iframe 안의 유튜브 재생 버튼을 직접 눌러 틀 수 있어야 해서
-  // (2026-08-18 확인 — pointer-events:none이 이 수동 재생 경로를 막고
-  // 있었다) 이 iframe엔 포인터 이벤트를 막지 않는다.
-  const origin = encodeURIComponent(window.location.origin);
-  document.getElementById("mini-player-frame-mount").innerHTML =
-    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&enablejsapi=1&origin=${origin}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   document.getElementById("mini-player").classList.remove("hidden");
 
   // 작성 시 사용자가 확인/수정한 곡 정보(musicLabel)가 있으면 그대로 쓴다 —
@@ -86,38 +112,68 @@ function playMiniPlayerVideo(videoId, musicLabel) {
   // oEmbed로 원본 제목만 최선을 다해 가져온다(실패해도 기능엔 지장 없음).
   if (musicLabel) {
     document.getElementById("mini-player-title").textContent = musicLabel;
+  } else {
+    document.getElementById("mini-player-title").textContent = "노래 재생 중";
+    Storage.fetchYoutubeTitle(videoId).then((title) => {
+      // 응답이 오는 사이 다른 곡으로 넘어갔거나 정지됐을 수 있어 videoId가
+      // 여전히 지금 재생 중인 곡일 때만 반영한다.
+      if (title && activeMiniPlayerVideoId === videoId) {
+        document.getElementById("mini-player-title").textContent = title;
+      }
+    });
+  }
+
+  // 이미 준비된 플레이어가 있으면(대부분 이 경우 — app.js가 부팅 시 미리
+  // 불러둠) 같은 탭 이벤트 안에서 동기적으로 곡만 바꿔 재생한다.
+  if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+    ytPlayer.loadVideoById(videoId);
     return;
   }
-  document.getElementById("mini-player-title").textContent = "노래 재생 중";
-  Storage.fetchYoutubeTitle(videoId).then((title) => {
-    // 응답이 오는 사이 다른 곡으로 넘어갔거나 정지됐을 수 있어 videoId가
-    // 여전히 지금 재생 중인 곡일 때만 반영한다.
-    if (title && activeMiniPlayerVideoId === videoId) {
-      document.getElementById("mini-player-title").textContent = title;
-    }
+  if (ytPlayerCreating) return; // 첫 로딩이 이미 진행 중 — 끝나면 최신 activeMiniPlayerVideoId를 재생함
+  ytPlayerCreating = true;
+
+  loadYoutubeIframeApi().then(() => {
+    ytPlayerCreating = false;
+    // API 로딩을 기다리는 사이 정지됐을 수 있다 — 그사이 또 다른 곡을
+    // 눌렀다면 activeMiniPlayerVideoId가 이미 그걸로 바뀌어 있어 그대로 재생된다.
+    if (!activeMiniPlayerVideoId) return;
+    const holder = document.createElement("div");
+    document.getElementById("mini-player-frame-mount").appendChild(holder);
+    ytPlayer = new YT.Player(holder, {
+      host: "https://www.youtube-nocookie.com",
+      videoId: activeMiniPlayerVideoId,
+      playerVars: { autoplay: 1, playsinline: 1 },
+      events: {
+        onReady: (e) => {
+          // .mini-player-frame(width/height 100%)을 직접 붙여야 44px
+          // 원형 마운트를 꽉 채운다 — API가 기본으로 만드는 iframe엔 이
+          // 클래스가 없다.
+          e.target.getIframe().classList.add("mini-player-frame");
+          e.target.playVideo();
+        },
+      },
+    });
   });
 }
 
 function stopMiniPlayer() {
   activeMiniPlayerVideoId = null;
   setMiniPlayerPaused(false);
-  document.getElementById("mini-player-frame-mount").innerHTML = "";
+  // iframe을 지우지 않고 정지만 한다 — 프레임을 계속 재사용해야 위에서
+  // 설명한 모바일 자동재생 문제가 다시 생기지 않는다.
+  if (ytPlayer && typeof ytPlayer.stopVideo === "function") ytPlayer.stopVideo();
   document.getElementById("mini-player").classList.add("hidden");
 }
 
 /**
- * 일시정지 ⇄ 재생 토글 — iframe을 만들거나 지우지 않고, 유튜브가 지원하는
- * postMessage 커맨드(pauseVideo/playVideo)만 보낸다. 그래서 ✕(stopMiniPlayer)
- * 와 달리 곡이 처음부터 다시 시작되지 않고 멈춘 지점에서 이어진다.
+ * 일시정지 ⇄ 재생 토글 — 공식 API 메서드를 직접 호출한다(곡이 처음부터
+ * 다시 시작되지 않고 멈춘 지점에서 이어짐, ✕/stopMiniPlayer와 다른 점).
  */
 function toggleMiniPlayerPause() {
-  const iframe = document.querySelector("#mini-player-frame-mount iframe");
-  if (!iframe || !iframe.contentWindow) return;
+  if (!ytPlayer || typeof ytPlayer.pauseVideo !== "function") return;
   const nextPaused = !miniPlayerPaused;
-  iframe.contentWindow.postMessage(
-    JSON.stringify({ event: "command", func: nextPaused ? "pauseVideo" : "playVideo", args: "" }),
-    "*"
-  );
+  if (nextPaused) ytPlayer.pauseVideo();
+  else ytPlayer.playVideo();
   setMiniPlayerPaused(nextPaused);
 }
 
