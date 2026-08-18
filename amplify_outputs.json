@@ -114,6 +114,20 @@
               "isRequired": false,
               "attributes": []
             },
+            "musicArtist": {
+              "name": "musicArtist",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "musicTitle": {
+              "name": "musicTitle",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "hashtags": {
               "name": "hashtags",
               "isArray": true,
