@@ -23,6 +23,10 @@ let sheetReturnTo = null;
 // 위한 1회성 상태 — 렌더 후 바로 소비하고 비운다.
 let sheetHighlightStoryId = null;
 
+// 지금 미니 플레이어(#mini-player)에서 재생 중인 유튜브 video ID —
+// 카드 썸네일의 재생/정지 아이콘을 그리는 기준이기도 하다(renderYoutubeEmbed).
+let activeMiniPlayerVideoId = null;
+
 function openSheet(group, options = {}) {
   currentSort = "latest";
   spotTimelineOpen[group.key] = false;
@@ -47,10 +51,52 @@ function closeSheet() {
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
-  // 시트를 CSS로 숨기기만 하고 iframe은 그대로 두면 유튜브 재생이 백그라운드
-  // 에서 계속된다 — 닫을 때 재생 중이던 임베드를 제거해 확실히 멈춘다.
-  // 다시 열릴 땐 항상 renderSheetContent가 새로 그려서 썸네일 상태로 복원된다.
-  document.querySelectorAll("#sheet-content .story-youtube-frame").forEach((f) => f.remove());
+  // 유튜브 재생은 시트 안이 아니라 미니 플레이어(#mini-player)에서 이뤄져서
+  // (아래 playMiniPlayerVideo 참고) 시트를 닫아도 끊기지 않는다 — 지도를
+  // 돌아다니면서 계속 들을 수 있게 한 게 의도다(2026-08-18). 끄고 싶으면
+  // 미니 플레이어의 ✕(stopMiniPlayer)를 쓴다.
+}
+
+// ------------------------------------------------------------
+// 유튜브 미니 플레이어 — index.html의 #mini-player(시트 바깥, 상시 존재하는
+// 요소)를 조작한다. 카드 안에 직접 iframe을 심었던 이전 방식은 시트를
+// 다시 그리거나 닫으면 재생이 끊겼는데(2026-08-18 논의), 재생 중에도 지도를
+// 계속 둘러볼 수 있길 바란다는 피드백으로 시트 생명주기와 분리했다.
+// ------------------------------------------------------------
+function playMiniPlayerVideo(videoId) {
+  activeMiniPlayerVideoId = videoId;
+  document.getElementById("mini-player-frame-mount").innerHTML =
+    `<iframe class="mini-player-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  document.getElementById("mini-player-title").textContent = "노래 재생 중";
+  document.getElementById("mini-player").classList.remove("hidden");
+
+  // 곡 제목은 API 키가 필요 없는 유튜브 oEmbed로 최선을 다해 가져온다 —
+  // 실패해도(네트워크 문제 등) 위의 기본 문구가 그대로 남아 기능엔 지장 없다.
+  fetchYoutubeTitle(videoId).then((title) => {
+    // 응답이 오는 사이 다른 곡으로 넘어갔거나 정지됐을 수 있어 videoId가
+    // 여전히 지금 재생 중인 곡일 때만 반영한다.
+    if (title && activeMiniPlayerVideoId === videoId) {
+      document.getElementById("mini-player-title").textContent = title;
+    }
+  });
+}
+
+function stopMiniPlayer() {
+  activeMiniPlayerVideoId = null;
+  document.getElementById("mini-player-frame-mount").innerHTML = "";
+  document.getElementById("mini-player").classList.add("hidden");
+}
+
+async function fetchYoutubeTitle(videoId) {
+  try {
+    const watchUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
+    const res = await fetch(`https://www.youtube.com/oembed?url=${watchUrl}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.title || null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -302,14 +348,16 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
     };
   });
 
-  // 유튜브 임베드는 썸네일 버튼으로만 렌더해뒀다가 클릭 시점에 iframe으로
-  // 바꿔 끼운다 — 카드가 여러 개 쌓인 목록에서 iframe을 한꺼번에 다 로드하면
-  // 무거워지고, 브라우저 자동재생 정책상 어차피 소리 없이는 못 켜진다.
+  // 유튜브 재생은 카드 안이 아니라 화면 하단 미니 플레이어에서 이뤄진다
+  // (2026-08-18) — 시트를 닫거나 다른 카드로 넘어가도 안 끊기고, 같은
+  // 썸네일을 다시 누르면 정지(토글)된다. 카드가 여러 개 쌓여도 항상
+  // 미니 플레이어 하나만 존재해서 여러 iframe이 동시에 로드될 일도 없다.
   content.querySelectorAll(".story-youtube-thumb").forEach((btn) => {
     btn.onclick = () => {
-      const wrap = btn.closest(".story-youtube");
-      const videoId = wrap.dataset.videoId;
-      wrap.innerHTML = `<iframe class="story-youtube-frame" src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      const videoId = btn.closest(".story-youtube").dataset.videoId;
+      if (activeMiniPlayerVideoId === videoId) stopMiniPlayer();
+      else playMiniPlayerVideo(videoId);
+      onChange();
     };
   });
 
@@ -472,10 +520,11 @@ function renderHashtagSheetContent() {
 function renderYoutubeEmbed(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return "";
+  const playing = videoId === activeMiniPlayerVideoId;
   return `
     <div class="story-youtube" data-video-id="${videoId}">
-      <button type="button" class="story-youtube-thumb" style="background-image:url('https://i.ytimg.com/vi/${videoId}/hqdefault.jpg')" aria-label="노래 재생">
-        <span class="story-youtube-play">▶</span>
+      <button type="button" class="story-youtube-thumb ${playing ? "story-youtube-thumb--playing" : ""}" style="background-image:url('https://i.ytimg.com/vi/${videoId}/hqdefault.jpg')" aria-label="${playing ? "노래 정지" : "노래 재생"}">
+        <span class="story-youtube-play">${playing ? "⏸" : "▶"}</span>
       </button>
     </div>
   `;

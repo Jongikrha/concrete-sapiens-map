@@ -92,6 +92,16 @@
     <!-- 기억 전달하기(공유) 완료 토스트 -->
     <div class="share-toast" id="share-toast"></div>
 
+    <!-- 유튜브 미니 플레이어 — 기억 카드에서 노래를 재생하면 시트를 닫거나
+         지도를 돌아다녀도 여기서 계속 흐른다(2026-08-18). 하단 컨트롤 바로
+         위에 뜨고, CSS 형제 선택자(.bottom-toolbar 규칙)로 떠 있을 때만
+         하단 컨트롤을 밀어올려 겹치지 않게 한다. -->
+    <div class="mini-player hidden" id="mini-player">
+      <div class="mini-player-frame-mount" id="mini-player-frame-mount"></div>
+      <p class="mini-player-title" id="mini-player-title">노래 재생 중</p>
+      <button type="button" class="mini-player-stop" id="mini-player-stop" aria-label="재생 중지">✕</button>
+    </div>
+
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
       <button class="tool-btn" id="btn-my-location">내 주변</button>

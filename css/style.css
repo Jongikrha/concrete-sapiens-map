@@ -793,8 +793,86 @@ body {
 }
 
 /* ------------------------------------------------------------
-   Map Controls (하단)
+   유튜브 미니 플레이어 — 기억 카드 썸네일을 눌러 재생을 시작하면 뜨는
+   상시 바(2026-08-18). 시트를 닫아도(closeSheet는 더 이상 iframe을
+   건드리지 않는다) 지도를 돌아다니며 계속 들을 수 있고, ✕로 언제든
+   끌 수 있다. bottom-toolbar 바로 위, 겹치지 않도록 아래
+   ".mini-player:not(.hidden) ~ .bottom-toolbar" 규칙이 툴바를 밀어올린다
+   — 툴바가 좁은 화면에서 2줄로 접혀도(아래 주석) 자기 bottom 기준으로
+   위쪽으로만 자라기 때문에 겹치지 않는다.
    ------------------------------------------------------------ */
+.mini-player {
+  position: absolute;
+  bottom: 88px;
+  left: 16px;
+  right: 16px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-chip);
+  padding: 6px 8px 6px 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.mini-player.hidden {
+  display: none;
+}
+
+.mini-player-frame-mount {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--cs-map-gray);
+}
+
+.mini-player-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  /* 44px 원형 안의 유튜브 자체 컨트롤을 눌러도 조작이 안 먹어 혼란만
+     주므로, 조작은 ✕(정지)로만 받는다 — 이 iframe은 시각적 표시 용도. */
+  pointer-events: none;
+}
+
+.mini-player-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-pretendard);
+  font-size: 12.5px;
+  color: var(--cs-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-player-stop {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--cs-map-gray);
+  color: var(--cs-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-player-stop:hover {
+  background: var(--cs-gray);
+  color: var(--cs-black);
+}
+
 .bottom-toolbar {
   position: absolute;
   /* 모바일 브라우저(주소창/카톡 인앱브라우저 하단 툴바 등)의 자체
@@ -809,6 +887,13 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  transition: bottom 0.2s ease;
+}
+
+/* 미니 플레이어가 떠 있는 동안만 툴바를 그 위로 밀어올린다. 88px(미니
+   플레이어 자신의 bottom) + 실측 최대 높이(~58px) + 8px 여유 = 154px. */
+.mini-player:not(.hidden) ~ .bottom-toolbar {
+  bottom: 154px;
 }
 
 .tool-btn {
@@ -1431,13 +1516,14 @@ button.story-place-line:hover {
   background: rgba(0, 0, 0, 0.65);
   color: #fff;
   font-size: 18px;
+  /* ▶ 글리퍼는 시각적으로 왼쪽에 무게가 쏠려 있어 살짝 밀어 중앙에
+     맞춘다 — ⏸(재생 중)는 좌우 대칭이라 이 보정이 필요 없다. */
   padding-left: 3px;
 }
 
-.story-youtube-frame {
-  width: 100%;
-  height: 100%;
-  border: none;
+.story-youtube-thumb--playing .story-youtube-play {
+  background: var(--cs-orange);
+  padding-left: 0;
 }
 
 .story-tags {
