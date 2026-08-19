@@ -34,6 +34,15 @@ let miniPlayerPaused = false;
 let ytPlayer = null;
 let ytPlayerCreating = false;
 let ytApiReadyPromise = null;
+// 곡이 끝까지 재생됐을 때(YT.PlayerState.ENDED) 알림 받을 콜백 — 지금은
+// 어딘가의 기억 플레이리스트(js/recall.js)만 등록해서 자동으로 다음 곡을
+// 잇는다. 아무도 등록하지 않았으면(보통의 카드 열람 등) 그냥 멈춘 채로
+// 남는다(기존 동작 그대로).
+let miniPlayerEndedCallback = null;
+
+function setMiniPlayerEndedCallback(fn) {
+  miniPlayerEndedCallback = fn;
+}
 
 /**
  * 유튜브 IFrame Player API(공식 JS API)를 준비해둔다. app.js initApp()이
@@ -150,6 +159,9 @@ function playMiniPlayerVideo(videoId, musicLabel) {
           // 클래스가 없다.
           e.target.getIframe().classList.add("mini-player-frame");
           e.target.playVideo();
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED && miniPlayerEndedCallback) miniPlayerEndedCallback();
         },
       },
     });
