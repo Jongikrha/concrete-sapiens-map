@@ -689,7 +689,15 @@ const Storage = {
    * 추정해 분리한다. 영상 제목 형식이 제각각이라 100% 정확할 수 없어 작성 폼에서
    * 사용자가 확인/수정하는 걸 전제로 한다 — 여기선 "그럴듯한 초안"만 만든다.
    */
-  parseYoutubeMusicTitle(rawTitle) {
+  /**
+   * rawTitle(영상 제목)만으론 구분자 없는 업로드가 많아(뮤직비디오 채널이
+   * 제목엔 곡명만 적고, 채널 자체가 아티스트인 경우 등) channelName(oEmbed의
+   * author_name, 즉 업로더 채널명)을 두 번째 신호로 함께 쓴다. 특히 유튜브가
+   * 자동 생성하는 "아티스트 - Topic" 채널명은 사실상 정답에 가까워 노이즈만
+   * 벗겨내면 그대로 아티스트로 쓸 수 있다(2026-08-19, 기존 제목-only 분리가
+   * 자주 틀린다는 피드백으로 추가).
+   */
+  parseYoutubeMusicTitle(rawTitle, channelName) {
     if (!rawTitle) return { artist: null, title: null };
 
     // 괄호 안에 노이즈 키워드가 있는 경우(예: "(Official MV)")와, 괄호 없이
@@ -703,17 +711,47 @@ const Storage = {
         .replace(/^[\s"'“”'‘]+|[\s"'“”'‘]+$/g, "")
         .replace(/\s{2,}/g, " ")
         .trim();
+    const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, "");
+
+    // 채널명 특유의 꼬리표(자동 생성 Topic 채널, VEVO, "공식 채널" 등)를 벗겨
+    // 순수 아티스트명에 가깝게 정리한다.
+    const cleanChannelName = (name) => {
+      if (!name) return null;
+      const cleaned = name
+        .replace(/\s*-\s*Topic$/i, "")
+        .replace(/VEVO$/i, "")
+        .replace(/\s*(공식\s*)?(채널|Official|Music|Ent(ertainment)?)$/i, "")
+        .trim();
+      return cleaned || null;
+    };
 
     const withoutNoise = trim(rawTitle.replace(BRACKET_NOISE, "").replace(TRAILING_NOISE, ""));
-    const parts = withoutNoise.split(/\s+[-–—~]\s+/);
+    const channelArtist = cleanChannelName(channelName);
 
+    // 「곡명」/『곡명』처럼 따옴표로 곡명을 감싸는 업로드 관행이 흔해서, 대시
+    // 구분자보다 먼저 확인한다 — 이 패턴이 잡히면 나머지 앞부분이 곧 아티스트.
+    const quoteMatch = withoutNoise.match(/[「『]([^」』]+)[」』]/);
+    if (quoteMatch) {
+      const title = trim(quoteMatch[1]);
+      const artist = trim(withoutNoise.slice(0, quoteMatch.index)) || channelArtist;
+      if (title) return { artist: artist || null, title };
+    }
+
+    // 대시류 외에 ":", "|"로 구분하는 업로드도 있어 구분자에 포함한다.
+    const parts = withoutNoise.split(/\s+[-–—~:|]\s+/);
     if (parts.length >= 2) {
-      const artist = trim(parts[0]);
-      const title = trim(parts.slice(1).join(" - "));
+      let artist = trim(parts[0]);
+      let title = trim(parts.slice(1).join(" - "));
+      // "곡명 - 아티스트"로 순서가 뒤집힌 제목도 있다 — 채널명이 뒷부분과
+      // 일치하면 순서를 바로잡는다.
+      if (channelArtist && norm(channelArtist) === norm(title) && norm(channelArtist) !== norm(artist)) {
+        [artist, title] = [title, artist];
+      }
       if (artist && title) return { artist, title };
     }
 
-    return { artist: null, title: withoutNoise || null };
+    // 구분자가 아예 없으면(제목엔 곡명만 있는 업로드) 채널명을 아티스트로 쓴다.
+    return { artist: channelArtist, title: withoutNoise || null };
   },
 
   /**
@@ -745,19 +783,37 @@ const Storage = {
   },
 
   /**
-   * API 키 없이 쓸 수 있는 유튜브 oEmbed로 영상 제목을 가져온다. 작성 폼(제목
-   * 미리보기)과 미니 플레이어(저장된 곡 정보가 없는 옛 기억의 폴백)가 공유해서 쓴다.
+   * API 키 없이 쓸 수 있는 유튜브 oEmbed 원본 응답(제목 + 채널명)을 가져온다.
+   * fetchYoutubeTitle/fetchYoutubeOEmbed가 공유해서 쓴다.
    */
-  async fetchYoutubeTitle(videoId) {
+  async _fetchYoutubeOEmbedRaw(videoId) {
     try {
       const watchUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
       const res = await fetch(`https://www.youtube.com/oembed?url=${watchUrl}&format=json`);
       if (!res.ok) return null;
-      const data = await res.json();
-      return data.title || null;
+      return await res.json();
     } catch (e) {
       return null;
     }
+  },
+
+  /**
+   * 영상 제목만 가져온다. 미니 플레이어(저장된 곡 정보가 없는 옛 기억의
+   * 폴백 표시)가 쓴다.
+   */
+  async fetchYoutubeTitle(videoId) {
+    const data = await this._fetchYoutubeOEmbedRaw(videoId);
+    return (data && data.title) || null;
+  },
+
+  /**
+   * 영상 제목 + 채널명(author_name)을 함께 가져온다. 작성 폼이 parseYoutubeMusicTitle에
+   * 채널명을 두 번째 신호로 넘겨 아티스트/곡명 분리 정확도를 높이는 데 쓴다.
+   */
+  async fetchYoutubeOEmbed(videoId) {
+    const data = await this._fetchYoutubeOEmbedRaw(videoId);
+    if (!data) return null;
+    return { title: data.title || null, channelName: data.author_name || null };
   },
 
   getStoryMonth(story) {

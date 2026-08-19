@@ -214,16 +214,18 @@ function openComposer(pin) {
     if (videoId === lastFetchedVideoId) return;
     lastFetchedVideoId = videoId;
 
-    Storage.fetchYoutubeTitle(videoId).then((rawTitle) => {
+    Storage.fetchYoutubeOEmbed(videoId).then((oembed) => {
       // 그 사이 URL이 바뀌었거나 이 작성 폼이 닫혔으면(다른 핀으로 재사용됐어도
       // pendingPin이 달라짐) 반영하지 않는다. 사용자가 이미 아티스트/곡명을
       // 직접 손댄 경우에도 자동으로 덮어쓰지 않는다.
-      if (!rawTitle || videoId !== lastFetchedVideoId || pendingPin !== pin) return;
+      if (!oembed || !oembed.title || videoId !== lastFetchedVideoId || pendingPin !== pin) return;
       const artistInput = document.getElementById("input-music-artist");
       const titleInput = document.getElementById("input-music-title");
       if (!artistInput || !titleInput) return;
       if (artistInput.value.trim() || titleInput.value.trim()) return;
-      const parsed = Storage.parseYoutubeMusicTitle(rawTitle);
+      // 채널명(author_name)을 두 번째 신호로 함께 넘긴다 — 제목에 구분자가
+      // 없거나 순서가 뒤집힌 업로드에서 정확도를 크게 높여준다.
+      const parsed = Storage.parseYoutubeMusicTitle(oembed.title, oembed.channelName);
       if (parsed.artist) artistInput.value = parsed.artist;
       if (parsed.title) titleInput.value = parsed.title;
     });

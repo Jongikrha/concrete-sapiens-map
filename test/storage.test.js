@@ -604,6 +604,40 @@ test("parseYoutubeMusicTitle은 빈 값이면 둘 다 null을 반환한다", () 
   assert.deepEqual(Storage.parseYoutubeMusicTitle(null), { artist: null, title: null });
 });
 
+test("parseYoutubeMusicTitle은 제목에 구분자가 없으면 채널명(Topic/VEVO 꼬리표 제거)을 아티스트로 쓴다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("Dynamite", "BTS - Topic"), {
+    artist: "BTS",
+    title: "Dynamite",
+  });
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("Way Back Home", "SHAUN VEVO"), {
+    artist: "SHAUN",
+    title: "Way Back Home",
+  });
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("좋은 노래 모음 (Lyrics)", null), {
+    artist: null,
+    title: "좋은 노래 모음",
+  });
+});
+
+test("parseYoutubeMusicTitle은 「」/『』로 곡명을 감싼 제목에서 앞부분을 아티스트로 분리한다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("아이유 「밤편지」 M/V"), {
+    artist: "아이유",
+    title: "밤편지",
+  });
+});
+
+test("parseYoutubeMusicTitle은 \":\"/\"|\" 구분자도 인식한다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("아이유 : 밤편지"), { artist: "아이유", title: "밤편지" });
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("아이유 | 밤편지"), { artist: "아이유", title: "밤편지" });
+});
+
+test("parseYoutubeMusicTitle은 채널명이 곡명 자리와 일치하면 \"곡명 - 아티스트\" 순서를 바로잡는다", () => {
+  assert.deepEqual(Storage.parseYoutubeMusicTitle("밤편지 - 아이유", "아이유"), {
+    artist: "아이유",
+    title: "밤편지",
+  });
+});
+
 test("normalizeSongKey는 대소문자/공백을 무시하고 같은 곡이면 같은 키를 만든다", () => {
   assert.equal(
     Storage.normalizeSongKey("Brown Eyes", "벌써 일년"),
