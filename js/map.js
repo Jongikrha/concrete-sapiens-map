@@ -11,6 +11,24 @@ let highlightedMarker = null;
 let searchPinMarker = null;
 let searchPinInfo = null; // openSearchAreaModal에 그대로 넘길 { lat, lng, placeName, placeId, address }
 
+// 장소 키(group.key) → { tier, selected, isToday, image } — makeDotImage는
+// 마커마다 반짝임 애니메이션 위상을 매번 새 난수로 만들어서 캐싱 없이는
+// renderMarkers()가 호출될 때마다(검색으로 지도 이동, 필터 전환 등) 화면에
+// 있는 모든 마커의 SVG 이미지를 처음부터 다시 생성해야 했다 — 마커가
+// 수백 개면 그때마다 눈에 띄게 느려지는 원인이었다(2026-08-19). 이 장소의
+// tier/선택/오늘 여부가 실제로 안 바뀌었으면 기존 이미지를 그대로 재사용한다.
+const dotImageCache = new Map();
+
+function getDotImage(key, tier, selected, isToday) {
+  const cached = dotImageCache.get(key);
+  if (cached && cached.tier === tier && cached.selected === selected && cached.isToday === isToday) {
+    return cached.image;
+  }
+  const image = makeDotImage(tier, selected, isToday);
+  dotImageCache.set(key, { tier, selected, isToday, image });
+  return image;
+}
+
 // ------------------------------------------------------------
 // Memory Light 이미지 — 기억 수에 따라 크기 차등(makeDotImage 아래 참고)
 // ------------------------------------------------------------
@@ -311,10 +329,10 @@ function highlightMarkerForStory(story) {
   if (highlightedMarker && highlightedMarker !== entry.marker) {
     const prevEntry = markers.find((m) => m.marker === highlightedMarker);
     if (prevEntry) {
-      highlightedMarker.setImage(makeDotImage(tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group)));
+      highlightedMarker.setImage(getDotImage(prevEntry.group.key, tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group)));
     }
   }
-  entry.marker.setImage(makeDotImage(tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group)));
+  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group)));
   highlightedMarker = entry.marker;
 }
 
@@ -379,7 +397,7 @@ function renderMarkers() {
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),
-      image: makeDotImage(tier, false, lit),
+      image: getDotImage(group.key, tier, false, lit),
     });
     kakao.maps.event.addListener(marker, "click", () => {
       clearSearchPin();
