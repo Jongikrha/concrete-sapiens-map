@@ -1631,6 +1631,7 @@ button.story-place-line:hover {
 }
 
 .story-youtube-artist {
+  width: 50%;
   margin: 0 0 6px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--cs-gray);
@@ -1656,17 +1657,21 @@ button.story-place-line:hover {
 .story-youtube-deco {
   position: absolute;
   z-index: 0;
-  right: -26px;
+  right: -32px;
   top: 50%;
   transform: translateY(-50%);
-  width: 112px;
-  height: 112px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
-  opacity: 0.4;
+  opacity: 0.55;
   pointer-events: none;
   background:
-    radial-gradient(circle at center, var(--cs-gray) 0 3px, transparent 3px),
-    repeating-radial-gradient(circle at center, transparent 0, transparent 9px, var(--cs-gray) 10px, transparent 11px);
+    radial-gradient(circle at center, var(--cs-gray) 0 2.5px, transparent 2.5px),
+    repeating-radial-gradient(circle at center, var(--cs-gray) 0, var(--cs-gray) 0.6px, transparent 0.6px, transparent 4px);
+  /* 얇은 나이테를 중심 근처는 진하게, 바깥은 서서히 사라지게 마스킹해서
+     과녁처럼 균일한 링이 아니라 CD 표면의 반사 그루브처럼 보이게 한다. */
+  -webkit-mask-image: radial-gradient(circle at center, #000 0%, #000 38%, transparent 80%);
+  mask-image: radial-gradient(circle at center, #000 0%, #000 38%, transparent 80%);
 }
 
 .story-tags {
