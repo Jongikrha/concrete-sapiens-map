@@ -264,16 +264,56 @@ function spawnClickStamp(mouseEvent) {
 // initMap의 전역 클릭 리스너 참고 — 처음엔 어떤 액션을 취해도 안
 // 사라지게 했었는데, 오히려 계속 남아있는 게 거슬린다는 피드백으로
 // "다음 액션 전까지만" 보이는 걸로 좁혔다). 카카오 기본 파란 마커 대신
-// 커스텀 깃발 아이콘(assets/search-pin-marker.png)을 써서 "아직 기억은
-// 없고 검색으로 짚어본 위치"라는 걸 시각적으로 구분한다.
+// 커스텀 아이콘을 써서 "아직 기억은 없고 검색으로 짚어본 위치"라는 걸
+// 시각적으로 구분한다. 예전엔 정적 PNG(assets/search-pin-marker.png)였는데,
+// 다른 마커들(makeDotImage 등)과 같은 방식으로 인라인 SVG를 데이터
+// URI로 직접 그려서 배율이 달라져도 안 흐려지고 색도 코드에서 바로
+// 관리한다(2026-08-19, 별+깃대+바닥링 디자인 시안 반영).
 // ------------------------------------------------------------
-const SEARCH_PIN_IMAGE_SRC = "assets/search-pin-marker.png";
+const SEARCH_PIN_COLOR = "#FF5A36"; // --cs-orange와 동일
+const SEARCH_PIN_WIDTH = 28;
+const SEARCH_PIN_HEIGHT = 40;
+// 실제 좌표가 가리키는 지점 — 기존 PNG는 뾰족한 핀 끝이 좌표였는데, 이
+// 디자인은 깃대 끝에 바닥링(과녁 모양)이 있는 구조라 그 중심이 그 역할을
+// 한다.
+const SEARCH_PIN_ANCHOR_Y = 34;
+
+// makeDotImage의 starPoints()는 4각 반짝임(sparkle)이라 이 디자인의 통통한
+// 5각 별과는 다른 모양 — 별도로 표준 5각 별 좌표를 만든다.
+function fivePointStarPath(cx, cy, outerR, innerR) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const angle = ((-90 + i * 36) * Math.PI) / 180;
+    const r = i % 2 === 0 ? outerR : innerR;
+    pts.push(`${(cx + r * Math.cos(angle)).toFixed(2)},${(cy + r * Math.sin(angle)).toFixed(2)}`);
+  }
+  return `M${pts.join("L")}Z`;
+}
+
+function buildSearchPinSvg() {
+  const cx = SEARCH_PIN_WIDTH / 2;
+  const starCy = 8.5;
+  const starOuterR = 7.2;
+  const starPath = fivePointStarPath(cx, starCy, starOuterR, 3.1);
+  // 별 아래쪽과 살짝 겹치게 시작해서 이음매가 안 보이게 한다.
+  const poleTop = starCy + starOuterR - 0.5;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SEARCH_PIN_WIDTH}" height="${SEARCH_PIN_HEIGHT}">
+    <rect x="${(cx - 1.3).toFixed(2)}" y="${poleTop.toFixed(2)}" width="2.6" height="${(SEARCH_PIN_ANCHOR_Y - poleTop).toFixed(2)}" rx="1.3" fill="${SEARCH_PIN_COLOR}"/>
+    <ellipse cx="${cx}" cy="${SEARCH_PIN_ANCHOR_Y}" rx="8" ry="2.6" fill="${SEARCH_PIN_COLOR}" opacity="0.18"/>
+    <ellipse cx="${cx}" cy="${SEARCH_PIN_ANCHOR_Y}" rx="5.4" ry="1.9" fill="#FFFFFF" opacity="0.95"/>
+    <ellipse cx="${cx}" cy="${SEARCH_PIN_ANCHOR_Y}" rx="2.3" ry="1.05" fill="${SEARCH_PIN_COLOR}"/>
+    <path d="${starPath}" fill="${SEARCH_PIN_COLOR}"/>
+  </svg>`;
+
+  return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+}
 
 function buildSearchPinImage() {
   return new kakao.maps.MarkerImage(
-    SEARCH_PIN_IMAGE_SRC,
-    new kakao.maps.Size(32, 45),
-    { offset: new kakao.maps.Point(16, 45) }
+    buildSearchPinSvg(),
+    new kakao.maps.Size(SEARCH_PIN_WIDTH, SEARCH_PIN_HEIGHT),
+    { offset: new kakao.maps.Point(SEARCH_PIN_WIDTH / 2, SEARCH_PIN_ANCHOR_Y) }
   );
 }
 
