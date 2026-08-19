@@ -309,14 +309,6 @@ function applyActiveFilterToGroup(rawGroup) {
 function showToast(elId, text, duration) {
   const el = document.getElementById(elId);
   el.textContent = text;
-  if (elId === "entry-toast") {
-    // 헤더(.map-overlay-top)가 불투명 고정 바로 바뀌면서(2026-08-19) 높이가
-    // 해시태그 줄바꿈/시간슬라이더 열림 등에 따라 달라진다 — CSS의
-    // top:64px 고정값만으론 헤더 위에 토스트가 겹쳐 보일 수 있어, 보여줄
-    // 때마다 실제 헤더 높이 아래로 다시 계산한다.
-    const header = document.getElementById("map-overlay-top");
-    el.style.top = `${header.offsetHeight + 12}px`;
-  }
   el.classList.add("show");
   setTimeout(() => el.classList.remove("show"), duration);
 }
