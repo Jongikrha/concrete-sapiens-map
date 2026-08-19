@@ -28,11 +28,12 @@
 </head>
 <body>
   <div id="app">
-    <div id="map"></div>
-
-    <!-- 상단 오버레이 (워드마크/검색/해시태그/배너) — 세로로 자연스럽게
-         쌓이는 구조라, 해시태그가 여러 줄로 내려가도 아래 요소들이
-         알아서 밀려난다 -->
+    <!-- 상단 헤더(워드마크/검색/해시태그/배너) — 불투명 고정 바로 문서
+         흐름을 차지하고, #map이 그 아래 남는 공간을 채운다(2026-08-19).
+         #app이 flex column이라 DOM 순서가 곧 화면상 위/아래 순서이므로,
+         이 헤더가 반드시 #map보다 먼저 와야 한다. 안에서는 세로로
+         자연스럽게 쌓이는 구조라, 해시태그가 여러 줄로 내려가도 아래
+         요소들이 알아서 밀려난다 -->
     <div class="map-overlay-top" id="map-overlay-top">
       <div class="top-bar">
         <div class="wordmark">
@@ -90,6 +91,8 @@
         <button class="btn-primary time-slider-view-btn" id="time-slider-view-btn">이 기간으로 보기 <span class="time-slider-view-btn-chevron">›</span></button>
       </div>
     </div>
+
+    <div id="map"></div>
 
     <!-- 최초 진입 안내 토스트 -->
     <div class="entry-toast" id="entry-toast"></div>

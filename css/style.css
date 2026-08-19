@@ -73,11 +73,21 @@ body {
      폴백(먼저 선언)으로 남긴다. */
   height: 100vh;
   height: 100dvh;
+  /* 상단 헤더(.map-overlay-top)를 지도 위에 뜨는 오버레이가 아니라
+     불투명한 고정 바로 쌓고, #map은 그 아래 남는 세로 공간을 채운다
+     (2026-08-19). */
+  display: flex;
+  flex-direction: column;
 }
 
 #map {
   width: 100%;
-  height: 100%;
+  /* 헤더가 더 이상 절대위치로 지도 위에 뜨지 않고 실제 문서 흐름을
+     차지하므로, #map은 height:100% 대신 남는 세로 공간을 flex로
+     채운다. min-height:0이 없으면 flex column 안에서 콘텐츠 높이만큼
+     늘어나려 해 지도가 화면 밖으로 넘칠 수 있다. */
+  flex: 1;
+  min-height: 0;
   background: var(--cs-map-gray);
   /* 흐릿한 지도 톤(디자인 레퍼런스 기준, 2026-08-13). 처음엔 #map 위에
      옅은 색 레이어(.map-dim-layer)를 따로 덮는 방식으로 했는데, 그
@@ -112,26 +122,23 @@ body {
 }
 
 /* ------------------------------------------------------------
-   상단 오버레이 래퍼 — 이 안의 요소들은 절대 위치가 아니라 세로로
-   자연스럽게 쌓인다. 해시태그가 여러 줄로 줄바꿈되면 그 아래
-   배너/슬라이더가 자동으로 밀려 내려간다.
+   상단 헤더 — 지도 위에 뜨는 오버레이가 아니라 불투명한 고정 바
+   (2026-08-19, 참고 이미지 기준). 문서 흐름을 그대로 차지하고 #map이
+   그 아래 남는 공간을 채우므로, 더 이상 지도를 가리지 않기 위해
+   pointer-events를 뚫어줄 필요가 없다. 안의 요소들은 세로로 자연스럽게
+   쌓여, 해시태그가 여러 줄로 줄바꿈되면 그 아래 배너/슬라이더가 자동으로
+   밀려 내려간다.
    ------------------------------------------------------------ */
 .map-overlay-top {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 20;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
   padding: 12px 16px;
-  pointer-events: none;
-}
-
-.map-overlay-top > * {
-  pointer-events: auto;
+  background: var(--cs-paper);
+  box-shadow: 0 2px 8px rgba(47, 48, 49, 0.06);
 }
 
 .top-bar {

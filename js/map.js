@@ -177,6 +177,17 @@ function initMap() {
   };
   map = new kakao.maps.Map(container, options);
 
+  // 헤더(.map-overlay-top)가 더 이상 지도 위에 뜨는 오버레이가 아니라
+  // 문서 흐름을 차지하는 불투명 바라서(2026-08-19), 해시태그 줄바꿈/
+  // 시간슬라이더 열림 등으로 헤더 높이가 바뀌면 #map의 실제 크기도
+  // 같이 바뀐다. 카카오맵은 컨테이너 크기를 초기화 시점에 캐싱해두고
+  // 있어서, relayout()을 직접 불러주지 않으면 타일이 옛 크기 기준으로
+  // 어긋나 보인다.
+  const mapResizeObserver = new ResizeObserver(() => {
+    map.relayout();
+  });
+  mapResizeObserver.observe(container);
+
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,
