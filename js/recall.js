@@ -278,6 +278,15 @@ function showNextRecallMemory() {
   map.setLevel(4);
   map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
   placeRecallDot(story);
+
+  // 점만 띄우고 눌러야 카드가 열리면 "어딜 눌러야 할지 모르겠다"는
+  // 피드백이 있어(2026-08-19), 지도 이동이 끝나는 타이밍(flyToStory와
+  // 동일한 250ms 관례)에 맞춰 카드를 바로 자동으로 연다. 그사이 사용자가
+  // "다음 기억으로"를 연타하거나 회상 모드를 나갔으면 이 타이머는 무시한다
+  // (recallCurrentStory가 이미 바뀌었거나 세션이 닫혔는지로 판단).
+  setTimeout(() => {
+    if (recallSessionOpen && recallCurrentStory === story) openRecallCard();
+  }, 250);
 }
 
 function placeRecallDot(story) {
