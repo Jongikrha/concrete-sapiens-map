@@ -166,6 +166,7 @@ function openComposer(pin) {
           <input type="text" id="input-music-artist" class="input-field input-field--sm" placeholder="아티스트" maxlength="60" value="${escapeHtml((editing && editing.musicArtist) || "")}" />
           <input type="text" id="input-music-title" class="input-field input-field--sm" placeholder="곡명" maxlength="80" value="${escapeHtml((editing && editing.musicTitle) || "")}" />
         </div>
+        <button type="button" class="song-match-hint hidden" id="song-match-hint"></button>
       </div>
     </div>
 
@@ -241,8 +242,37 @@ function openComposer(pin) {
       const parsed = Storage.parseYoutubeMusicTitle(oembed.title, oembed.channelName);
       if (parsed.artist) artistInput.value = parsed.artist;
       if (parsed.title) titleInput.value = parsed.title;
+      updateSongMatchHint();
     });
   });
+
+  // 자동 추출이 "Sung si kyoun - 성시경(거리에서)"처럼 엉뚱하게 갈라놓아도,
+  // 곡명이 겹치는 기존 곡이 있으면 "혹시 이 곡?" 제안을 보여준다(2026-08-19).
+  // 자동으로 합치지 않고 눌러야만 반영 — 오탐이 있어도 무해하다.
+  function updateSongMatchHint() {
+    const hint = document.getElementById("song-match-hint");
+    if (!hint) return;
+    const artistVal = document.getElementById("input-music-artist").value.trim();
+    const titleVal = document.getElementById("input-music-title").value.trim();
+    const match = titleVal ? Storage.suggestSongMatch(artistVal, titleVal) : null;
+    if (!match) {
+      hint.classList.add("hidden");
+      hint.onclick = null;
+      return;
+    }
+    hint.textContent = `혹시 이 곡인가요? ${match.artist ? `${match.artist} · ` : ""}${match.title}`;
+    hint.classList.remove("hidden");
+    hint.onclick = () => {
+      document.getElementById("input-music-artist").value = match.artist || "";
+      document.getElementById("input-music-title").value = match.title;
+      hint.classList.add("hidden");
+    };
+  }
+
+  ["input-music-artist", "input-music-title"].forEach((id) => {
+    panel.querySelector(`#${id}`).addEventListener("input", updateSongMatchHint);
+  });
+  updateSongMatchHint();
 
   // 자유 핀은 이름을 자동 채워두므로, 처음 포커스할 때 전체 선택해
   // 바로 타이핑으로 덮어쓸 수 있다는 걸(=수정 가능하다는 걸) 느끼게 한다.

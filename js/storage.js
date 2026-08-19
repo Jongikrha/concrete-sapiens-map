@@ -822,6 +822,31 @@ const Storage = {
   },
 
   /**
+   * 작성 폼에서 아티스트/곡명을 채운 뒤, 이미 저장된 곡 중 곡명이 겹치는 게
+   * 있으면 "혹시 이 곡?" 제안을 만든다. normalizeSongKey는 아티스트+곡명이
+   * 둘 다 일치해야 하나로 묶는데, 아티스트 표기가 언어/철자로 갈리는 경우
+   * (예: "성시경" vs "Sung si kyoun")는 그 기준으로 못 묶는다 — 대신 곡명
+   * 쪽은 그대로 겹치는 경우가 많아 곡명 포함 관계만으로 느슨하게 찾는다.
+   * 자동 병합이 아니라 사용자가 확인하고 눌러야 반영되는 제안이라 느슨해도
+   * 된다. 짧은 제목(2자 미만)은 엉뚱한 매칭이 잦아 제외한다.
+   */
+  suggestSongMatch(artist, title) {
+    const norm = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, "");
+    const inputTitle = norm(title);
+    if (inputTitle.length < 2) return null;
+    const currentKey = this.normalizeSongKey(artist, title);
+
+    const match = this._getSongCounts().find((song) => {
+      if (this.normalizeSongKey(song.artist, song.title) === currentKey) return false;
+      const candTitle = norm(song.title);
+      if (candTitle.length < 2) return false;
+      return candTitle.includes(inputTitle) || inputTitle.includes(candTitle);
+    });
+
+    return match ? { artist: match.artist, title: match.title } : null;
+  },
+
+  /**
    * API 키 없이 쓸 수 있는 유튜브 oEmbed 원본 응답(제목 + 채널명)을 가져온다.
    * fetchYoutubeTitle/fetchYoutubeOEmbed가 공유해서 쓴다.
    */

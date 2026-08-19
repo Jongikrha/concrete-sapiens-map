@@ -2219,6 +2219,28 @@ button.story-place-line:hover {
   font-size: 13px;
 }
 
+/* "혹시 이 곡?" 제안 — 자동 추출이 다른 언어/철자로 아티스트를 갈라놔도
+   곡명이 겹치는 기존 곡을 눌러서 바로 맞출 수 있게 한다(2026-08-19). */
+.song-match-hint {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px dashed var(--cs-orange);
+  border-radius: 10px;
+  background: none;
+  color: var(--cs-orange);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--cs-transition-fast);
+}
+
+.song-match-hint:hover {
+  background: rgba(255, 90, 54, 0.08);
+}
+
 /* ------------------------------------------------------------
    회원가입 / 로그인
    ------------------------------------------------------------ */

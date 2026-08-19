@@ -684,3 +684,26 @@ test("getTopSongs는 limit만큼만 반환하고, getAllSongsWithCounts는 제�
   assert.equal(Storage.getTopSongs(2).length, 2);
   assert.equal(Storage.getAllSongsWithCounts().length, 3);
 });
+
+test("suggestSongMatch는 아티스트 표기가 갈려도 곡명이 겹치면 기존 곡을 제안한다", () => {
+  Storage._setCache([
+    createStory({ id: "s1", musicArtist: "성시경", musicTitle: "거리에서" }),
+  ]);
+  assert.deepEqual(
+    Storage.suggestSongMatch("Sung si kyoun", "성시경(거리에서)"),
+    { artist: "성시경", title: "거리에서" }
+  );
+});
+
+test("suggestSongMatch는 이미 정확히 같은 곡이면(정규화 키 일치) 제안하지 않는다", () => {
+  Storage._setCache([createStory({ id: "s1", musicArtist: "성시경", musicTitle: "거리에서" })]);
+  assert.equal(Storage.suggestSongMatch("성시경", "거리에서"), null);
+  assert.equal(Storage.suggestSongMatch(" 성시경 ", " 거리에서 "), null);
+});
+
+test("suggestSongMatch는 곡명이 2자 미만이거나 겹치는 게 없으면 null을 반환한다", () => {
+  Storage._setCache([createStory({ id: "s1", musicArtist: "성시경", musicTitle: "거리에서" })]);
+  assert.equal(Storage.suggestSongMatch("누군가", "봄"), null);
+  assert.equal(Storage.suggestSongMatch("누군가", "전혀다른곡"), null);
+  assert.equal(Storage.suggestSongMatch(null, ""), null);
+});
