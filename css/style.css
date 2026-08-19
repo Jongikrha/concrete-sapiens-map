@@ -352,28 +352,6 @@ body {
   margin: 6px 4px;
 }
 
-/* ------------------------------------------------------------
-   워드마크 아래 박스 — 왼쪽 전체 기억 수 + 오른쪽 태그/곡 두 줄
-   ------------------------------------------------------------ */
-.top-panel {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: rgba(244, 243, 239, 0.92);
-  border: 1px solid var(--cs-gray);
-  border-radius: var(--cs-radius-sheet);
-  padding: 16px 20px;
-}
-
-.top-panel-rows {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .hashtag-divider {
   flex-shrink: 0;
   width: 1px;
@@ -655,19 +633,16 @@ body {
 }
 
 /* ------------------------------------------------------------
-   전체 등록된 기억 수 (박스 왼쪽, 숫자 큼직하게 + 설명 두 줄)
+   전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
    ------------------------------------------------------------ */
 .total-count-banner {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
-  width: 84px;
+  align-items: baseline;
+  gap: 4px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
-  text-align: left;
   transition: opacity 0.15s;
 }
 
@@ -678,16 +653,14 @@ body {
 .total-count-num {
   font-family: var(--font-sans);
   font-weight: 700;
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 18px;
   color: #FF5A3C;
 }
 
 .total-count-suffix {
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 12.5px;
   color: #555555;
 }
 
