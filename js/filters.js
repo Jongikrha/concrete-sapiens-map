@@ -441,7 +441,7 @@ function toggleMyMemoryMode() {
     renderMarkers();
     return;
   }
-  requireLogin(startMyMemoryMode);
+  requireLogin(openRecallEntryChoice);
 }
 
 async function startMyMemoryMode() {

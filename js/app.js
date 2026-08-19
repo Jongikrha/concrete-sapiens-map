@@ -385,6 +385,7 @@ function bindUIEvents() {
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
   // 버튼이나 ESC를 눌러야 닫힌다).
   bindAccountMenuEvents();
+  bindRecallEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-random").onclick = goToRandomStory;
@@ -418,6 +419,8 @@ function bindUIEvents() {
       else if (!document.getElementById("slider-period-overlay").classList.contains("hidden")) closeSliderPeriodModal();
       else if (!document.getElementById("daily-prompt-overlay").classList.contains("hidden")) closeTodayMission();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
+      else if (!document.getElementById("recall-choice-overlay").classList.contains("hidden")) closeRecallChoice();
+      else if (recallSessionOpen) endRecallSession();
     }
   });
 
