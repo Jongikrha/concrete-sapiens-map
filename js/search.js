@@ -208,9 +208,7 @@ function bindSearchEvents() {
   const searchResults = document.getElementById("search-results");
 
   // 전용 닫기 버튼이 없으니 카드 바깥(오버레이 자신)을 클릭하면 닫는다.
-  document.getElementById("search-area-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "search-area-overlay") closeSearchAreaModal();
-  });
+  bindOverlayClickToClose("search-area-overlay", closeSearchAreaModal);
 
   document.getElementById("search-btn").onclick = () => runSearch();
   searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });

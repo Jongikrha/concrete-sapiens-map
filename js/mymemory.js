@@ -285,7 +285,5 @@ function bindAccountMenuEvents() {
     if (!wrap.contains(e.target)) closeAccountMenu();
   });
 
-  document.getElementById("mymemory-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "mymemory-overlay") closeMyMemoryList();
-  });
+  bindOverlayClickToClose("mymemory-overlay", closeMyMemoryList);
 }

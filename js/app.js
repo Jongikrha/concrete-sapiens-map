@@ -347,6 +347,25 @@ function goToRandomStory() {
   }, 650);
 }
 
+/**
+ * 오버레이는 배경 클릭으로 닫는다. click 이벤트 하나만 보고 e.target이
+ * 오버레이 자신인지만 확인하면, 패널 안(텍스트 입력창 등)에서 마우스를
+ * 눌러 드래그로 텍스트를 선택하다가 오버레이 위에서 손을 놓아도 "배경
+ * 클릭"으로 오인해 창이 꺼진다 — mousedown도 오버레이 자신에서 시작했을
+ * 때만 닫게 해서 막는다(2026-08-19, "기억 카드 쓰다가 드래그로 텍스트
+ * 선택하면 창이 꺼진다" 피드백).
+ */
+function bindOverlayClickToClose(overlayId, onClose) {
+  const overlay = document.getElementById(overlayId);
+  let downOnOverlay = false;
+  overlay.addEventListener("mousedown", (e) => {
+    downOnOverlay = e.target === overlay;
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay && downOnOverlay) onClose();
+  });
+}
+
 // ------------------------------------------------------------
 // 전역 UI 이벤트 바인딩
 // ------------------------------------------------------------
@@ -355,25 +374,13 @@ function bindUIEvents() {
   document.getElementById("sheet-backdrop").addEventListener("click", closeSheetToUnfiltered);
   document.getElementById("mini-player-pause").onclick = toggleMiniPlayerPause;
   document.getElementById("mini-player-stop").onclick = stopMiniPlayer;
-  document.getElementById("composer-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "composer-overlay") closeComposer();
-  });
+  bindOverlayClickToClose("composer-overlay", closeComposer);
   document.getElementById("total-count-banner").onclick = () => openRecentMemoriesModal();
-  document.getElementById("recent-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "recent-overlay") closeRecentMemoriesModal();
-  });
-  document.getElementById("today-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "today-overlay") closeTodayMemoriesModal();
-  });
-  document.getElementById("slider-period-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "slider-period-overlay") closeSliderPeriodModal();
-  });
-  document.getElementById("daily-prompt-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "daily-prompt-overlay") closeTodayMission();
-  });
-  document.getElementById("changepw-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "changepw-overlay") closeChangePasswordPanel();
-  });
+  bindOverlayClickToClose("recent-overlay", closeRecentMemoriesModal);
+  bindOverlayClickToClose("today-overlay", closeTodayMemoriesModal);
+  bindOverlayClickToClose("slider-period-overlay", closeSliderPeriodModal);
+  bindOverlayClickToClose("daily-prompt-overlay", closeTodayMission);
+  bindOverlayClickToClose("changepw-overlay", closeChangePasswordPanel);
   // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
   // 버튼이나 ESC를 눌러야 닫힌다).
