@@ -170,9 +170,12 @@ body {
 
 .search-input-row {
   display: flex;
-  background: rgba(244, 243, 239, 0.92);
+  background: rgba(244, 243, 239, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--cs-gray);
   border-radius: var(--cs-radius-chip);
+  box-shadow: 0 2px 10px rgba(47, 48, 49, 0.08);
   overflow: hidden;
 }
 
@@ -374,7 +377,9 @@ body {
 .chip {
   pointer-events: auto;
   flex-shrink: 0;
-  background: rgba(244, 243, 239, 0.92);
+  background: rgba(244, 243, 239, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--cs-gray);
   color: var(--cs-text-muted);
   font-family: var(--font-sans);
@@ -382,7 +387,8 @@ body {
   padding: 5px 12px;
   border-radius: var(--cs-radius-chip);
   cursor: pointer;
-  transition: background var(--cs-transition-fast);
+  box-shadow: 0 2px 8px rgba(47, 48, 49, 0.07);
+  transition: background var(--cs-transition-fast), box-shadow var(--cs-transition-fast);
 }
 
 .chip--active {
@@ -991,13 +997,16 @@ body {
 
 .tool-btn {
   border: 1px solid var(--cs-gray);
-  background: rgba(244, 243, 239, 0.92);
+  background: rgba(244, 243, 239, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--cs-black);
   font-family: var(--font-sans);
   font-size: 13px;
   padding: 9px 16px;
   border-radius: var(--cs-radius-chip);
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(47, 48, 49, 0.08);
   transition: background var(--cs-transition-fast);
 }
 
