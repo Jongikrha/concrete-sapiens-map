@@ -132,10 +132,28 @@ const Storage = {
     return _cache;
   },
 
-  saveStory(story) {
+  /**
+   * onFail(선택): updateStory와 같은 이유로 필요하다 — Amplify Data 클라이언트는
+   * GraphQL 레벨 에러를 reject가 아니라 `{ data: null, errors: [...] }`로 정상
+   * resolve해서 돌려주기 때문에 .catch()만으로는 못 잡는다(2026-08-19,
+   * updateStory 수정과 동일 패턴 적용 — 새 기억 저장도 조용히 실패할 수 있었다).
+   */
+  saveStory(story, { onFail } = {}) {
     _cache.push(story);
-    if (client) client.models.Story.create(story).catch((e) => console.error("스토리 저장 실패(백그라운드)", story.id, e));
-    else console.error("백엔드 미연결 상태라 저장이 서버에 반영되지 않았습니다", story.id);
+    if (client) {
+      client.models.Story.create(story)
+        .then(({ errors }) => {
+          if (!errors) return;
+          console.error("스토리 저장 실패(백그라운드)", story.id, errors);
+          if (onFail) onFail(errors);
+        })
+        .catch((e) => {
+          console.error("스토리 저장 실패(백그라운드)", story.id, e);
+          if (onFail) onFail(e);
+        });
+    } else {
+      console.error("백엔드 미연결 상태라 저장이 서버에 반영되지 않았습니다", story.id);
+    }
     return story;
   },
 

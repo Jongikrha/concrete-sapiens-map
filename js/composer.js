@@ -428,7 +428,9 @@ function openComposer(pin) {
         viewCount: 0,
         authorDeviceId: Storage.getDeviceId(),
       };
-      Storage.saveStory(story);
+      Storage.saveStory(story, {
+        onFail: () => showToast("entry-toast", "기억이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+      });
       const currentUser = Auth.getCurrentUser();
       if (currentUser) {
         Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
