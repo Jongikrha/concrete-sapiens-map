@@ -397,7 +397,9 @@ function openComposer(pin) {
 
     let story;
     if (editing) {
-      story = Storage.updateStory(editing.id, sharedFields);
+      story = Storage.updateStory(editing.id, sharedFields, {
+        onFail: () => showToast("entry-toast", "수정 내용이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+      });
     } else {
       story = {
         id: crypto.randomUUID(),

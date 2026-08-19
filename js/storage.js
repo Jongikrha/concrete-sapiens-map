@@ -144,14 +144,30 @@ const Storage = {
    * saveStory와 같은 낙관적 업데이트 패턴 — 캐시를 먼저 바꾸고 서버 반영은
    * 백그라운드로 보낸다. id/publicId/createdAt/작성 통계(reportCount 등)는
    * fields에 안 담아 보내면 그대로 유지된다.
+   *
+   * onFail(선택): 서버 반영이 실패하면 호출자가 사용자에게 알릴 수 있게
+   * 넘겨준다. Amplify Data 클라이언트는 GraphQL 레벨 에러(예: DynamoDB
+   * ConditionalCheckFailedException)를 reject가 아니라 `{ data: null,
+   * errors: [...] }`로 정상 resolve해서 돌려주기 때문에, .catch()만으로는
+   * 이런 실패를 못 잡고 콘솔 로그조차 안 남는 채로 조용히 사라진다
+   * (2026-08-19 확인 — 새로고침하면 방금 수정한 내용이 사라지는 버그의
+   * 원인). resolve된 값의 errors도 함께 확인해야 한다.
    */
-  updateStory(storyId, fields) {
+  updateStory(storyId, fields, { onFail } = {}) {
     const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
     Object.assign(target, fields);
     if (client) {
       client.models.Story.update({ id: storyId, ...fields })
-        .catch((e) => console.error("스토리 수정 실패(백그라운드)", storyId, e));
+        .then(({ errors }) => {
+          if (!errors) return;
+          console.error("스토리 수정 실패(백그라운드)", storyId, errors);
+          if (onFail) onFail(errors);
+        })
+        .catch((e) => {
+          console.error("스토리 수정 실패(백그라운드)", storyId, e);
+          if (onFail) onFail(e);
+        });
     }
     return target;
   },
