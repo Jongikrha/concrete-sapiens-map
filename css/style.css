@@ -966,6 +966,12 @@ body {
   bottom: 36px;
   left: 16px;
   right: 16px;
+  /* 좁은 화면에선 left/right 여백 안으로 줄어들고, 넓은 화면(데스크톱)에선
+     내용 크기만큼만 차지하고 가운데 정렬 — 창 끝까지 늘어나 커 보이던
+     문제 수정(2026-08-19, 예전 칩 버튼 크기감으로 복원). */
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   z-index: 20;
   display: flex;
   align-items: center;
