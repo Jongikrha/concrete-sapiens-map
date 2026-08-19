@@ -97,6 +97,28 @@ function renderHashtagChips() {
     wrap.appendChild(moreChip);
   }
 
+  // 해시태그 칩 뒤에 곡 칩을 이어 붙인다 — 곡 정보가 담긴 기억이 아직
+  // 없으면(자동 추출 기능 이전 기억이 많음) 조용히 아무것도 안 보여준다,
+  // 해시태그처럼 빈 칩까지 노출할 이유는 없다(2026-08-19).
+  const allSongs = Storage.getAllSongsWithCounts();
+  const topSongLimit = window.innerWidth <= 600 ? 5 : CONFIG.TOP_SONG_LIMIT;
+  const topSongs = allSongs.slice(0, topSongLimit);
+  topSongs.forEach(({ artist, title }) => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = `🎧 ${buildSongLabel({ artist, title })}`;
+    chip.onclick = () => exploreSong(artist, title);
+    wrap.appendChild(chip);
+  });
+
+  if (allSongs.length > topSongs.length) {
+    const moreSongChip = document.createElement("button");
+    moreSongChip.className = "chip chip--more";
+    moreSongChip.textContent = "🎧 더보기";
+    moreSongChip.onclick = openAllSongsSheet;
+    wrap.appendChild(moreSongChip);
+  }
+
   renderTotalCountBanner();
 }
 

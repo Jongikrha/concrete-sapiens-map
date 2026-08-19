@@ -603,6 +603,49 @@ function renderSongSheetContent() {
   });
 }
 
+/**
+ * 상단 바 "🎧 더보기" 칩 — openAllTagsSheet와 같은 패턴으로, 화면에 다
+ * 못 넣는 곡까지 포함해 전체 곡을 많이 남겨진 순으로 목록으로 보여준다.
+ * 곡을 고르면 exploreSong으로 이어져 그 곡의 기억 목록(openSongSheet)으로
+ * 전환된다.
+ */
+function openAllSongsSheet() {
+  sheetReturnTo = null;
+  renderAllSongsSheetContent();
+  document.getElementById("sheet-backdrop").classList.remove("hidden");
+  document.getElementById("bottom-sheet").classList.remove("hidden");
+  document.getElementById("sheet-content").scrollTop = 0;
+  sheetOpen = true;
+}
+
+function renderAllSongsSheetContent() {
+  const content = document.getElementById("sheet-content");
+  const songs = Storage.getAllSongsWithCounts();
+
+  const listHtml = songs
+    .map(
+      ({ artist, title, count }) => `
+        <button class="all-tags-item" data-artist="${escapeHtml(artist || "")}" data-title="${escapeHtml(title)}">
+          <span class="all-tags-item-name">🎧 ${escapeHtml(buildSongLabel({ artist, title }))}</span>
+          <span class="all-tags-item-count">${count.toLocaleString()}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  content.innerHTML = `
+    <div class="story-spot-header">
+      <div class="story-spot-name">모든 노래</div>
+      <span class="story-spot-count">${songs.length}개의 곡</span>
+    </div>
+    <div class="all-tags-list">${listHtml || `<p class="story-list-empty">아직 곡 정보가 담긴 기억이 없습니다.</p>`}</div>
+  `;
+
+  content.querySelectorAll(".all-tags-item").forEach((btn) => {
+    btn.onclick = () => exploreSong(btn.dataset.artist || null, btn.dataset.title);
+  });
+}
+
 function renderYoutubeEmbed(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return "";

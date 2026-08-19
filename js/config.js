@@ -16,6 +16,10 @@ const CONFIG = {
   // 상단 해시태그 바에 노출할 개수 (많이 쓰인 순 상위 N개)
   TOP_HASHTAG_LIMIT: 20,
 
+  // 상단 바의 곡 칩에 노출할 개수 (해시태그보다 적게 — 보조 발견 경로라
+  // 메인 화면을 덜 차지하게 한다)
+  TOP_SONG_LIMIT: 8,
+
   // 신고 누적 시 자동 숨김(HIDDEN) 처리 기준
   REPORT_HIDE_THRESHOLD: 5,
 

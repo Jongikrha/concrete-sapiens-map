@@ -782,6 +782,27 @@ const Storage = {
     return this.getStoriesForSong(artist, title).length;
   },
 
+  _getSongCounts() {
+    const map = new Map();
+    this.getVisibleStories().forEach((s) => {
+      if (!s.musicTitle) return;
+      const key = this.normalizeSongKey(s.musicArtist, s.musicTitle);
+      const existing = map.get(key);
+      if (existing) existing.count += 1;
+      else map.set(key, { artist: s.musicArtist || null, title: s.musicTitle, count: 1 });
+    });
+    return [...map.values()].sort((a, b) => b.count - a.count);
+  },
+
+  getTopSongs(limit = 30) {
+    return this._getSongCounts().slice(0, limit);
+  },
+
+  // 상단 바의 "더보기" 시트용 — 개수 제한 없이 전체 곡을 많이 남겨진 순으로.
+  getAllSongsWithCounts() {
+    return this._getSongCounts();
+  },
+
   /**
    * API 키 없이 쓸 수 있는 유튜브 oEmbed 원본 응답(제목 + 채널명)을 가져온다.
    * fetchYoutubeTitle/fetchYoutubeOEmbed가 공유해서 쓴다.

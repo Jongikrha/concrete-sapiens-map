@@ -661,3 +661,26 @@ test("getStoriesForSong은 곡명이 없으면 빈 배열을 반환한다", () =
   assert.deepEqual(Storage.getStoriesForSong("Artist", ""), []);
   assert.deepEqual(Storage.getStoriesForSong("Artist", null), []);
 });
+
+test("getTopSongs는 같은 곡(아티스트+곡명 정규화 기준)을 하나로 묶어 기억 개수 내림차순으로 반환한다", () => {
+  Storage._setCache([
+    createStory({ id: "s1", musicArtist: "아이유", musicTitle: "밤편지" }),
+    createStory({ id: "s2", musicArtist: " 아이유 ", musicTitle: "밤편지" }),
+    createStory({ id: "s3", musicArtist: "성시경", musicTitle: "두 사람" }),
+    createStory({ id: "s4", musicArtist: null, musicTitle: null }),
+  ]);
+  assert.deepEqual(Storage.getTopSongs(), [
+    { artist: "아이유", title: "밤편지", count: 2 },
+    { artist: "성시경", title: "두 사람", count: 1 },
+  ]);
+});
+
+test("getTopSongs는 limit만큼만 반환하고, getAllSongsWithCounts는 제한 없이 전체를 반환한다", () => {
+  Storage._setCache([
+    createStory({ id: "s1", musicArtist: "A", musicTitle: "1" }),
+    createStory({ id: "s2", musicArtist: "B", musicTitle: "2" }),
+    createStory({ id: "s3", musicArtist: "C", musicTitle: "3" }),
+  ]);
+  assert.equal(Storage.getTopSongs(2).length, 2);
+  assert.equal(Storage.getAllSongsWithCounts().length, 3);
+});
