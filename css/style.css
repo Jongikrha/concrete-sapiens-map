@@ -353,6 +353,35 @@ body {
 }
 
 /* ------------------------------------------------------------
+   워드마크 아래 박스 — 왼쪽 전체 기억 수 + 오른쪽 태그/곡 두 줄
+   ------------------------------------------------------------ */
+.top-panel {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(244, 243, 239, 0.92);
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-sheet);
+  padding: 16px 20px;
+}
+
+.top-panel-rows {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hashtag-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  background: var(--cs-gray);
+}
+
+/* ------------------------------------------------------------
    해시태그 칩
    ------------------------------------------------------------ */
 .hashtag-bar {
@@ -626,16 +655,19 @@ body {
 }
 
 /* ------------------------------------------------------------
-   전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
+   전체 등록된 기억 수 (박스 왼쪽, 숫자 큼직하게 + 설명 두 줄)
    ------------------------------------------------------------ */
 .total-count-banner {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  width: 84px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
+  text-align: left;
   transition: opacity 0.15s;
 }
 
@@ -646,14 +678,16 @@ body {
 .total-count-num {
   font-family: var(--font-sans);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 26px;
+  line-height: 1.1;
   color: #FF5A3C;
 }
 
 .total-count-suffix {
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 12.5px;
+  font-size: 12px;
+  line-height: 1.3;
   color: #555555;
 }
 
@@ -965,22 +999,14 @@ body {
      UI에 가려 안 보인다는 피드백(2026-08-13) — 여유를 더 준다. */
   bottom: 36px;
   left: 16px;
+  /* 버튼이 4개(내 주변/시간여행/어딘가의 기억/내 기억)로 늘면서 좁은
+     화면에서 오른쪽으로 넘칠 수 있어(2026-08-13) — 폭을 화면 안으로
+     제한하고 넘치면 다음 줄로 감싼다. */
   right: 16px;
-  /* 좁은 화면에선 left/right 여백 안으로 줄어들고, 넓은 화면(데스크톱)에선
-     내용 크기만큼만 차지하고 가운데 정렬 — 창 끝까지 늘어나 커 보이던
-     문제 수정(2026-08-19, 예전 칩 버튼 크기감으로 복원). */
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto;
   z-index: 20;
   display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 5px;
-  background: rgba(244, 243, 239, 0.95);
-  border: 1px solid var(--cs-gray);
-  border-radius: var(--cs-radius-chip);
-  box-shadow: 0 4px 16px rgba(47, 48, 49, 0.12);
+  flex-wrap: wrap;
+  gap: 8px;
   transition: bottom 0.2s ease;
 }
 
@@ -990,49 +1016,26 @@ body {
   bottom: 154px;
 }
 
-.tool-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 16px;
-  background: var(--cs-gray);
-}
-
 .tool-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  flex: 1 1 0;
-  min-width: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--cs-gray);
+  background: rgba(244, 243, 239, 0.92);
   color: var(--cs-black);
   font-family: var(--font-sans);
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 9px 4px;
+  font-size: 13px;
+  padding: 9px 16px;
   border-radius: var(--cs-radius-chip);
   cursor: pointer;
   transition: background var(--cs-transition-fast);
 }
 
-.tool-btn-icon {
-  flex-shrink: 0;
-  width: 13px;
-  height: 13px;
-}
-
 .tool-btn:hover {
-  background: rgba(47, 48, 49, 0.06);
+  background: var(--cs-paper);
 }
 
-/* 4개 항목 중 가장 긴 라벨이라(2026-08-19) 살짝 더 넓게 잡는다. */
 .tool-btn--accent {
-  flex: 1.25 1 0;
   background: var(--cs-black);
   color: var(--cs-paper);
+  border-color: var(--cs-black);
 }
 
 .tool-btn--accent:hover {
@@ -1042,6 +1045,7 @@ body {
 .tool-btn--active {
   background: var(--cs-memory-core);
   color: var(--cs-paper);
+  border-color: var(--cs-memory-core);
 }
 
 .tool-btn--active:hover {

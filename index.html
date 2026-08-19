@@ -64,13 +64,20 @@
         </div>
       </div>
 
-      <!-- 전체 등록된 기억 수 — 워드마크 바로 아래, 숫자만 코랄 오렌지로 강조 -->
-      <div class="total-count-banner hidden" id="total-count-banner"></div>
-      <!-- 해시태그 칩 (많이 쓰인 순 상위 5개 + 더보기) -->
-      <div class="hashtag-bar" id="hashtag-chips"></div>
-      <!-- 많이 등록된 곡 칩 — 해시태그와 같은 줄에 이어 붙이면 화면 폭에 따라
-           줄바꿈 위치가 들쭉날쭉해서, 항상 별도의 줄로 분리한다(2026-08-19). -->
-      <div class="hashtag-bar" id="song-chips"></div>
+      <!-- 워드마크 아래 박스 — 왼쪽에 전체 기억 수, 오른쪽에 태그/곡 두 줄
+           (2026-08-19, 디자인 시안 반영). 지도 위에 떠 있던 칩들을 카드
+           하나로 묶어 가독성을 높인다. -->
+      <div class="top-panel">
+        <!-- 전체 등록된 기억 수 — 숫자만 코랄 오렌지로 강조 -->
+        <div class="total-count-banner hidden" id="total-count-banner"></div>
+        <div class="top-panel-rows">
+          <!-- 해시태그 칩 (많이 쓰인 순 상위 5개 + 더보기) -->
+          <div class="hashtag-bar" id="hashtag-chips"></div>
+          <!-- 많이 등록된 곡 칩 — 해시태그와 같은 줄에 이어 붙이면 화면 폭에 따라
+               줄바꿈 위치가 들쭉날쭉해서, 항상 별도의 줄로 분리한다(2026-08-19). -->
+          <div class="hashtag-bar" id="song-chips"></div>
+        </div>
+      </div>
       <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
       <div class="filter-banner hidden" id="filter-banner"></div>
 
@@ -109,24 +116,10 @@
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
-      <button class="tool-btn" id="btn-my-location">
-        <svg class="tool-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        내 주변
-      </button>
-      <span class="tool-divider" aria-hidden="true"></span>
-      <button class="tool-btn" id="btn-timeslider">
-        <svg class="tool-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg>
-        시간여행
-      </button>
-      <button class="tool-btn tool-btn--accent" id="btn-random">
-        <svg class="tool-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="3" x2="10.5" y2="13.5"></line><polygon points="21 3 14 21 10.5 13.5 3 10 21 3"></polygon></svg>
-        어딘가의 기억
-      </button>
-      <span class="tool-divider" aria-hidden="true"></span>
-      <button class="tool-btn" id="btn-my-memory">
-        <svg class="tool-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        내 기억
-      </button>
+      <button class="tool-btn" id="btn-my-location">내 주변</button>
+      <button class="tool-btn" id="btn-timeslider">시간여행</button>
+      <button class="tool-btn tool-btn--accent" id="btn-random">어딘가의 기억</button>
+      <button class="tool-btn" id="btn-my-memory">내 기억</button>
     </div>
 
     <!-- Story Bottom Sheet -->

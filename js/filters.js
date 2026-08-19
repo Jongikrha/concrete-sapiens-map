@@ -77,6 +77,13 @@ function renderHashtagChips() {
   promptChip.onclick = openTodayMission;
   wrap.appendChild(promptChip);
 
+  // "오늘의 기억/미션" 칩과 태그 칩 구간을 시각적으로 나눈다(2026-08-19,
+  // 디자인 시안 반영).
+  const tagDivider = document.createElement("span");
+  tagDivider.className = "hashtag-divider";
+  tagDivider.setAttribute("aria-hidden", "true");
+  wrap.appendChild(tagDivider);
+
   const allTags = Storage.getAllHashtagsWithCounts();
   const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
   topTags.forEach(({ tag }) => {
