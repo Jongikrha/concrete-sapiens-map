@@ -51,6 +51,20 @@ const SIDO_ABBR = [
   ["제주특별자치도", "제주"],
 ];
 
+// SIDO_ABBR 중 그 자체로 이미 "도시" 단위인 광역시/특별시/세종 — getCityLabel()이
+// 이 목록에 있으면 다음 토큰(구)을 안 보고 시/도명 자체를 도시명으로 쓴다.
+const SIDO_IS_CITY_LEVEL = new Set([
+  "서울특별시",
+  "부산광역시",
+  "대구광역시",
+  "인천광역시",
+  "전남광주통합특별시",
+  "광주광역시",
+  "대전광역시",
+  "울산광역시",
+  "세종특별자치시",
+]);
+
 // 오늘의 질문 프롬프트 목록 (매일 자정에 하나씩 결정론적으로 노출) —
 // 데이터 의존 없음. 한 번 만들었다가(2026-08-11) 없앴는데(2026-08-12),
 // 해시태그 칩과 같은 크기의 칩으로 다시 살렸다(2026-08-14).
@@ -515,7 +529,16 @@ const Storage = {
   },
 
   getGroupedByPlace() {
-    const stories = this.getVisibleStories();
+    return this.groupStoriesByPlace(this.getVisibleStories());
+  },
+
+  /**
+   * getGroupedByPlace()의 그룹핑 로직 본체 — 스토리 배열을 인자로 받도록
+   * 일반화해서, 전체 지도가 아니라 "내가 남긴 기억"처럼 이미 걸러낸
+   * 부분집합도 같은 방식으로 장소 단위로 묶을 수 있게 한다(js/recall.js
+   * 별자리 기능에서 재사용, 2026-08-19).
+   */
+  groupStoriesByPlace(stories) {
     const groups = {};
 
     stories.forEach((story) => {
@@ -634,6 +657,29 @@ const Storage = {
       }
     }
     return address;
+  },
+
+  /**
+   * "서울·부산·경주" 같은 도시 단위 요약 문구(js/recall.js 별자리 기능)에
+   * 쓰는 도시명 추출 — abbreviateAddress()는 시/도 레벨까지만 축약해서
+   * "경상북도 경주시..."가 "경북 경주시..."로만 줄고 "경주"까지는 안
+   * 나온다. 광역시/특별시/세종처럼 이미 시/도 자체가 도시 단위인 곳은
+   * SIDO_ABBR 축약형을 그대로 쓰고, 도(경기·강원·충청·전라·경상·제주)는
+   * 그다음 토큰(시/군)에서 "시"/"군" 접미사를 떼어 도시명으로 쓴다.
+   */
+  getCityLabel(address) {
+    if (!address) return null;
+    const tokens = address.trim().split(/\s+/);
+    if (tokens.length === 0) return null;
+
+    for (const [full, short] of SIDO_ABBR) {
+      if (tokens[0] !== full) continue;
+      if (SIDO_IS_CITY_LEVEL.has(full)) return short;
+      const next = tokens[1];
+      if (!next) return short;
+      return next.replace(/(시|군)$/, "") || next;
+    }
+    return null;
   },
 
   /**

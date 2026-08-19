@@ -179,6 +179,35 @@
     <div class="overlay hidden" id="search-nearby-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="search-nearby-panel"></div></div>
     </div>
+
+    <!-- 기억산책 진입 선택지 — 하단 "내 기억" 버튼 클릭 시 뜬다. 1단계(지도에서
+         보기/기억산책), 2단계(내 기억/전체 범위) 모두 같은 패널을 재사용한다. -->
+    <div class="overlay hidden" id="recall-choice-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="recall-choice-panel"></div></div>
+    </div>
+
+    <!-- 기억산책 / 회상 모드 세션 — 진입하면 검색창/해시태그/툴바 등 평소
+         UI를 지우고(#app.recall-chrome-hidden) 이 셸 안에서 별자리 개요 →
+         몰입 리빌(점 하나 + 카드)까지 이어진다. -->
+    <div class="recall-session hidden" id="recall-session">
+      <button type="button" class="recall-exit-btn" id="recall-exit-btn" aria-label="회상 모드 종료">✕</button>
+
+      <div class="recall-constellation hidden" id="recall-constellation">
+        <canvas class="recall-constellation-canvas" id="recall-constellation-canvas" width="300" height="300"></canvas>
+        <p class="recall-constellation-fact" id="recall-constellation-fact"></p>
+        <div class="recall-constellation-actions">
+          <button type="button" class="btn-primary" id="recall-walk-start-btn">산책 시작</button>
+          <button type="button" class="tool-btn" id="recall-share-btn">나의 기억 지도 저장/공유</button>
+        </div>
+      </div>
+
+      <div class="recall-card hidden" id="recall-card">
+        <p class="recall-card-yearplace" id="recall-card-yearplace"></p>
+        <p class="story-content" id="recall-card-content"></p>
+        <p class="recall-card-music hidden" id="recall-card-music"></p>
+        <button type="button" class="btn-primary" id="recall-card-next-btn">다음 기억으로</button>
+      </div>
+    </div>
   </div>
 
   <!-- API 키 미설정 시 안내 -->
@@ -222,6 +251,7 @@
   <script src="js/filters.js"></script>
   <script src="js/search.js"></script>
   <script src="js/mymemory.js"></script>
+  <script src="js/recall.js"></script>
   <script>
     if (
       !CONFIG.KAKAO_APP_KEY ||

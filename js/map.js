@@ -209,6 +209,7 @@ function initMap() {
   geocoderService = new kakao.maps.services.Geocoder();
 
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
+    if (recallSessionOpen) return;
     clearSearchPin();
     if (sheetOpen) {
       closeSheetToUnfiltered();

@@ -707,3 +707,40 @@ test("suggestSongMatch는 곡명이 2자 미만이거나 겹치는 게 없으면
   assert.equal(Storage.suggestSongMatch("누군가", "전혀다른곡"), null);
   assert.equal(Storage.suggestSongMatch(null, ""), null);
 });
+
+test("groupStoriesByPlace는 인자로 받은 스토리 배열만 장소 단위로 묶는다(getVisibleStories 전체가 아님)", () => {
+  const included = createStory({ id: "included", placeId: "p1", lat: 37.1, lng: 127.1 });
+  const excluded = createStory({ id: "excluded", placeId: "p1", lat: 37.1, lng: 127.1 });
+  Storage._setCache([included, excluded]);
+
+  const groups = Storage.groupStoriesByPlace([included]);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].stories.map((s) => s.id), ["included"]);
+});
+
+test("getGroupedByPlace는 groupStoriesByPlace(getVisibleStories())와 동일한 결과를 준다", () => {
+  Storage._setCache([
+    createStory({ id: "a", placeId: "p1", lat: 37.1, lng: 127.1 }),
+    createStory({ id: "b", placeId: "p2", lat: 37.2, lng: 127.2 }),
+  ]);
+  assert.deepEqual(Storage.getGroupedByPlace(), Storage.groupStoriesByPlace(Storage.getVisibleStories()));
+});
+
+test("getCityLabel은 광역시/특별시/세종이면 그 축약형 자체를 도시명으로 반환한다", () => {
+  assert.equal(Storage.getCityLabel("서울특별시 마포구 잔다리로 24"), "서울");
+  assert.equal(Storage.getCityLabel("부산광역시 해운대구 1"), "부산");
+  assert.equal(Storage.getCityLabel("세종특별자치시 1"), "세종");
+});
+
+test("getCityLabel은 도(道) 단위 주소면 다음 토큰(시/군)에서 접미사를 뗀 걸 도시명으로 반환한다", () => {
+  assert.equal(Storage.getCityLabel("경상북도 경주시 1"), "경주");
+  assert.equal(Storage.getCityLabel("경기도 성남시 분당구 판교역로 1"), "성남");
+  assert.equal(Storage.getCityLabel("강원도 춘천시 1"), "춘천");
+  assert.equal(Storage.getCityLabel("제주특별자치도 서귀포시 1"), "서귀포");
+});
+
+test("getCityLabel은 매칭되는 시/도가 없거나 주소가 없으면 null을 반환한다", () => {
+  assert.equal(Storage.getCityLabel("어딘가 1길 1"), null);
+  assert.equal(Storage.getCityLabel(null), null);
+  assert.equal(Storage.getCityLabel(""), null);
+});
