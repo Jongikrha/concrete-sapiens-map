@@ -87,6 +87,7 @@ body {
      (모든 걸 하나의 옅은 색으로 뭉개는 게 아니라), 옅은 지도 타일은 더
      흐릿해지면서도 마커의 orange 톤은 상대적으로 또렷하게 남는다. */
   filter: saturate(0.6) brightness(1.05) contrast(0.95);
+  transition: filter 0.6s ease;
 }
 
 /* 지도를 클릭했을 때 "도장 찍힌" 느낌을 주는 짧은 링 애니메이션 */
@@ -1002,15 +1003,24 @@ body {
      UI에 가려 안 보인다는 피드백(2026-08-13) — 여유를 더 준다. */
   bottom: 36px;
   left: 16px;
-  /* 버튼이 4개(내 주변/시간여행/어딘가의 기억/내 기억)로 늘면서 좁은
-     화면에서 오른쪽으로 넘칠 수 있어(2026-08-13) — 폭을 화면 안으로
-     제한하고 넘치면 다음 줄로 감싼다. */
   right: 16px;
   z-index: 20;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   transition: bottom 0.2s ease, opacity var(--cs-transition-normal) ease;
+}
+
+/* 기억 라디오(구 어딘가의 기억)가 이 서비스의 핵심 기능이라, 같은 줄의
+   버튼 4개 중 하나가 아니라 위에 크게 두고 나머지는 그 아래 작은 보조
+   버튼 줄로 내렸다(2026-08-19 피드백 — "4개 중 하나"로는 눈에 안 띈다).
+   보조 버튼 줄은 좁은 화면에서 넘치면 다음 줄로 감싼다. */
+.bottom-toolbar-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* 기억산책(회상 모드) 진행 중엔 상단바/툴바를 옅게 지운다(js/recall.js
@@ -1021,6 +1031,17 @@ body {
 .recall-chrome-hidden .bottom-toolbar {
   opacity: 0;
   pointer-events: none;
+}
+
+/* 기억 라디오(어딘가의 기억, scope="songs") 재생 중엔 지도를 밤처럼
+   어둡게(2026-08-19) — 기억산책(내 기억)에는 안 준다. 개인적인 산책과
+   배경에 틀어놓는 라디오의 분위기를 다르게 두려는 의도(js/recall.js
+   enterRecallNightMode/exitRecallNightMode 참고). #map 위에 별도 dim
+   레이어를 덮으면 마커까지 통째로 흐려지는 문제가 있었던 전례가 있어
+   (위 #map 주석 참고), 같은 filter 기법을 밤 톤으로 더 강하게 준다 —
+   orange 마커는 상대적으로 여전히 도드라진다. */
+.recall-radio-night #map {
+  filter: saturate(0.25) brightness(0.4) contrast(1.15);
 }
 
 /* 미니 플레이어가 떠 있는 동안만 툴바를 그 위로 밀어올린다. 88px(미니
@@ -1048,14 +1069,29 @@ body {
   background: var(--cs-paper);
 }
 
-.tool-btn--accent {
+/* 기억 라디오 전용 — 나머지 3개보다 뚜렷이 크고 진하게(2026-08-19). */
+.tool-btn--radio {
   background: var(--cs-black);
   color: var(--cs-paper);
   border-color: var(--cs-black);
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(47, 48, 49, 0.28);
 }
 
-.tool-btn--accent:hover {
+.tool-btn--radio:hover {
   background: #1c1d1e;
+}
+
+/* 보조 버튼 줄(내 주변/시간여행/내 기억) — 기억 라디오보다 한 단계
+   작게 눌러서 위계를 준다. background/색은 .tool-btn 기본값을 그대로
+   쓰고, 크기만 줄인다(.tool-btn--active 등 상태 클래스와 배경이
+   부딪히지 않게 하기 위함). */
+.tool-btn--small {
+  padding: 6px 13px;
+  font-size: 12px;
+  min-height: 34px;
 }
 
 .tool-btn--active {

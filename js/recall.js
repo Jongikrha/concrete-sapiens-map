@@ -1,5 +1,5 @@
 // ============================================================
-// 기억산책 / 회상 모드 + 내 기억의 별자리 + 어딘가의 기억(랜덤 플레이리스트)
+// 기억산책 / 회상 모드 + 내 기억의 별자리 + 기억 라디오(랜덤 플레이리스트)
 // ============================================================
 // 이 파일은 두 진입점을 담당한다.
 //
@@ -9,11 +9,15 @@
 //    리빌 전에 별자리 개요(showConstellationOverview)를 먼저 보여준다.
 //    선택 패널은 filters.js의 openTodayMission()과 같은 패턴 —
 //    #recall-choice-panel의 innerHTML만 갈아끼운다.
-// 2) 하단 "어딘가의 기억" 버튼(startRandomMemoryPlaylist, scope="songs")
-//    — 내 기억을 포함한 전체 공개 기억 중 노래가 첨부된 것만 모아 랜덤
-//    플레이리스트처럼 계속 재생한다. 첫 곡만 "N초 후 재생됩니다" 예고를
-//    보여주고, 그다음부터는(곡이 끝나 자동으로 넘어가든 "다음 기억으로"를
-//    직접 누르든) 예고 없이 바로 재생된다 — 켜놓고 다른 일을 해도 되게.
+// 2) 하단 "기억 라디오" 버튼(startMemoryRadio, scope="songs", 구 "어딘가의
+//    기억") — 이 서비스의 핵심 기능으로 두기로 해서(2026-08-19) 툴바에서
+//    혼자 크게 뜬다. 내 기억을 포함한 전체 공개 기억 중 노래가 첨부된
+//    것만 모아 랜덤 플레이리스트처럼 계속 재생하고, 지도도 밤처럼
+//    어둡게 바꾼다(enterRecallNightMode — 기억산책엔 안 준다, 개인적
+//    산책과 배경 라디오의 분위기를 다르게 두려는 의도). 첫 곡만 "N초 후
+//    재생됩니다" 예고를 보여주고, 그다음부터는(곡이 끝나 자동으로
+//    넘어가든 "다음 기억으로"를 직접 누르든) 예고 없이 바로 재생된다 —
+//    켜놓고 다른 일을 해도 되게.
 //
 // 별자리에서 점을 잇는 선은 실제 카카오 지도가 아니라 이 파일 안의 별도
 // 캔버스에 그린다 — 2026-08-13에 실제 지도 위에서 점을 선으로 이었다가
@@ -23,7 +27,7 @@
 // 자동으로) 카드가 뜨고 음악이 흐른다. 무한 스크롤/추천 피드는 없다.
 
 let recallSessionOpen = false;
-let recallScope = null; // "mine"(기억산책) | "songs"(어딘가의 기억 플레이리스트)
+let recallScope = null; // "mine"(기억산책) | "songs"(기억 라디오)
 let recallPool = [];
 let recallQueue = []; // pop()으로 뒤에서 하나씩 꺼내 쓰는 셔플 큐
 let recallCurrentStory = null;
@@ -32,9 +36,9 @@ let recallDotMarker = null;
 // (hideRecallCard) 회상 모드가 끝나면 반드시 clearTimeout해서 엉뚱한
 // 타이밍에 다른 곡이 재생되지 않게 한다.
 let recallMusicTimer = null;
-// 어딘가의 기억 플레이리스트(scope="songs")에서 "예고 없이 바로 재생"
-// 구간에 들어섰는지 — 세션의 첫 곡 카드에서만 false, 그 뒤로는 계속 true.
-// beginRecallWalk()가 새 세션마다 리셋한다.
+// 기억 라디오(scope="songs")에서 "예고 없이 바로 재생" 구간에 들어섰는지
+// — 세션의 첫 곡 카드에서만 false, 그 뒤로는 계속 true. beginRecallWalk()가
+// 새 세션마다 리셋한다.
 let recallPlaylistStarted = false;
 // 별자리 개요에서 쓴 스토리 목록 — 공유 카드 생성 시 다시 계산하지 않고 재사용.
 let recallConstellationStories = null;
@@ -84,9 +88,10 @@ async function startRecallConstellation() {
   showConstellationOverview(stories);
 }
 
-// 하단 "어딘가의 기억" 버튼 — 내 기억을 포함한 전체 공개 기억 중 노래가
-// 첨부된 것만 모아 랜덤 플레이리스트처럼 계속 재생한다(2026-08-19).
-function startRandomMemoryPlaylist() {
+// 하단 "기억 라디오" 버튼(구 "어딘가의 기억") — 내 기억을 포함한 전체
+// 공개 기억 중 노래가 첨부된 것만 모아 랜덤 플레이리스트처럼 계속
+// 재생한다(2026-08-19).
+function startMemoryRadio() {
   const pool = Storage.getVisibleStories().filter((s) => Storage.extractYoutubeVideoId(s.youtubeUrl));
   if (!pool.length) {
     showToast("entry-toast", "아직 노래가 담긴 기억이 없어요", 2400);
@@ -99,7 +104,8 @@ function startRandomMemoryPlaylist() {
 
 // 진입 경로별 공통 처리 — 다른 필터 모드와 상호배타를
 // 유지하고(clearFilters 등 기존 함수 재사용), 평소 마커를 지우고 UI
-// 크롬을 페이드아웃한다.
+// 크롬을 페이드아웃한다. 기억 라디오(scope="songs")일 때만 지도를
+// 밤처럼 어둡게 한다.
 function openRecallSessionShell() {
   clearFilters();
   closeSlider();
@@ -108,11 +114,20 @@ function openRecallSessionShell() {
   clearSearchPin();
   recallSessionOpen = true;
   enterRecallImmersiveChrome();
+  if (recallScope === "songs") enterRecallNightMode();
   document.getElementById("recall-session").classList.remove("hidden");
 }
 
 function enterRecallImmersiveChrome() {
   document.getElementById("app").classList.add("recall-chrome-hidden");
+}
+
+function enterRecallNightMode() {
+  document.getElementById("app").classList.add("recall-radio-night");
+}
+
+function exitRecallNightMode() {
+  document.getElementById("app").classList.remove("recall-radio-night");
 }
 
 function exitRecallImmersiveChrome() {
@@ -331,10 +346,10 @@ function openRecallCard() {
       : "";
 
     // 기억산책(scope="mine")은 카드마다 매번 예고 후 재생 — 조용한 곳에서
-    // 갑자기 소리가 나면 놀랄 수 있어서다(2026-08-19 피드백). 어딘가의 기억
-    // 플레이리스트(scope="songs")는 "켜놓고 다른 일을 해도 되는" 경험이
-    // 목적이라 첫 곡에서만 예고하고, 그 뒤로는(곡이 끝나 자동으로 넘어가든
-    // 직접 다음으로 넘기든) 예고 없이 바로 이어 재생한다.
+    // 갑자기 소리가 나면 놀랄 수 있어서다(2026-08-19 피드백). 기억 라디오
+    // (scope="songs")는 "켜놓고 다른 일을 해도 되는" 경험이 목적이라 첫
+    // 곡에서만 예고하고, 그 뒤로는(곡이 끝나 자동으로 넘어가든 직접 다음
+    // 으로 넘기든) 예고 없이 바로 이어 재생한다.
     const isPlaylist = recallScope === "songs";
     const needsWarning = !isPlaylist || !recallPlaylistStarted;
 
@@ -384,6 +399,7 @@ function endRecallSession() {
   hideConstellationOverview();
   document.getElementById("recall-session").classList.add("hidden");
   exitRecallImmersiveChrome();
+  exitRecallNightMode();
 
   recallSessionOpen = false;
   recallScope = null;
@@ -482,8 +498,8 @@ function bindRecallEvents() {
   document.getElementById("recall-exit-btn").onclick = endRecallSession;
   document.getElementById("recall-card-next-btn").onclick = advanceRecall;
 
-  // 어딘가의 기억 플레이리스트에서만 곡이 끝나면 자동으로 다음 기억으로
-  // 넘어간다 — 기억산책(scope="mine")이나 일반 카드 재생 중엔 아무것도
+  // 기억 라디오에서만 곡이 끝나면 자동으로 다음 기억으로 넘어간다 —
+  // 기억산책(scope="mine")이나 일반 카드 재생 중엔 아무것도
   // 하지 않는다(storySheet.js의 미니 플레이어는 이 화면 밖에서도 쓰이므로,
   // 콜백 안에서 매번 지금이 정말 플레이리스트 세션인지 확인한다).
   setMiniPlayerEndedCallback(() => {

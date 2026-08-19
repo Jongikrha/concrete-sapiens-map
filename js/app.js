@@ -388,7 +388,7 @@ function bindUIEvents() {
   bindRecallEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
-  document.getElementById("btn-random").onclick = startRandomMemoryPlaylist;
+  document.getElementById("btn-random").onclick = startMemoryRadio;
   document.getElementById("btn-timeslider").onclick = toggleSlider;
   document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;
   document.getElementById("time-slider-close").onclick = closeSlider;
