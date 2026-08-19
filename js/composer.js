@@ -191,7 +191,10 @@ function openComposer(pin) {
   // 유튜브 URL을 붙이면 oEmbed로 원본 제목을 가져와 아티스트/곡명을 추정해
   // 미리 채워준다 — 제목 형식이 제각각이라 100% 정확하진 않아서 사용자가
   // 그대로 두거나 고쳐 쓰는 걸 전제로 한다(추측이 아니라 확인용 초안).
-  let lastFetchedVideoId = null;
+  // 수정 모드에서는 기존 URL의 videoId로 시작해야 한다 — null로 시작하면
+  // URL을 안 건드리고 다른 필드만 만졌다가 커서가 스쳐가도 "새 영상"으로
+  // 오인해 기존 아티스트/곡명을 지워버린다.
+  let lastFetchedVideoId = Storage.extractYoutubeVideoId((editing && editing.youtubeUrl) || "");
 
   function updateMusicMetaVisibility(videoId) {
     const box = document.getElementById("music-meta-preview");
@@ -207,11 +210,21 @@ function openComposer(pin) {
     hint.textContent = raw && !videoId ? "유튜브 링크 형식을 확인해주세요." : "";
     updateMusicMetaVisibility(videoId);
 
+    if (videoId === lastFetchedVideoId) return;
     if (!videoId) {
       lastFetchedVideoId = null;
       return;
     }
-    if (videoId === lastFetchedVideoId) return;
+
+    // 링크가 가리키는 영상 자체가 바뀌었다 — 이전 영상에 대해 채워졌거나
+    // 사용자가 손댔던 아티스트/곡명은 이제 새 영상과 무관하니 지워서,
+    // 아래 자동채움 가드(값이 비어있을 때만 채움)가 새 영상에도 다시
+    // 걸리게 한다. 그렇지 않으면 한 번이라도 손댄 뒤엔 다른 링크로
+    // 바꿔도 영영 자동채움이 안 되는 문제가 있었다(2026-08-19).
+    const artistInput = document.getElementById("input-music-artist");
+    const titleInput = document.getElementById("input-music-title");
+    if (artistInput) artistInput.value = "";
+    if (titleInput) titleInput.value = "";
     lastFetchedVideoId = videoId;
 
     Storage.fetchYoutubeOEmbed(videoId).then((oembed) => {
