@@ -2937,12 +2937,16 @@ button.story-place-line:hover {
 /* 회상 카드 — 나머지 UI는 다 지운 채 지도 위에 뜨는 카드라, 시트와
    달리 화면 하단에 살짝 띄운 독립된 카드로 둔다(지도가 카드 뒤로
    계속 보이게). 본문 타이포는 기억 열람 시트의 .story-content를
-   그대로 재사용한다(같은 밝은 카드 배경이라 색이 그대로 맞는다). */
+   그대로 재사용한다(같은 밝은 카드 배경이라 색이 그대로 맞는다).
+   전역 .hidden은 display:none !important라 트랜지션이 안 먹혀서(다른
+   오버레이들도 실제로는 즉시 나타남/사라짐) 이 카드는 대신 opacity/
+   transform만으로 숨김을 표현한다 — 살며시 떠오르는 연출을 위해
+   (2026-08-19 피드백). pointer-events는 .recall-session > *(자식 전체
+   auto)보다 확실히 이기도록 id 선택자로 지정한다. */
 .recall-card {
   position: absolute;
   left: 50%;
   bottom: 56px;
-  transform: translateX(-50%);
   width: min(380px, calc(100vw - 32px));
   max-height: 60vh;
   overflow-y: auto;
@@ -2950,6 +2954,22 @@ button.story-place-line:hover {
   border-radius: var(--cs-radius-sheet);
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
   padding: 28px 26px 24px;
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.recall-card.recall-card--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#recall-card {
+  pointer-events: none;
+}
+
+#recall-card.recall-card--visible {
+  pointer-events: auto;
 }
 
 .recall-card-yearplace {

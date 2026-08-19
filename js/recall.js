@@ -22,6 +22,10 @@ let recallPool = [];
 let recallQueue = []; // pop()으로 뒤에서 하나씩 꺼내 쓰는 셔플 큐
 let recallCurrentStory = null;
 let recallDotMarker = null;
+// "5초 후 재생됩니다" 예고 후 실제 재생을 거는 타이머 — 카드가 바뀌거나
+// (hideRecallCard) 회상 모드가 끝나면 반드시 clearTimeout해서 엉뚱한
+// 타이밍에 다른 곡이 재생되지 않게 한다.
+let recallMusicTimer = null;
 // 별자리 개요에서 쓴 스토리 목록 — 공유 카드 생성 시 다시 계산하지 않고 재사용.
 let recallConstellationStories = null;
 
@@ -280,13 +284,13 @@ function showNextRecallMemory() {
   placeRecallDot(story);
 
   // 점만 띄우고 눌러야 카드가 열리면 "어딜 눌러야 할지 모르겠다"는
-  // 피드백이 있어(2026-08-19), 지도 이동이 끝나는 타이밍(flyToStory와
-  // 동일한 250ms 관례)에 맞춰 카드를 바로 자동으로 연다. 그사이 사용자가
+  // 피드백이 있어(2026-08-19), 지도 이동을 잠깐 지켜본 뒤 카드를 자동으로
+  // 연다(500ms — flyToStory의 250ms 관례보다 여유를 뒀다). 그사이 사용자가
   // "다음 기억으로"를 연타하거나 회상 모드를 나갔으면 이 타이머는 무시한다
   // (recallCurrentStory가 이미 바뀌었거나 세션이 닫혔는지로 판단).
   setTimeout(() => {
     if (recallSessionOpen && recallCurrentStory === story) openRecallCard();
-  }, 250);
+  }, 500);
 }
 
 function placeRecallDot(story) {
@@ -316,6 +320,10 @@ function openRecallCard() {
   document.getElementById("recall-card-content").textContent = story.content;
 
   const musicEl = document.getElementById("recall-card-music");
+  if (recallMusicTimer) {
+    clearTimeout(recallMusicTimer);
+    recallMusicTimer = null;
+  }
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (videoId) {
     const label = story.musicTitle
@@ -323,24 +331,37 @@ function openRecallCard() {
         ? `${story.musicArtist} — ${story.musicTitle}`
         : story.musicTitle
       : "노래";
-    musicEl.textContent = `🎵 ${label}`;
-    musicEl.classList.remove("hidden");
     const musicLabel = story.musicTitle
       ? story.musicArtist
         ? `${story.musicArtist} · ${story.musicTitle}`
         : story.musicTitle
       : "";
-    playMiniPlayerVideo(videoId, musicLabel);
+    // 조용한 방/도서관 같은 데서 볼 수도 있어, 카드가 뜨자마자 바로 소리가
+    // 나면 놀랄 수 있다(2026-08-19 피드백) — 재생 예고만 먼저 보여주고
+    // 5초 뒤에 실제로 튼다. 그사이 다음 기억으로 넘어가거나 회상 모드를
+    // 나갔으면(recallCurrentStory가 바뀌었거나 세션 종료) 재생하지 않는다.
+    musicEl.textContent = `🎵 ${label} · 5초 후 재생됩니다`;
+    musicEl.classList.remove("hidden");
+    recallMusicTimer = setTimeout(() => {
+      recallMusicTimer = null;
+      if (!recallSessionOpen || recallCurrentStory !== story) return;
+      musicEl.textContent = `🎵 ${label}`;
+      playMiniPlayerVideo(videoId, musicLabel);
+    }, 5000);
   } else {
     musicEl.textContent = "";
     musicEl.classList.add("hidden");
   }
 
-  document.getElementById("recall-card").classList.remove("hidden");
+  document.getElementById("recall-card").classList.add("recall-card--visible");
 }
 
 function hideRecallCard() {
-  document.getElementById("recall-card").classList.add("hidden");
+  document.getElementById("recall-card").classList.remove("recall-card--visible");
+  if (recallMusicTimer) {
+    clearTimeout(recallMusicTimer);
+    recallMusicTimer = null;
+  }
 }
 
 function advanceRecall() {
