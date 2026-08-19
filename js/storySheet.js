@@ -617,10 +617,14 @@ function renderYoutubeEmbed(story) {
     : "";
   return `
     <div class="story-youtube" data-video-id="${videoId}" data-music-label="${escapeHtml(musicLabel)}">
-      <button type="button" class="story-youtube-thumb ${playing ? "story-youtube-thumb--playing" : ""}" style="background-image:url('https://i.ytimg.com/vi/${videoId}/hqdefault.jpg')" aria-label="${playing ? "노래 정지" : "노래 재생"}">
+      <button type="button" class="story-youtube-thumb ${playing ? "story-youtube-thumb--playing" : ""}" aria-label="${playing ? "노래 정지" : "노래 재생"}">
         <span class="story-youtube-play">${playing ? "⏸" : "▶"}</span>
       </button>
-      ${musicLabel ? `<div class="story-youtube-label">🎧 ${escapeHtml(musicLabel)}</div>` : ""}
+      <div class="story-youtube-info">
+        ${story.musicArtist ? `<p class="story-youtube-artist">${escapeHtml(story.musicArtist)}</p>` : ""}
+        <p class="story-youtube-title">${story.musicTitle ? escapeHtml(story.musicTitle) : "🎧 노래 재생하기"}</p>
+      </div>
+      <div class="story-youtube-deco" aria-hidden="true"></div>
     </div>
   `;
 }

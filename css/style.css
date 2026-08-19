@@ -1569,64 +1569,104 @@ button.story-place-line:hover {
   white-space: pre-wrap;
 }
 
+/* 유튜브 썸네일(i.ytimg.com 이미지)은 카드 안에서 영상이 재생되는 게
+   아니라 하단 미니 플레이어로 재생을 위임하는 구조라 오해를 부른다는
+   피드백으로, 이미지 대신 곡 정보를 보여주는 카드형 UI로 교체(2026-08-19).
+   장식용 동심원은 순수 CSS 그라디언트라 이미지 요청이 없다. */
 .story-youtube {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 10px;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 14px;
-  background: var(--cs-map-gray);
+  background: var(--cs-paper);
+  border: 1px solid var(--cs-map-gray);
 }
 
 .story-youtube-thumb {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--cs-text-main);
+  background: transparent;
   padding: 0;
   cursor: pointer;
-  background-size: cover;
-  background-position: center;
 }
 
 .story-youtube-play {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font-size: 18px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--cs-text-main);
   /* ▶ 글리퍼는 시각적으로 왼쪽에 무게가 쏠려 있어 살짝 밀어 중앙에
      맞춘다 — ⏸(재생 중)는 좌우 대칭이라 이 보정이 필요 없다. */
-  padding-left: 3px;
+  padding-left: 2px;
+}
+
+.story-youtube-thumb--playing {
+  border-color: var(--cs-orange);
+  background: var(--cs-orange);
 }
 
 .story-youtube-thumb--playing .story-youtube-play {
-  background: var(--cs-orange);
+  color: #fff;
   padding-left: 0;
 }
 
-.story-youtube-label {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  max-width: calc(100% - 20px);
-  padding: 4px 10px;
-  border-radius: var(--cs-radius-chip);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
+.story-youtube-info {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+}
+
+.story-youtube-artist {
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--cs-gray);
+  font-family: var(--font-pretendard);
+  font-size: 12.5px;
+  color: var(--cs-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.story-youtube-title {
+  margin: 0;
+  font-family: var(--font-maruburi);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cs-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.story-youtube-deco {
+  position: absolute;
+  z-index: 0;
+  right: -26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  opacity: 0.4;
   pointer-events: none;
+  background:
+    radial-gradient(circle at center, var(--cs-gray) 0 3px, transparent 3px),
+    repeating-radial-gradient(circle at center, transparent 0, transparent 9px, var(--cs-gray) 10px, transparent 11px);
 }
 
 .story-tags {
