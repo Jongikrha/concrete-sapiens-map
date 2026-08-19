@@ -37,7 +37,9 @@ function consumePendingDailyPrompt() {
 // ------------------------------------------------------------
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
+  const songWrap = document.getElementById("song-chips");
   wrap.innerHTML = "";
+  songWrap.innerHTML = "";
 
   if (activeYearFilter !== null || activeHashtagFilter || activeSongFilter) {
     const label = activeYearFilter !== null
@@ -76,11 +78,7 @@ function renderHashtagChips() {
   wrap.appendChild(promptChip);
 
   const allTags = Storage.getAllHashtagsWithCounts();
-  // 모바일 화면(<=600px, 다른 반응형 분기와 동일 기준)에서는 칩이 너무
-  // 많이 줄바꿈되지 않도록 20개 대신 10개만 먼저 보여주고 나머지는
-  // "더보기"로 넘긴다(2026-08-13).
-  const topLimit = window.innerWidth <= 600 ? 10 : CONFIG.TOP_HASHTAG_LIMIT;
-  const topTags = allTags.slice(0, topLimit);
+  const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
   topTags.forEach(({ tag }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
@@ -97,18 +95,17 @@ function renderHashtagChips() {
     wrap.appendChild(moreChip);
   }
 
-  // 해시태그 칩 뒤에 곡 칩을 이어 붙인다 — 곡 정보가 담긴 기억이 아직
-  // 없으면(자동 추출 기능 이전 기억이 많음) 조용히 아무것도 안 보여준다,
-  // 해시태그처럼 빈 칩까지 노출할 이유는 없다(2026-08-19).
+  // 해시태그 줄과 별도의 줄 — 곡 정보가 담긴 기억이 아직 없으면(자동 추출
+  // 기능 이전 기억이 많음) 조용히 아무것도 안 보여준다, 해시태그처럼 빈
+  // 칩까지 노출할 이유는 없다(2026-08-19).
   const allSongs = Storage.getAllSongsWithCounts();
-  const topSongLimit = window.innerWidth <= 600 ? 5 : CONFIG.TOP_SONG_LIMIT;
-  const topSongs = allSongs.slice(0, topSongLimit);
+  const topSongs = allSongs.slice(0, CONFIG.TOP_SONG_LIMIT);
   topSongs.forEach(({ artist, title }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
     chip.textContent = `🎧 ${buildSongLabel({ artist, title })}`;
     chip.onclick = () => exploreSong(artist, title);
-    wrap.appendChild(chip);
+    songWrap.appendChild(chip);
   });
 
   if (allSongs.length > topSongs.length) {
@@ -116,7 +113,7 @@ function renderHashtagChips() {
     moreSongChip.className = "chip chip--more";
     moreSongChip.textContent = "🎧 더보기";
     moreSongChip.onclick = openAllSongsSheet;
-    wrap.appendChild(moreSongChip);
+    songWrap.appendChild(moreSongChip);
   }
 
   renderTotalCountBanner();
