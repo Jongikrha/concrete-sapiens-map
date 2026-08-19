@@ -32,6 +32,15 @@ function consumePendingDailyPrompt() {
   return text;
 }
 
+// 모바일(기존 CSS 브레이크포인트 600px와 동일)에서는 해시태그/곡 칩이
+// 너무 많아 여러 줄로 넘치는 게 부담스럽다는 피드백(2026-08-19) — 데스크톱
+// 노출 개수(CONFIG.TOP_HASHTAG_LIMIT/TOP_SONG_LIMIT)와 별개로 좁은 화면만
+// 3개로 줄이고, 나머지는 기존처럼 "더보기" 칩으로 빠진다.
+const MOBILE_CHIP_LIMIT = 3;
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 600px)").matches;
+}
+
 // ------------------------------------------------------------
 // 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 미션" + 상위 N개 + 더보기)
 // ------------------------------------------------------------
@@ -78,7 +87,8 @@ function renderHashtagChips() {
   wrap.appendChild(promptChip);
 
   const allTags = Storage.getAllHashtagsWithCounts();
-  const topTags = allTags.slice(0, CONFIG.TOP_HASHTAG_LIMIT);
+  const tagLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_HASHTAG_LIMIT;
+  const topTags = allTags.slice(0, tagLimit);
   topTags.forEach(({ tag }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
@@ -99,7 +109,8 @@ function renderHashtagChips() {
   // 기능 이전 기억이 많음) 조용히 아무것도 안 보여준다, 해시태그처럼 빈
   // 칩까지 노출할 이유는 없다(2026-08-19).
   const allSongs = Storage.getAllSongsWithCounts();
-  const topSongs = allSongs.slice(0, CONFIG.TOP_SONG_LIMIT);
+  const songLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_SONG_LIMIT;
+  const topSongs = allSongs.slice(0, songLimit);
   topSongs.forEach(({ artist, title }) => {
     const chip = document.createElement("button");
     chip.className = "chip";
