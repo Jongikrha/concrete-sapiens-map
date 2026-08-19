@@ -388,6 +388,15 @@ body {
   pointer-events: none;
 }
 
+/* flex-wrap 줄바꿈 강제용 빈 요소(js/filters.js renderHashtagChips 참고) —
+   flex-basis:100%는 남은 폭과 무관하게 그 뒤 항목을 항상 다음 줄로
+   보낸다. */
+.hashtag-bar-break {
+  flex-basis: 100%;
+  width: 0;
+  height: 0;
+}
+
 .chip {
   pointer-events: auto;
   flex-shrink: 0;

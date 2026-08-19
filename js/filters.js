@@ -86,6 +86,17 @@ function renderHashtagChips() {
   promptChip.onclick = openTodayMission;
   wrap.appendChild(promptChip);
 
+  // 모바일은 "오늘의 기억/미션" 다음 줄에 해시태그가 오길 원해서
+  // (2026-08-20), flex-wrap이 폭에 따라 제멋대로 줄바꿈하지 않도록
+  // flex-basis:100%짜리 빈 요소로 강제로 줄을 바꾼다. 데스크톱은 기존
+  // 그대로 폭에 맞춰 자연스럽게 흐른다.
+  if (isMobileViewport()) {
+    const lineBreak = document.createElement("span");
+    lineBreak.className = "hashtag-bar-break";
+    lineBreak.setAttribute("aria-hidden", "true");
+    wrap.appendChild(lineBreak);
+  }
+
   const allTags = Storage.getAllHashtagsWithCounts();
   const tagLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_HASHTAG_LIMIT;
   const topTags = allTags.slice(0, tagLimit);
