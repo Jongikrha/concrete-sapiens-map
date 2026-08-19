@@ -965,14 +965,16 @@ body {
      UI에 가려 안 보인다는 피드백(2026-08-13) — 여유를 더 준다. */
   bottom: 36px;
   left: 16px;
-  /* 버튼이 4개(내 주변/시간여행/어딘가의 기억/내 기억)로 늘면서 좁은
-     화면에서 오른쪽으로 넘칠 수 있어(2026-08-13) — 폭을 화면 안으로
-     제한하고 넘치면 다음 줄로 감싼다. */
   right: 16px;
   z-index: 20;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  background: rgba(244, 243, 239, 0.95);
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-chip);
+  box-shadow: 0 4px 16px rgba(47, 48, 49, 0.12);
   transition: bottom 0.2s ease;
 }
 
@@ -982,26 +984,49 @@ body {
   bottom: 154px;
 }
 
+.tool-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  background: var(--cs-gray);
+}
+
 .tool-btn {
-  border: 1px solid var(--cs-gray);
-  background: rgba(244, 243, 239, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: 0;
+  border: none;
+  background: transparent;
   color: var(--cs-black);
   font-family: var(--font-sans);
-  font-size: 13px;
-  padding: 9px 16px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 9px 4px;
   border-radius: var(--cs-radius-chip);
   cursor: pointer;
   transition: background var(--cs-transition-fast);
 }
 
-.tool-btn:hover {
-  background: var(--cs-paper);
+.tool-btn-icon {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
 }
 
+.tool-btn:hover {
+  background: rgba(47, 48, 49, 0.06);
+}
+
+/* 4개 항목 중 가장 긴 라벨이라(2026-08-19) 살짝 더 넓게 잡는다. */
 .tool-btn--accent {
+  flex: 1.25 1 0;
   background: var(--cs-black);
   color: var(--cs-paper);
-  border-color: var(--cs-black);
 }
 
 .tool-btn--accent:hover {
@@ -1011,7 +1036,6 @@ body {
 .tool-btn--active {
   background: var(--cs-memory-core);
   color: var(--cs-paper);
-  border-color: var(--cs-memory-core);
 }
 
 .tool-btn--active:hover {
