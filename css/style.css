@@ -177,6 +177,13 @@ body {
 
 .search-box {
   flex: 1;
+  /* flex item의 기본 min-width는 auto(=콘텐츠 기준 최소 크기)라 flex:1이
+     있어도 원하는 만큼 안 줄어들 수 있다 — 아이폰 크롬에서 이 때문에
+     검색 버튼/계정 아바타가 화면 밖으로 밀려나 잘려 보이는 문제가
+     있었다(2026-08-20, 네이버 인앱 브라우저는 같은 WebKit이어도 이
+     계산이 달라 문제없이 보였음). 명시적으로 0으로 풀어서 남는 폭만큼만
+     차지하게 한다. */
+  min-width: 0;
   max-width: 380px;
   position: relative;
   pointer-events: auto;
