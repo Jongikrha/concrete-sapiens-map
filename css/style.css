@@ -1040,6 +1040,17 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
+/* 회상 세션(기억산책/기억 라디오, #app.recall-chrome-hidden) 동안은 화면
+   위쪽으로 옮긴다 — 원래 위치(bottom:88px)가 회상 카드 하단의 "다음
+   기억으로" 버튼과 겹쳐 안 보이는 문제가 있었다(2026-08-20 피드백).
+   회상 종료 시 카드가 있던 자리로 돌아가는 게 아니라 클래스만 빠지므로
+   별도 정리 코드가 필요 없다. 상단 ✕(recall-exit-btn, top:18px/40px)
+   보다 아래로 내려서 겹치지 않게 한다. */
+.recall-chrome-hidden .mini-player {
+  bottom: auto;
+  top: 70px;
+}
+
 .mini-player.hidden {
   display: none;
 }
