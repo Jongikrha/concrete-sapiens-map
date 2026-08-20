@@ -3282,16 +3282,6 @@ button.story-place-line:hover {
   color: var(--cs-text-muted);
 }
 
-.recall-card-music {
-  margin: 0;
-  font-size: 14px;
-  color: var(--cs-text-muted);
-}
-
-.recall-card-music:not(:empty) {
-  margin-bottom: 20px;
-}
-
 .recall-card .btn-primary {
   width: 100%;
 }

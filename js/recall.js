@@ -334,16 +334,15 @@ function openRecallCard() {
   }
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (videoId) {
-    // 화면 하단에 따로 뜨는 바 대신, 곡 정보 줄(musicEl) 바로 아래 카드 안에
-    // 넣는다(2026-08-20 피드백) — 회상 카드는 곡이 바뀔 때마다 항상 정지 후
-    // 다시 재생해서(advanceRecall의 stopMiniPlayer) 화면을 벗어나도 이어
-    // 듣는 시나리오가 없어, 시트 밖 상시 바로 뺄 이유가 없다.
+    // "🎵 아티스트 — 곡명" 텍스트 줄은 없앴다(2026-08-20 피드백) — 미니
+    // 플레이어 자체가 제목을 보여주는데 바로 위에 같은 정보가 텍스트로도
+    // 한 번 더 나오는 게 중복이었다. musicEl은 항상 hidden 상태로 두고
+    // (index.html 기본값) 미니 플레이어를 끼워 넣을 자리 표시로만 쓴다 —
+    // 화면 하단에 따로 뜨는 바 대신 여기(곡 정보가 있던 자리) 카드 안에
+    // 들어간다. 회상 카드는 곡이 바뀔 때마다 항상 정지 후 다시 재생해서
+    // (advanceRecall의 stopMiniPlayer) 화면을 벗어나도 이어 듣는 시나리오가
+    // 없어, 시트 밖 상시 바로 뺄 이유가 없다.
     attachMiniPlayerAfter(musicEl);
-    const label = story.musicTitle
-      ? story.musicArtist
-        ? `${story.musicArtist} — ${story.musicTitle}`
-        : story.musicTitle
-      : "노래";
     const musicLabel = story.musicTitle
       ? story.musicArtist
         ? `${story.musicArtist} · ${story.musicTitle}`
@@ -354,13 +353,13 @@ function openRecallCard() {
     // 갑자기 소리가 나면 놀랄 수 있어서다(2026-08-19 피드백). 기억 라디오
     // (scope="songs")는 "켜놓고 다른 일을 해도 되는" 경험이 목적이라 첫
     // 곡에서만 예고하고, 그 뒤로는(곡이 끝나 자동으로 넘어가든 직접 다음
-    // 으로 넘기든) 예고 없이 바로 이어 재생한다.
+    // 으로 넘기든) 예고 없이 바로 이어 재생한다. 텍스트 예고 문구는
+    // 없앴지만, 음소거 상태로 미리 재생해뒀다가 5초 뒤 음소거만 푸는
+    // 동작 자체는 그대로 유지한다(조용한 곳에서 갑자기 소리가 나지 않게).
     const isPlaylist = recallScope === "songs";
     const needsWarning = !isPlaylist || !recallPlaylistStarted;
 
     if (needsWarning) {
-      musicEl.textContent = `🎵 ${label} · 5초 후 재생됩니다`;
-      musicEl.classList.remove("hidden");
       // 실제 재생은 지금(카드가 뜨는 시점, 아직 탭의 유효기간 안) 음소거로
       // 미리 걸어두고, 5초 뒤엔 음소거만 푼다 — playMiniPlayerVideo 아래
       // unmuteMiniPlayerIfStillPlaying 설명 참고.
@@ -368,18 +367,13 @@ function openRecallCard() {
       recallMusicTimer = setTimeout(() => {
         recallMusicTimer = null;
         if (!recallSessionOpen || recallCurrentStory !== story) return;
-        musicEl.textContent = `🎵 ${label}`;
         unmuteMiniPlayerIfStillPlaying(videoId);
       }, 5000);
     } else {
-      musicEl.textContent = `🎵 ${label}`;
-      musicEl.classList.remove("hidden");
       playMiniPlayerVideo(videoId, musicLabel);
     }
     if (isPlaylist) recallPlaylistStarted = true;
   } else {
-    musicEl.textContent = "";
-    musicEl.classList.add("hidden");
     restoreMiniPlayerHome();
   }
 
