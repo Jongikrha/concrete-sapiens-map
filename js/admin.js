@@ -679,6 +679,7 @@ document.getElementById("admin-content").addEventListener("click", (e) => {
 });
 
 (async function boot() {
+  initFadeScrollbars();
   const outputs = await fetch(OUTPUTS_FILE).then((r) => r.json());
   Amplify.configure(outputs);
 

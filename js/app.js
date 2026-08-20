@@ -15,6 +15,7 @@ async function initApp() {
   // 직후 바로 곡을 누르면 아직 로딩 중이라 재생이 막히는 경우가 있었다
   // (2026-08-20 확인) — 다른 초기화와 병렬로 최대한 일찍 시작한다.
   loadYoutubeIframeApi();
+  initFadeScrollbars();
   await Storage.init();
   await Auth.init();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));

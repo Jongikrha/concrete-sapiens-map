@@ -1341,26 +1341,48 @@ body {
   padding: 4px 14px 28px 24px;
 }
 
-/* 스크롤바 숨김 — 스크롤이 있는 모달/시트 공통(.composer-card-inner,
-   .sheet-scroll, .search-area-card-inner). 원래는 가는 알약형 커스텀
-   스크롤바를 그렸는데(2026-08-14), 실기기(안드로이드 크롬 등)에서
-   ::-webkit-scrollbar의 폭(2.67px) 지정이 무시되고 브라우저 자체
-   최소 두께로 그려지면서 카드 둥근 모서리 밖으로 삐져나와 보이는
-   문제가 있었다(2026-08-20 제보 스크린샷 확인). 폭을 얇게 그리는
-   시도 대신 아예 안 그리는 쪽으로 — 스크롤 동작 자체는 그대로 살아
-   있고(터치 스와이프/휠), 이 모달들은 전부 손가락 스와이프로 넘기는
-   게 자연스러운 카드/시트 UI라 스크롤바가 없어도 낯설지 않다. */
+/* 스크롤 중에만 살짝 보이는 오버레이 스크롤바 — 서비스의 스크롤 가능한
+   컨테이너 전체(.composer-card-inner, .sheet-scroll,
+   .search-area-card-inner, .search-results, .recall-card,
+   .bulk-prompt-box) 공통. 원래는 가는 알약형 커스텀 ::-webkit-scrollbar
+   를 직접 그렸는데(2026-08-14), 실기기(안드로이드 크롬 등)에서 폭
+   지정(2.67px)이 무시되고 브라우저 자체 최소 두께로 그려지며 카드
+   둥근 모서리 밖으로 삐져나와 보이는 문제가 있었다(2026-08-20 제보
+   스크린샷 확인). 네이티브 스크롤바는 여기서 아예 숨기고, 실제 썸은
+   일반 DOM 엘리먼트로 js/scrollFade.js가 그려서 스크롤 중에만
+   페이드 인/아웃한다 — 플랫폼별 렌더링 차이가 없다. */
 .composer-card-inner,
 .sheet-scroll,
-.search-area-card-inner {
+.search-area-card-inner,
+.search-results,
+.recall-card,
+.bulk-prompt-box {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 .composer-card-inner::-webkit-scrollbar,
 .sheet-scroll::-webkit-scrollbar,
-.search-area-card-inner::-webkit-scrollbar {
+.search-area-card-inner::-webkit-scrollbar,
+.search-results::-webkit-scrollbar,
+.recall-card::-webkit-scrollbar,
+.bulk-prompt-box::-webkit-scrollbar {
   display: none;
+}
+
+.fade-scrollbar-thumb {
+  position: fixed;
+  width: 3px;
+  border-radius: var(--cs-radius-chip);
+  background: rgb(150, 150, 150);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 500;
+}
+
+.fade-scrollbar-thumb.is-visible {
+  opacity: 0.85;
 }
 
 /* ------------------------------------------------------------

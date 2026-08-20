@@ -360,6 +360,30 @@ body {
   margin-bottom: 8px;
   max-height: 320px;
   overflow-y: auto;
+  /* 네이티브 스크롤바는 숨기고, js/scrollFade.js가 그리는 공유 썸으로
+     대체한다 — 나머지 페이지(css/style.css)와 같은 이유
+     (2026-08-20, style.css의 "스크롤 중에만 살짝 보이는" 주석 참고). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bulk-prompt-box::-webkit-scrollbar {
+  display: none;
+}
+
+.fade-scrollbar-thumb {
+  position: fixed;
+  width: 3px;
+  border-radius: 999px;
+  background: rgb(150, 150, 150);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 500;
+}
+
+.fade-scrollbar-thumb.is-visible {
+  opacity: 0.85;
 }
 
 .bulk-prompt-box pre {
