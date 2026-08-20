@@ -11,6 +11,7 @@
 const MY_MEMORY_TITLES = {
   posted: "내가 남긴 기억",
   recalled: "나를 떠올린 기억",
+  overlap: "겹치는 기억",
   reacted: "내가 떠올린 기억",
   shared: "전달한 기억",
 };
@@ -18,6 +19,7 @@ const MY_MEMORY_TITLES = {
 const MY_MEMORY_EMPTY = {
   posted: "아직 남긴 기억이 없습니다.",
   recalled: "아직 다른 사람이 떠올린 내 기억이 없습니다.",
+  overlap: "아직 내 기억과 겹치는 다른 기억이 없습니다.",
   reacted: "아직 떠올린 기억이 없습니다.",
   shared: "아직 전달한 기억이 없습니다.",
 };
@@ -63,12 +65,14 @@ function _saveNotifSeenState(state) {
 async function refreshNotificationBadge() {
   const dot = document.getElementById("account-notif-dot");
   const recalledDot = document.getElementById("menu-recalled-dot");
+  const overlapDot = document.getElementById("menu-overlap-dot");
   if (!dot) return;
 
   const user = Auth.getCurrentUser();
   if (!user) {
     dot.classList.add("hidden");
     if (recalledDot) recalledDot.classList.add("hidden");
+    if (overlapDot) overlapDot.classList.add("hidden");
     _pendingNotifState = null;
     return;
   }
@@ -77,9 +81,10 @@ async function refreshNotificationBadge() {
   const seen = _getNotifSeenState();
   const currentState = {};
   let hasNew = false;
-  // "나를 떠올린 기억" 메뉴 항목 전용 — 새 반응만 추적한다(같은 장소/근처
-  // 발견은 이 항목과 무관해서 뺀다).
+  // "나를 떠올린 기억"/"겹치는 기억" 메뉴 항목 전용 — 각자 자기 원인만
+  // 추적한다(반응 vs 같은 장소·근처 새 기억).
   let hasNewReaction = false;
+  let hasNewOverlap = false;
   let seenUpdated = false;
 
   myStories.forEach((story) => {
@@ -101,17 +106,19 @@ async function refreshNotificationBadge() {
       // 확정 저장된다 — 아래 markNotificationsSeen 참고).
       seen[story.id] = { reactionCount, addressCount, nearbyYearCount: 0 };
       seenUpdated = true;
-      if (nearbyYearCount > 0) hasNew = true;
+      if (nearbyYearCount > 0) {
+        hasNew = true;
+        hasNewOverlap = true;
+      }
       return;
     }
     if (reactionCount > prev.reactionCount) hasNewReaction = true;
-    if (
-      reactionCount > prev.reactionCount ||
-      addressCount > prev.addressCount ||
+    if (addressCount > prev.addressCount || nearbyYearCount > (prev.nearbyYearCount || 0)) {
       // prev.nearbyYearCount가 없는(이 지표 도입 전에 저장된) 기록도
       // ||0로 0 기준 취급되어 위와 같은 원칙으로 동작한다.
-      nearbyYearCount > (prev.nearbyYearCount || 0)
-    ) {
+      hasNewOverlap = true;
+    }
+    if (reactionCount > prev.reactionCount || hasNewOverlap) {
       hasNew = true;
     }
   });
@@ -120,6 +127,7 @@ async function refreshNotificationBadge() {
   _pendingNotifState = currentState;
   dot.classList.toggle("hidden", !hasNew);
   if (recalledDot) recalledDot.classList.toggle("hidden", !hasNewReaction);
+  if (overlapDot) overlapDot.classList.toggle("hidden", !hasNewOverlap);
 }
 
 // 계정 메뉴를 열어야 "확인했다"로 치고 스냅샷을 저장한다 — 아바타만
@@ -129,6 +137,8 @@ function markNotificationsSeen() {
   document.getElementById("account-notif-dot").classList.add("hidden");
   const recalledDot = document.getElementById("menu-recalled-dot");
   if (recalledDot) recalledDot.classList.add("hidden");
+  const overlapDot = document.getElementById("menu-overlap-dot");
+  if (overlapDot) overlapDot.classList.add("hidden");
 }
 
 function renderAccountAvatar() {
@@ -185,6 +195,28 @@ async function buildMyMemoryList(kind) {
   if (kind === "recalled") {
     const posted = await buildMyMemoryList("posted");
     return posted.filter((s) => (s.reactionCount || 0) > 0);
+  }
+  // "겹치는 기억" — 내 기억과 같은 장소, 또는 반경 1000m 안에 같은 해를
+  // 남긴 다른 사람의 기억(아바타 알림 뱃지가 조용히 추적만 하던 두
+  // 원인을 실제로 확인할 수 있는 화면, 2026-08-20). 내가 같은 장소에
+  // 여러 기억을 남긴 경우 서로를 "겹친다"고 보여주면 이상해서
+  // isMyStory로 내 글은 걸러낸다.
+  if (kind === "overlap") {
+    const posted = await buildMyMemoryList("posted");
+    const seenIds = new Set();
+    const overlapping = [];
+    posted.forEach((story) => {
+      const matches = [
+        ...Storage.getStoriesAtSamePlace(story),
+        ...Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS),
+      ];
+      matches.forEach((s) => {
+        if (Storage.isMyStory(s.id) || seenIds.has(s.id)) return;
+        seenIds.add(s.id);
+        overlapping.push(s);
+      });
+    });
+    return overlapping;
   }
   if (kind === "reacted") return all.filter((s) => Storage.hasReacted(s.id));
   if (kind === "shared") return all.filter((s) => Storage.hasShared(s.id));
@@ -258,6 +290,7 @@ function bindAccountMenuEvents() {
   };
   document.getElementById("menu-posted").onclick = () => openMyMemoryList("posted");
   document.getElementById("menu-recalled").onclick = () => openMyMemoryList("recalled");
+  document.getElementById("menu-overlap").onclick = () => openMyMemoryList("overlap");
   document.getElementById("menu-reacted").onclick = () => openMyMemoryList("reacted");
   document.getElementById("menu-shared").onclick = () => openMyMemoryList("shared");
   document.getElementById("menu-changepw").onclick = () => {
