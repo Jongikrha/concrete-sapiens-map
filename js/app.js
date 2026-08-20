@@ -116,10 +116,8 @@ function renderRecentListItem(story, options = {}) {
 }
 
 // renderItemFn은 호출부마다 다른 카드 마크업(요약 리스트 항목 vs 기억
-// 카드 전체)을 그린다. cap은 호출부가 넘길 때만 적용(정렬 모드와
-// 무관 — "지금까지 쌓인 기억"의 디폴트가 역시간여행순이 된 뒤로도
-// 최대 50개 표시 관행은 그대로 유지해야 해서 정렬별 분기를 없앴다,
-// 2026-08-14).
+// 카드 전체)을 그린다. cap은 호출부가 넘길 때만 적용되고, "시점 미상"
+// (undated) 쪽에는 적용되지 않는다 — 아래로 계속 있다.
 function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
   const { dated, undated } = Storage.sortStoriesForDisplay(stories, sortMode);
   const shown = cap ? dated.slice(0, cap) : dated;
@@ -135,14 +133,30 @@ function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
 // 기억(실시간 피드)과 대비되는 "전체 역사를 훑어보는" 화면이라는
 // 정체성에 맞춘다. 아득한 과거부터 던지기보다 최근 과거부터 보여주고
 // 스크롤하며 더 옛날로 들어가는 편이 첫인상이 자연스럽다(2026-08-14).
+//
+// 처음엔 50개만 보여주고 "더 불러오기"로 50개씩 더 연다(2026-08-20 —
+// 예전엔 50개로 캡만 걸고 더 볼 방법이 없었는데, "전체 역사를 훑어보는"
+// 화면 취지상 캡만 있고 탈출구가 없는 게 오히려 어색하다는 피드백).
+// 오늘의 기억(todayVisibleCount)과 같은 패턴 — 정렬을 바꾸면 새 목록을
+// 보는 셈이라 50으로 리셋하고, 카드 상세로 들어갔다 뒤로가기로 돌아올
+// 때만 그 시점의 visibleCount를 이어받는다.
 let recentSort = "timetravel-reverse";
+let recentVisibleCount = 50;
+const RECENT_LOAD_MORE_STEP = 50;
 
 function openRecentMemoriesModal(opts = {}) {
   const panel = document.getElementById("recent-panel");
   const stories = Storage.getVisibleStories();
+  recentVisibleCount = opts.visibleCount || 50;
+
+  // buildSortedListHtml의 cap은 "시점 미상"엔 적용되지 않아 stories.length
+  // 전체와 비교하면 "더 볼 게 있는지"를 틀리게 판단할 수 있다 — dated만
+  // 따로 세어 정확히 비교한다.
+  const { dated } = Storage.sortStoriesForDisplay(stories, recentSort);
+  const hasMore = dated.length > recentVisibleCount;
 
   const listHtml = stories.length
-    ? buildSortedListHtml(stories, recentSort, renderRecentListItem, { cap: 50 })
+    ? buildSortedListHtml(stories, recentSort, renderRecentListItem, { cap: recentVisibleCount })
     : `<p class="recent-empty">아직 등록된 기억이 없습니다.</p>`;
 
   panel.innerHTML = `
@@ -152,19 +166,29 @@ function openRecentMemoriesModal(opts = {}) {
     </div>
     ${stories.length > 1 ? SORT_TOGGLE_HTML(recentSort) : ""}
     ${listHtml}
+    ${hasMore ? `<button class="recent-load-more" id="recent-load-more" type="button">더 불러오기 <span class="recent-load-more-chevron" aria-hidden="true">⌄</span></button>` : ""}
   `;
 
   panel.querySelector("#recent-close").onclick = closeRecentMemoriesModal;
 
   panel.querySelectorAll(".sort-btn").forEach((btn) => {
-    btn.onclick = () => { recentSort = btn.dataset.sort; openRecentMemoriesModal(); };
+    btn.onclick = () => { recentSort = btn.dataset.sort; openRecentMemoriesModal({ visibleCount: 50 }); };
   });
+
+  const loadMoreBtn = panel.querySelector("#recent-load-more");
+  if (loadMoreBtn) {
+    loadMoreBtn.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      openRecentMemoriesModal({ visibleCount: recentVisibleCount + RECENT_LOAD_MORE_STEP });
+      panel.scrollTop = scrollTop;
+    };
+  }
 
   panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeRecentMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, label: "지금까지 쌓인 기억" });
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, visibleCount: recentVisibleCount, label: "지금까지 쌓인 기억" });
     };
   });
 
@@ -267,7 +291,7 @@ function goBackFromSheet() {
   closeSheet();
   if (!returnTo) return;
   if (returnTo.kind === "recent") {
-    openRecentMemoriesModal({ scrollTop: returnTo.scrollTop });
+    openRecentMemoriesModal({ scrollTop: returnTo.scrollTop, visibleCount: returnTo.visibleCount });
   } else if (returnTo.kind === "today") {
     openTodayMemoriesModal({ scrollTop: returnTo.scrollTop, visibleCount: returnTo.visibleCount });
   } else if (returnTo.kind === "mymemory") {

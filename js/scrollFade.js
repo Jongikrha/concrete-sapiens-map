@@ -51,6 +51,19 @@ function handleAnyScroll(e) {
   updateFadeScrollbarThumb(el);
 }
 
+// "지금까지 쌓인 기억" 등 헤더(제목+닫기 버튼)가 스크롤 컨테이너 맨 위에
+// 같이 들어있는 모달은, 스크롤이 맨 위 근처일 때 썸이 그 헤더 높이까지
+// 올라가 닫기 버튼과 겹쳐 보였다(2026-08-20 제보). 컨테이너 바로 아래
+// 자식으로 헤더(.recent-header/.composer-header)가 있으면 그 높이만큼
+// 썸의 이동 구간을 아래로 밀어준다 — 헤더가 없는 컨테이너(기억 카드
+// 시트, 검색 결과 등)는 그대로 0.
+function getFadeScrollbarTopInset(el) {
+  const header = el.querySelector(":scope > .recent-header, :scope > .composer-header");
+  if (!header) return 0;
+  const style = getComputedStyle(header);
+  return header.offsetHeight + (parseFloat(style.marginBottom) || 0);
+}
+
 function updateFadeScrollbarThumb(el) {
   const { scrollTop, scrollHeight, clientHeight } = el;
   if (scrollHeight <= clientHeight + 1) {
@@ -59,10 +72,13 @@ function updateFadeScrollbarThumb(el) {
   }
 
   const rect = el.getBoundingClientRect();
+  const topInset = getFadeScrollbarTopInset(el);
+  const trackTop = rect.top + topInset;
+  const trackHeight = clientHeight - topInset;
   const maxScroll = scrollHeight - clientHeight;
-  const thumbHeight = Math.max((clientHeight / scrollHeight) * clientHeight, FADE_SCROLLBAR_MIN_THUMB_PX);
+  const thumbHeight = Math.max((clientHeight / scrollHeight) * trackHeight, FADE_SCROLLBAR_MIN_THUMB_PX);
   const progress = maxScroll > 0 ? scrollTop / maxScroll : 0;
-  const thumbTop = rect.top + progress * (clientHeight - thumbHeight);
+  const thumbTop = trackTop + progress * (trackHeight - thumbHeight);
 
   fadeScrollbarThumbEl.style.height = `${thumbHeight}px`;
   fadeScrollbarThumbEl.style.top = `${thumbTop}px`;
