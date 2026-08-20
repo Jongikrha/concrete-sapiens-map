@@ -364,10 +364,21 @@ function openRecallCard() {
       // 미리 걸어두고, 5초 뒤엔 음소거만 푼다 — playMiniPlayerVideo 아래
       // unmuteMiniPlayerIfStillPlaying 설명 참고.
       playMiniPlayerVideo(videoId, musicLabel, { muted: true });
+      // 임시 진단 — 원인 확인되면 이 블록 통째로 지운다(2026-08-20).
+      [300, 1500, 3000].forEach((delay) => {
+        setTimeout(() => {
+          if (!recallSessionOpen || recallCurrentStory !== story) return;
+          appendMiniPlayerDebugText(`${delay}ms:${getMiniPlayerDebugState()}`);
+        }, delay);
+      });
       recallMusicTimer = setTimeout(() => {
         recallMusicTimer = null;
         if (!recallSessionOpen || recallCurrentStory !== story) return;
         unmuteMiniPlayerIfStillPlaying(videoId);
+        setTimeout(() => {
+          if (!recallSessionOpen || recallCurrentStory !== story) return;
+          appendMiniPlayerDebugText(`unmute후:${getMiniPlayerDebugState()}`);
+        }, 300);
       }, 5000);
     } else {
       playMiniPlayerVideo(videoId, musicLabel);
