@@ -119,23 +119,19 @@ function warmMiniPlayer() {
       // (2026-08-20, 원격 디버깅 없이도 나중에 확인 가능하도록).
       onError: (e) => {
         console.warn("[mini-player] YouTube 재생 오류, code:", e.data);
-        appendMiniPlayerDebugText(`오류(${e.data})`);
+        // alert — 임시 진단용, 원인 확인되면 지운다(2026-08-20).
+        alert(`[디버그] 유튜브 재생 오류 code=${e.data}`);
       },
     },
   });
 }
 
 /**
- * 임시 진단용 — 원격 디버깅 없이도 지금 재생 상태를 화면(미니 플레이어
- * 제목 자리)에서 바로 볼 수 있게 한다. 세 번째 자동재생 수정도 실기기에서
- * 안 됐다는 보고를 받고, 더 이상 코드만 보고 추측하지 않기 위해 넣었다
- * (2026-08-20). 원인을 확인하면 이 함수와 호출부를 지운다.
+ * 임시 진단용 — 원격 디버깅 없이도 지금 재생 상태를 화면에서 바로 볼 수
+ * 있게 한다. 세 번째 자동재생 수정도 실기기에서 안 됐다는 보고를 받고,
+ * 더 이상 코드만 보고 추측하지 않기 위해 넣었다(2026-08-20). 원인을
+ * 확인하면 이 함수와 호출부를 지운다.
  */
-function appendMiniPlayerDebugText(text) {
-  const el = document.getElementById("mini-player-title");
-  if (el) el.textContent += ` [${text}]`;
-}
-
 function getMiniPlayerDebugState() {
   if (!ytPlayer) return "no-player";
   if (typeof ytPlayer.getPlayerState !== "function") return "not-ready";

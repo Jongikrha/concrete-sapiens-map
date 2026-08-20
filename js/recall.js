@@ -364,20 +364,25 @@ function openRecallCard() {
       // 미리 걸어두고, 5초 뒤엔 음소거만 푼다 — playMiniPlayerVideo 아래
       // unmuteMiniPlayerIfStillPlaying 설명 참고.
       playMiniPlayerVideo(videoId, musicLabel, { muted: true });
-      // 임시 진단 — 원인 확인되면 이 블록 통째로 지운다(2026-08-20).
+      // 임시 진단 — 미니 플레이어 제목은 CSS로 잘려서(ellipsis) 안 보였다.
+      // alert()로 한 번에 모아서 보여준다. 원인 확인되면 이 블록 통째로
+      // 지운다(2026-08-20).
+      const debugLog = [`videoId=${videoId}`];
       [300, 1500, 3000].forEach((delay) => {
         setTimeout(() => {
           if (!recallSessionOpen || recallCurrentStory !== story) return;
-          appendMiniPlayerDebugText(`${delay}ms:${getMiniPlayerDebugState()}`);
+          debugLog.push(`${delay}ms: ${getMiniPlayerDebugState()}`);
         }, delay);
       });
       recallMusicTimer = setTimeout(() => {
         recallMusicTimer = null;
         if (!recallSessionOpen || recallCurrentStory !== story) return;
+        debugLog.push(`5000ms(unmute전): ${getMiniPlayerDebugState()}`);
         unmuteMiniPlayerIfStillPlaying(videoId);
         setTimeout(() => {
           if (!recallSessionOpen || recallCurrentStory !== story) return;
-          appendMiniPlayerDebugText(`unmute후:${getMiniPlayerDebugState()}`);
+          debugLog.push(`5300ms(unmute후): ${getMiniPlayerDebugState()}`);
+          alert(debugLog.join("\n"));
         }, 300);
       }, 5000);
     } else {
