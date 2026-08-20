@@ -89,8 +89,14 @@ async function refreshNotificationBadge() {
 
   myStories.forEach((story) => {
     const reactionCount = story.reactionCount || 0;
-    const addressCount = Storage.getStoriesAtSamePlace(story).length;
-    const nearbyYearCount = Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS).length;
+    // 내가 같은 장소/근처에 또 다른 내 기억을 남긴 경우는 "겹침"으로
+    // 안 친다 — "겹치는 기억" 목록(buildMyMemoryList의 "overlap")도
+    // isMyStory로 내 글을 빼고 보여주는데, 여기서 안 빼면 알림 점만
+    // 켜지고 정작 목록엔 아무것도 안 뜨는 불일치가 생긴다(2026-08-20
+    // 제보 — 내 글끼리 겹쳐 써도 알림이 왔다).
+    const addressCount = Storage.getStoriesAtSamePlace(story).filter((s) => !Storage.isMyStory(s.id)).length;
+    const nearbyYearCount = Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS)
+      .filter((s) => !Storage.isMyStory(s.id)).length;
     currentState[story.id] = { reactionCount, addressCount, nearbyYearCount };
 
     const prev = seen[story.id];
