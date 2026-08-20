@@ -703,6 +703,19 @@ function renderYoutubeEmbed(story) {
   `;
 }
 
+// 정확한 반응 숫자는 공개 화면에 노출하지 않고 구간 라벨로만 보여준다
+// (CONFIG.REACTION_DISPLAY_TIERS, js/config.js — "10+", "온기가
+// 닿았습니다" 등). 지금까지 이 티어 표를 실제로 읽는 곳이 코드 어디에도
+// 없어서, 반응 버튼을 눌러도(자기 글이든 남의 글이든 동일) 버튼 아이콘
+// 색만 바뀔 뿐 "반응이 등록됐다"는 걸 보여주는 문구가 화면에 하나도
+// 없었다 — "눌러도 뭐가 바뀐지 모르겠다"는 피드백이 바로 이 때문이었다
+// (2026-08-20).
+function formatReactionDisplay(count) {
+  if (!count) return null;
+  const tier = CONFIG.REACTION_DISPLAY_TIERS.find((t) => count >= t.min);
+  return tier ? tier.label : null;
+}
+
 function renderStoryItem(story, options = {}) {
   const numericYear = Storage.getStoryYear(story);
   const month = Storage.getStoryMonth(story);
@@ -738,6 +751,8 @@ function renderStoryItem(story, options = {}) {
   // 안 보여준다.
   const songCount = story.musicTitle ? Storage.getSongMemoryCount(story.musicArtist, story.musicTitle) : 0;
 
+  const reactionLabel = formatReactionDisplay(story.reactionCount || 0);
+
   return `
     <div class="story-item" data-story-id="${story.id}">
       <div class="story-date-block">
@@ -770,6 +785,7 @@ function renderStoryItem(story, options = {}) {
         </button>
         <button class="share-btn" data-id="${story.id}">↗ 기억 전하기</button>
       </div>
+      ${reactionLabel ? `<p class="reaction-count-caption">${escapeHtml(reactionLabel)}</p>` : ""}
 
       <div class="share-panel-inline hidden" id="share-panel-${story.id}">
         ${renderSharePrivacyBox()}
