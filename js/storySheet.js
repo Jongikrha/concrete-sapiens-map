@@ -58,7 +58,7 @@ function setMiniPlayerEndedCallback(fn) {
  * 지금 누른" 재생으로 인정해 소리를 허용한다(아래 playMiniPlayerVideo 설명).
  */
 function loadYoutubeIframeApi() {
-  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (window.YT && window.YT.Player) return Promise.resolve().then(warmMiniPlayer);
   if (ytApiReadyPromise) return ytApiReadyPromise;
   ytApiReadyPromise = new Promise((resolve) => {
     const prevCallback = window.onYouTubeIframeAPIReady;
@@ -69,8 +69,52 @@ function loadYoutubeIframeApi() {
     const script = document.createElement("script");
     script.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(script);
-  });
+  }).then(warmMiniPlayer);
   return ytApiReadyPromise;
+}
+
+/**
+ * 유튜브 IFrame Player 인스턴스를 곡 없이 미리 만들어둔다(부팅 시
+ * loadYoutubeIframeApi 뒤에 자동으로 호출됨). 예전엔 이 인스턴스를 세션의
+ * 첫 재생 탭이 들어왔을 때가 돼서야 만들었는데, 그 안의 실제 playVideo()
+ * 호출이 iframe 로딩 완료를 기다리는 onReady 콜백 — 즉 탭 이벤트와는 분리된
+ * 비동기 시점 — 안에서 이뤄져서, 모바일 브라우저가 이걸 "사용자가 지금
+ * 누른" 재생으로 인정하지 않고 소리를 막았다. 그래서 세션의 첫 곡만 항상
+ * 재생되지 않고(기억 라디오 첫 곡, 카드 첫 재생 등) 두 번째 곡부터는 이미
+ * 만들어진 플레이어에 loadVideoById를 탭과 같은 틱에서 동기 호출하니 잘
+ * 되던 것이었다(2026-08-20 확인). 미리 만들어두면 실제 첫 탭도 항상
+ * loadVideoById 경로(동기)를 타게 된다.
+ */
+function warmMiniPlayer() {
+  if (ytPlayer || ytPlayerCreating) return;
+  ytPlayerCreating = true;
+  const holder = document.createElement("div");
+  document.getElementById("mini-player-frame-mount").appendChild(holder);
+  ytPlayer = new YT.Player(holder, {
+    host: "https://www.youtube-nocookie.com",
+    playerVars: { playsinline: 1 },
+    events: {
+      onReady: (e) => {
+        ytPlayerCreating = false;
+        // .mini-player-frame을 직접 붙여야 44px 마운트에 맞는 크기와
+        // (2026-08-20부터) opacity:0 처리가 적용된다 — 마운트 자리에는
+        // 이제 정적 CD 그래픽만 보이고 이 iframe은 소리만 낸다. API가
+        // 기본으로 만드는 iframe엔 이 클래스가 없다.
+        e.target.getIframe().classList.add("mini-player-frame");
+        // 준비되는 사이 이미 재생 요청이 들어와 있었다면(activeMiniPlayerVideoId)
+        // 그 곡을 바로 재생한다 — playMiniPlayerVideo의 폴백 경로 참고.
+        if (activeMiniPlayerVideoId) e.target.loadVideoById(activeMiniPlayerVideoId);
+      },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.PLAYING) miniPlayerActuallyPlaying = true;
+        else if (e.data === YT.PlayerState.PAUSED) miniPlayerActuallyPlaying = false;
+        else if (e.data === YT.PlayerState.ENDED) {
+          miniPlayerActuallyPlaying = false;
+          if (miniPlayerEndedCallback) miniPlayerEndedCallback();
+        }
+      },
+    },
+  });
 }
 
 function openSheet(group, options = {}) {
@@ -117,7 +161,7 @@ function closeSheet() {
 // 두 번째 곡부터는(그리고 API가 미리 로드돼 있으면 첫 곡부터도) 재생이
 // 사용자의 탭과 같은 이벤트 틱 안에서 동기적으로 시작된다.
 // ------------------------------------------------------------
-function playMiniPlayerVideo(videoId, musicLabel) {
+function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   activeMiniPlayerVideoId = videoId;
   miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
@@ -139,46 +183,36 @@ function playMiniPlayerVideo(videoId, musicLabel) {
     });
   }
 
-  // 이미 준비된 플레이어가 있으면(대부분 이 경우 — app.js가 부팅 시 미리
-  // 불러둠) 같은 탭 이벤트 안에서 동기적으로 곡만 바꿔 재생한다.
+  // 플레이어는 부팅 시 warmMiniPlayer()가 곡 없이 미리 만들어둬서, 대부분
+  // 이 시점엔 이미 준비돼 있다 — 같은 탭 이벤트 안에서 동기적으로 곡만
+  // 바꿔 재생한다.
   if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
     ytPlayer.loadVideoById(videoId);
+    if (muted) ytPlayer.mute();
+    else ytPlayer.unMute();
     return;
   }
-  if (ytPlayerCreating) return; // 첫 로딩이 이미 진행 중 — 끝나면 최신 activeMiniPlayerVideoId를 재생함
-  ytPlayerCreating = true;
+  // 아주 드물게(페이지 진입 직후 곧바로 탭) 아직 준비 전이면, warmMiniPlayer의
+  // onReady가 activeMiniPlayerVideoId를 보고 그때 재생한다(음소거 요청은
+  // 이 희귀 경로에선 반영하지 않는다 — 놓쳐도 무해하다).
+  loadYoutubeIframeApi();
+}
 
-  loadYoutubeIframeApi().then(() => {
-    ytPlayerCreating = false;
-    // API 로딩을 기다리는 사이 정지됐을 수 있다 — 그사이 또 다른 곡을
-    // 눌렀다면 activeMiniPlayerVideoId가 이미 그걸로 바뀌어 있어 그대로 재생된다.
-    if (!activeMiniPlayerVideoId) return;
-    const holder = document.createElement("div");
-    document.getElementById("mini-player-frame-mount").appendChild(holder);
-    ytPlayer = new YT.Player(holder, {
-      host: "https://www.youtube-nocookie.com",
-      videoId: activeMiniPlayerVideoId,
-      playerVars: { autoplay: 1, playsinline: 1 },
-      events: {
-        onReady: (e) => {
-          // .mini-player-frame을 직접 붙여야 44px 마운트에 맞는 크기와
-          // (2026-08-20부터) opacity:0 처리가 적용된다 — 마운트 자리에는
-          // 이제 정적 CD 그래픽만 보이고 이 iframe은 소리만 낸다. API가
-          // 기본으로 만드는 iframe엔 이 클래스가 없다.
-          e.target.getIframe().classList.add("mini-player-frame");
-          e.target.playVideo();
-        },
-        onStateChange: (e) => {
-          if (e.data === YT.PlayerState.PLAYING) miniPlayerActuallyPlaying = true;
-          else if (e.data === YT.PlayerState.PAUSED) miniPlayerActuallyPlaying = false;
-          else if (e.data === YT.PlayerState.ENDED) {
-            miniPlayerActuallyPlaying = false;
-            if (miniPlayerEndedCallback) miniPlayerEndedCallback();
-          }
-        },
-      },
-    });
-  });
+/**
+ * 음소거 상태로 미리 재생 중인 곡을 나중에(예: 예고 카운트다운이 끝난 뒤)
+ * 소리 나게 전환한다. 회상/라디오의 "N초 후 재생됩니다" 예고가 바로 이걸
+ * 쓴다 — 예고가 끝나는 시점에 setTimeout으로 재생을 "새로 시작"하면 그
+ * 호출은 사용자의 탭과 무관한 스크립트 호출이라 모바일 브라우저가 소리를
+ * 막는다(탭의 "사용자 활성화" 유효기간은 몇 초 안에 만료된다). 반면 이미
+ * 재생 중인 미디어의 음소거를 나중에 해제하는 건 "새 재생 시작"으로 보지
+ * 않아 막히지 않는다 — 그래서 실제 재생은 카드가 뜨는 즉시 음소거로 걸어
+ * 두고, 예고가 끝나면 음소거만 푼다(2026-08-20 확인, 기억 라디오 첫 곡이
+ * 항상 안 나오던 문제).
+ */
+function unmuteMiniPlayerIfStillPlaying(videoId) {
+  if (ytPlayer && typeof ytPlayer.unMute === "function" && activeMiniPlayerVideoId === videoId) {
+    ytPlayer.unMute();
+  }
 }
 
 function stopMiniPlayer() {

@@ -356,11 +356,15 @@ function openRecallCard() {
     if (needsWarning) {
       musicEl.textContent = `🎵 ${label} · 5초 후 재생됩니다`;
       musicEl.classList.remove("hidden");
+      // 실제 재생은 지금(카드가 뜨는 시점, 아직 탭의 유효기간 안) 음소거로
+      // 미리 걸어두고, 5초 뒤엔 음소거만 푼다 — playMiniPlayerVideo 아래
+      // unmuteMiniPlayerIfStillPlaying 설명 참고.
+      playMiniPlayerVideo(videoId, musicLabel, { muted: true });
       recallMusicTimer = setTimeout(() => {
         recallMusicTimer = null;
         if (!recallSessionOpen || recallCurrentStory !== story) return;
         musicEl.textContent = `🎵 ${label}`;
-        playMiniPlayerVideo(videoId, musicLabel);
+        unmuteMiniPlayerIfStillPlaying(videoId);
       }, 5000);
     } else {
       musicEl.textContent = `🎵 ${label}`;
