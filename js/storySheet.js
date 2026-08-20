@@ -187,9 +187,16 @@ function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   // 이 시점엔 이미 준비돼 있다 — 같은 탭 이벤트 안에서 동기적으로 곡만
   // 바꿔 재생한다.
   if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
-    ytPlayer.loadVideoById(videoId);
+    // 음소거는 반드시 loadVideoById보다 먼저 걸어야 한다 — 순서가 바뀌면
+    // (재생 시작 → 음소거) 재생이 "소리 있는 채로" 시작을 시도하는 그
+    // 짧은 순간에 브라우저가 이미 자동재생을 막아버려서, 뒤늦게 음소거를
+    // 걸어도 되살아나지 않는다(2026-08-20 확인 — 기억 라디오에서 자동
+    // 재생이 안 되고, 미니 플레이어에서 정지 후 수동으로 다시 눌러야만
+    // 재생되던 문제가 이거였다). postMessage 두 콜은 순서가 보장되므로
+    // 음소거 요청이 항상 loadVideoById보다 먼저 도착한다.
     if (muted) ytPlayer.mute();
-    else ytPlayer.unMute();
+    ytPlayer.loadVideoById(videoId);
+    if (!muted) ytPlayer.unMute();
     return;
   }
   // 아주 드물게(페이지 진입 직후 곧바로 탭) 아직 준비 전이면, warmMiniPlayer의
