@@ -26,13 +26,13 @@ const MY_MEMORY_EMPTY = {
 
 // ------------------------------------------------------------
 // 아바타 알림 뱃지 — "누가" 반응했는지/썼는지는 알려주지 않는(느슨한
-// SNS) 대신, 내가 남긴 기억에 (1) 떠올랐어요가 늘었거나 (2) 같은
-// 장소에 새 기억이 생겼으면 점 하나만 켠다. 실시간이 아니라 로그인
-// 상태로 앱을 열 때마다(=Storage가 서버에서 새로 받아온 시점) 확인하는
-// 걸로 충분하다는 전제(2026-08-14 논의). "확인했다"는 계정 메뉴를 여는
-// 순간으로 치고, 그때 스냅샷을 localStorage에 저장해 다음 비교 기준으로
-// 삼는다 — 그 전까지는(예: 새로고침) 뱃지가 계속 떠 있어야 실제로 본 게
-// 된다.
+// SNS) 대신, 내가 남긴 기억에 (1) 떠올랐어요가 늘었거나 (2) 반경 1km
+// 안에 다른 사람의 새 기억이 생겼으면 점 하나만 켠다. 실시간이 아니라
+// 로그인 상태로 앱을 열 때마다(=Storage가 서버에서 새로 받아온 시점)
+// 확인하는 걸로 충분하다는 전제(2026-08-14 논의). "확인했다"는 계정
+// 메뉴를 여는 순간으로 치고, 그때 스냅샷을 localStorage에 저장해 다음
+// 비교 기준으로 삼는다 — 그 전까지는(예: 새로고침) 뱃지가 계속 떠 있어야
+// 실제로 본 게 된다.
 // v1 배포 당시 nearbyYearCount 버그(처음 계산되는 순간 실제 값을 그대로
 // 기준값으로 조용히 저장해버려, 이미 존재하던 근처 겹침은 영원히 알림이
 // 안 뜨던 문제, 2026-08-14 확인)로 잘못 저장된 v1 기록은 정상 값과
@@ -41,10 +41,12 @@ const MY_MEMORY_EMPTY = {
 // 계산 시 조용히 기준값만 저장"이 맞는 동작이라 알림이 갑자기 몰아쳐
 // 뜨는 부작용은 없다.
 const NOTIF_SEEN_KEY = "concrete_sapiens_notif_seen_v2";
-// "장소는 달라도 걸어서 닿을 거리"의 기준(2026-08-14, storySheet.js
-// story-overlap-caption과는 별개 — 카드 캡션은 정확히 같은 장소만, 알림은
-// 반경까지 넓혀 "우연히 겹치는" 발견 범위를 키운다).
-const NEARBY_YEAR_RADIUS_METERS = 1000;
+// (2)는 원래 "정확히 같은 장소"와 "반경 1km + 같은 연도" 둘로 나뉘어
+// 있었는데, "이해하기 어렵다"는 피드백으로 하나로 합쳤다(2026-08-20) —
+// 연도 조건 없이 그냥 반경 1km 안의 다른 사람 기억이면 전부 겹침으로
+// 친다(storySheet.js story-overlap-caption의 "정확히 같은 장소·같은
+// 해" 카드 캡션과는 별개 기능, 그쪽은 그대로 둔다).
+const OVERLAP_RADIUS_METERS = 1000;
 let _pendingNotifState = null;
 
 function _getNotifSeenState() {
@@ -89,41 +91,39 @@ async function refreshNotificationBadge() {
 
   myStories.forEach((story) => {
     const reactionCount = story.reactionCount || 0;
-    // 내가 같은 장소/근처에 또 다른 내 기억을 남긴 경우는 "겹침"으로
-    // 안 친다 — "겹치는 기억" 목록(buildMyMemoryList의 "overlap")도
-    // isMyStory로 내 글을 빼고 보여주는데, 여기서 안 빼면 알림 점만
-    // 켜지고 정작 목록엔 아무것도 안 뜨는 불일치가 생긴다(2026-08-20
-    // 제보 — 내 글끼리 겹쳐 써도 알림이 왔다).
-    const addressCount = Storage.getStoriesAtSamePlace(story).filter((s) => !Storage.isMyStory(s.id)).length;
-    const nearbyYearCount = Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS)
-      .filter((s) => !Storage.isMyStory(s.id)).length;
-    currentState[story.id] = { reactionCount, addressCount, nearbyYearCount };
+    // 반경 1km 안의 "다른 사람" 기억 개수 — 내가 같은 장소/근처에 또
+    // 다른 내 기억을 남긴 경우는 "겹침"으로 안 친다. "겹치는 기억" 목록
+    // (buildMyMemoryList의 "overlap")도 isMyStory로 내 글을 빼고
+    // 보여주는데, 여기서 안 빼면 알림 점만 켜지고 정작 목록엔 아무것도
+    // 안 뜨는 불일치가 생긴다(2026-08-20 제보 — 내 글끼리 겹쳐 써도
+    // 알림이 왔다).
+    const nearbyCount = Storage.getStoriesNear(story.lat, story.lng, OVERLAP_RADIUS_METERS)
+      .filter((s) => s.id !== story.id && !Storage.isMyStory(s.id)).length;
+    currentState[story.id] = { reactionCount, nearbyCount };
 
     const prev = seen[story.id];
     if (!prev) {
-      // 뱃지 도입 이후 처음 추적하는 내 글. reactionCount/addressCount는
-      // 이 알림 기능 이전부터 카드에 이미 보이던 값이라, 과거 활동이
-      // 한꺼번에 "새 알림"으로 안 터지게 지금 값을 그대로 기준값으로
-      // 조용히 저장한다. 반면 nearbyYearCount(반경 1000m 알림)는 이
-      // 뱃지 말고는 어디에도 노출된 적 없는 정보라 "처음 계산되는 순간"이
-      // 곧 사용자에게는 "새로 발견하는 순간"과 같다 — 그래서 기준값을
+      // 뱃지 도입 이후 처음 추적하는 내 글. reactionCount는 이 알림
+      // 기능 이전부터 카드에 이미 보이던 값이라, 과거 활동이 한꺼번에
+      // "새 알림"으로 안 터지게 지금 값을 그대로 기준값으로 조용히
+      // 저장한다. 반면 nearbyCount(반경 1km 겹침)는 이 알림 말고는
+      // 어디에도 노출된 적 없는 정보라 "처음 계산되는 순간"이 곧
+      // 사용자에게는 "새로 발견하는 순간"과 같다 — 그래서 기준값을
       // 0으로 저장해, 이미 존재하던 근처 기억도 다음 새로고침에서
       // 정상적으로 알려준다(실제 값은 계정 메뉴를 열 때 currentState로
       // 확정 저장된다 — 아래 markNotificationsSeen 참고).
-      seen[story.id] = { reactionCount, addressCount, nearbyYearCount: 0 };
+      seen[story.id] = { reactionCount, nearbyCount: 0 };
       seenUpdated = true;
-      if (nearbyYearCount > 0) {
+      if (nearbyCount > 0) {
         hasNew = true;
         hasNewOverlap = true;
       }
       return;
     }
     if (reactionCount > prev.reactionCount) hasNewReaction = true;
-    if (addressCount > prev.addressCount || nearbyYearCount > (prev.nearbyYearCount || 0)) {
-      // prev.nearbyYearCount가 없는(이 지표 도입 전에 저장된) 기록도
-      // ||0로 0 기준 취급되어 위와 같은 원칙으로 동작한다.
-      hasNewOverlap = true;
-    }
+    // prev.nearbyCount가 없는(이 지표 도입 전에 저장된) 기록도 ||0로
+    // 0 기준 취급되어 위와 같은 원칙으로 동작한다.
+    if (nearbyCount > (prev.nearbyCount || 0)) hasNewOverlap = true;
     if (reactionCount > prev.reactionCount || hasNewOverlap) {
       hasNew = true;
     }
@@ -202,22 +202,18 @@ async function buildMyMemoryList(kind) {
     const posted = await buildMyMemoryList("posted");
     return posted.filter((s) => (s.reactionCount || 0) > 0);
   }
-  // "겹치는 기억" — 내 기억과 같은 장소, 또는 반경 1000m 안에 같은 해를
-  // 남긴 다른 사람의 기억(아바타 알림 뱃지가 조용히 추적만 하던 두
-  // 원인을 실제로 확인할 수 있는 화면, 2026-08-20). 내가 같은 장소에
-  // 여러 기억을 남긴 경우 서로를 "겹친다"고 보여주면 이상해서
-  // isMyStory로 내 글은 걸러낸다.
+  // "겹치는 기억" — 내 기억 반경 1km 안에 남겨진 다른 사람의 기억
+  // (연도 무관, 아바타 알림 뱃지가 조용히 추적만 하던 걸 실제로 확인할
+  // 수 있는 화면, 2026-08-20). 내가 같은 장소/근처에 여러 기억을 남긴
+  // 경우 서로를 "겹친다"고 보여주면 이상해서 isMyStory로 내 글은
+  // 걸러낸다.
   if (kind === "overlap") {
     const posted = await buildMyMemoryList("posted");
     const seenIds = new Set();
     const overlapping = [];
     posted.forEach((story) => {
-      const matches = [
-        ...Storage.getStoriesAtSamePlace(story),
-        ...Storage.getNearbySameYearStories(story, NEARBY_YEAR_RADIUS_METERS),
-      ];
-      matches.forEach((s) => {
-        if (Storage.isMyStory(s.id) || seenIds.has(s.id)) return;
+      Storage.getStoriesNear(story.lat, story.lng, OVERLAP_RADIUS_METERS).forEach((s) => {
+        if (s.id === story.id || Storage.isMyStory(s.id) || seenIds.has(s.id)) return;
         seenIds.add(s.id);
         overlapping.push(s);
       });

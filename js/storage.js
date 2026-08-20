@@ -574,8 +574,10 @@ const Storage = {
   },
 
   /**
-   * 같은 장소(스팟)에 남겨진 다른 기억들 — 자기 자신은 제외. 알림 뱃지가
-   * "내 기억이 있는 주소에 새 기억이 생겼는지" 판단할 때 쓴다(js/mymemory.js).
+   * 같은 장소(스팟)에 남겨진 다른 기억들 — 자기 자신은 제외. 기억 카드의
+   * "우연히 겹치는 기억" 캡션(정확히 같은 장소·같은 해, js/storySheet.js)
+   * 에 쓴다 — 알림 뱃지의 "겹치는 기억"은 반경 1km 판단(getStoriesNear)
+   * 만 쓰도록 2026-08-20에 분리됐다.
    */
   getStoriesAtSamePlace(story) {
     const key = this._groupKeyFor(story);
@@ -584,7 +586,7 @@ const Storage = {
 
   /**
    * 두 좌표 사이의 직선 거리(미터) — 하버사인 공식. "근처" 판단(장소가
-   * 달라도 걸어서 닿을 거리)에 쓴다(getNearbySameYearStories 참고).
+   * 달라도 걸어서 닿을 거리)에 쓴다(getStoriesNear 참고).
    */
   _distanceMeters(lat1, lng1, lat2, lng2) {
     const R = 6371000;
@@ -595,22 +597,6 @@ const Storage = {
       Math.sin(dLat / 2) ** 2 +
       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
-  },
-
-  /**
-   * 다른 장소라도 반경(미터) 안에 있고, 같은 해를 기억하는 다른 기억들 —
-   * "우연히 겹치는" 발견을 장소 단위(getStoriesAtSamePlace)보다 넓게
-   * 잡는다. 자기 자신은 제외, 연도를 모르는(dateMode "unknown") 기억은
-   * 비교 대상에서 제외한다.
-   */
-  getNearbySameYearStories(story, radiusMeters) {
-    const year = this.getStoryYear(story);
-    if (year === null) return [];
-    return this.getVisibleStories().filter((s) => {
-      if (s.id === story.id) return false;
-      if (this.getStoryYear(s) !== year) return false;
-      return this._distanceMeters(story.lat, story.lng, s.lat, s.lng) <= radiusMeters;
-    });
   },
 
   /**
