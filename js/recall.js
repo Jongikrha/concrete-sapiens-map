@@ -40,6 +40,34 @@ let recallConstellationStories = null;
 // 별자리/공유 카드 제목에 쓴다(getConstellationTitle).
 let recallDecadeLabel = null;
 
+// "내 기억" 선택 카드 아이콘(2026-08-20 디자인 변경) — 외부 아이콘
+// 라이브러리 없이 인라인 SVG로 직접 그린다. 지도 폴리곤/핀 좌표는 feather
+// icons의 "map"/"map-pin" 글리프(24×24 그리드)를 그대로 가져와 위치만
+// 옮겼다 — 흔히 쓰는 검증된 모양이라 직접 새로 그리는 것보다 안전하다.
+const RECALL_CHOICE_MAP_ICON_SVG = `
+  <svg viewBox="0 0 64 64" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <g transform="translate(2,12) scale(1.6)" stroke="#2F3031" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+      <line x1="8" y1="2" x2="8" y2="18" />
+      <line x1="16" y1="6" x2="16" y2="22" />
+    </g>
+    <g transform="translate(29,2) scale(1.2)">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#FF5A36" />
+      <circle cx="12" cy="10" r="3.4" fill="#FDEDE7" />
+    </g>
+  </svg>
+`;
+const RECALL_CHOICE_WALK_ICON_SVG = `
+  <svg viewBox="0 0 64 64" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M8 50 C 18 50, 18 36, 28 36 C 38 36, 38 22, 46 22"
+      stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.5 8" />
+    <g transform="translate(44,8)">
+      <line x1="2" y1="2" x2="2" y2="26" stroke="#FF5A36" stroke-width="2.6" stroke-linecap="round" />
+      <path d="M2 2 L18 7 L2 12 Z" fill="#FF5A36" />
+    </g>
+  </svg>
+`;
+
 // ------------------------------------------------------------
 // "내 기억" 버튼의 선택지 — 지도에서 보기 / 기억산책
 // ------------------------------------------------------------
@@ -52,8 +80,16 @@ function openRecallEntryChoice() {
     </div>
     <p class="daily-prompt-hint">어떻게 보고 싶으세요?</p>
     <div class="daily-prompt-divider"></div>
-    <button class="btn-primary" id="recall-choice-map-btn">지도에서 내 기억 보기</button>
-    <button class="btn-secondary" id="recall-choice-walk-btn" style="margin-top:8px;">기억산책</button>
+    <div class="recall-choice-grid">
+      <button type="button" class="recall-choice-card" id="recall-choice-map-btn">
+        <span class="recall-choice-card-icon">${RECALL_CHOICE_MAP_ICON_SVG}</span>
+        <span class="recall-choice-card-label">지도에서 내 기억 보기</span>
+      </button>
+      <button type="button" class="recall-choice-card" id="recall-choice-walk-btn">
+        <span class="recall-choice-card-icon">${RECALL_CHOICE_WALK_ICON_SVG}</span>
+        <span class="recall-choice-card-label">기억산책</span>
+      </button>
+    </div>
   `;
   panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
   panel.querySelector("#recall-choice-map-btn").onclick = () => {

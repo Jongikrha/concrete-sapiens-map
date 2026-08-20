@@ -2925,6 +2925,61 @@ button.story-place-line:hover {
   margin: 24px 0 0;
 }
 
+/* "내 기억" 선택 카드(지도에서 보기 / 기억산책) — 세로로 쌓인 두 버튼
+   대신 아이콘 카드 두 개를 나란히 두는 디자인으로 변경(2026-08-20). */
+.recall-choice-grid {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.recall-choice-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 26px 10px;
+  border: 1.5px solid rgba(255, 90, 54, 0.35);
+  border-radius: 16px;
+  background: var(--cs-paper);
+  cursor: pointer;
+  transition: border-color var(--cs-transition-fast) ease, background var(--cs-transition-fast) ease;
+}
+
+.recall-choice-card:hover {
+  border-color: var(--cs-orange);
+  background: rgba(255, 90, 54, 0.05);
+}
+
+.recall-choice-card-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 90, 54, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recall-choice-card-label {
+  font-family: var(--font-pretendard);
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--cs-black);
+  text-align: center;
+  line-height: 1.35;
+}
+
+/* 이 패널만 X를 좀 더 굵고 크게 — 다른 모달의 daily-prompt-close에는
+   영향 없게 패널 안에서만 오버라이드한다. */
+#recall-choice-panel .daily-prompt-close {
+  font-size: 22px;
+  color: var(--cs-black);
+}
+
 .btn-secondary {
   width: 100%;
   margin-top: 8px;
