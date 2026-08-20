@@ -212,37 +212,6 @@ function stopMiniPlayer() {
   document.getElementById("mini-player").classList.add("hidden");
 }
 
-// ------------------------------------------------------------
-// #mini-player를 원래 자리(화면 하단 고정 바)가 아니라 다른 곳(회상 카드
-// 안 등)에 잠깐 끼워 넣었다가 다시 되돌리는 기능 — js/recall.js가 쓴다.
-// 재생 엔진(ytPlayer)은 그대로 두고 DOM 위치만 옮기는 거라 재생이 끊기지
-// 않는다.
-// ------------------------------------------------------------
-let miniPlayerHomeParent = null;
-let miniPlayerHomeNextSibling = null;
-
-function captureMiniPlayerHome() {
-  if (miniPlayerHomeParent) return;
-  const el = document.getElementById("mini-player");
-  miniPlayerHomeParent = el.parentNode;
-  miniPlayerHomeNextSibling = el.nextSibling;
-}
-
-function attachMiniPlayerAfter(referenceEl) {
-  captureMiniPlayerHome();
-  const el = document.getElementById("mini-player");
-  el.classList.add("mini-player--inline");
-  referenceEl.after(el);
-}
-
-function restoreMiniPlayerHome() {
-  const el = document.getElementById("mini-player");
-  if (!el.classList.contains("mini-player--inline")) return;
-  el.classList.remove("mini-player--inline");
-  captureMiniPlayerHome();
-  miniPlayerHomeParent.insertBefore(el, miniPlayerHomeNextSibling);
-}
-
 /**
  * 일시정지 ⇄ 재생 토글 — 공식 API 메서드를 직접 호출한다(곡이 처음부터
  * 다시 시작되지 않고 멈춘 지점에서 이어짐, ✕/stopMiniPlayer와 다른 점).

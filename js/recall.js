@@ -318,35 +318,22 @@ function openRecallCard() {
     `${year !== null ? year : "· · ·"} · <span class="recall-card-place">${escapeHtml(place)}</span>`;
   document.getElementById("recall-card-content").textContent = story.content;
 
-  const musicEl = document.getElementById("recall-card-music");
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (videoId) {
-    // "🎵 아티스트 — 곡명" 텍스트 줄은 없앴다(2026-08-20 피드백) — 미니
-    // 플레이어 자체가 제목을 보여주는데 바로 위에 같은 정보가 텍스트로도
-    // 한 번 더 나오는 게 중복이었다. musicEl은 항상 hidden 상태로 두고
-    // (index.html 기본값) 미니 플레이어를 끼워 넣을 자리 표시로만 쓴다 —
-    // 화면 하단에 따로 뜨는 바 대신 여기(곡 정보가 있던 자리) 카드 안에
-    // 들어간다. 회상 카드는 곡이 바뀔 때마다 항상 정지 후 다시 재생해서
-    // (advanceRecall의 stopMiniPlayer) 화면을 벗어나도 이어 듣는 시나리오가
-    // 없어, 시트 밖 상시 바로 뺄 이유가 없다.
-    attachMiniPlayerAfter(musicEl);
     const musicLabel = story.musicTitle
       ? story.musicArtist
         ? `${story.musicArtist} · ${story.musicTitle}`
         : story.musicTitle
       : "";
 
-    // "N초 후 재생" 예고(음소거 후 지연 해제)는 없앴다 — 실기기 테스트로
-    // 확인됨: 음소거로 미리 재생해두고 몇 초 뒤 음소거만 풀어도, 그 사이
-    // 탭 이벤트의 유효기간이 지나 iOS가 음소거 해제 자체를 막아버렸다
-    // (2026-08-20, "5000ms muted=true → unmute 직후 state=일시정지"로 실측
-    // 확인). cueVideoById+CUED 대기로 우회해보려던 시도도 검증 없이
-    // 복잡도만 더했던 것으로 보여 걷어냈다 — storySheet.js의 일반 카드
-    // 재생과 "다음 기억으로" 버튼이 이 세션 내내 안정적으로 써온 것과
-    // 똑같은 단순한 경로(곧장 재생)를 그대로 쓴다.
+    // 미니 플레이어를 카드 안 DOM으로 옮겨 넣었던 적이 있었는데(2026-08-20,
+    // 곡 정보 줄 자리에 끼워 넣는 디자인), 그 DOM 이동(referenceEl.after)
+    // 자체가 iframe을 재초기화시켜 그 직후 보낸 재생 명령이 유실되는
+    // 원인이었을 가능성이 높아 되돌렸다 — 일반 카드 재생(DOM 이동 없음)은
+    // 이 세션 내내 안정적이었는데 회상 카드만 계속 실패한 유일한 구조적
+    // 차이가 이 DOM 이동이었다. 화면 하단 고정 바 그대로 쓴다(z-index는
+    // 이미 회상 모달보다 높게 고쳐둠).
     playMiniPlayerVideo(videoId, musicLabel);
-  } else {
-    restoreMiniPlayerHome();
   }
 
   document.getElementById("recall-card").classList.add("recall-card--visible");
@@ -363,7 +350,6 @@ function advanceRecall() {
 
 function endRecallSession() {
   stopMiniPlayer();
-  restoreMiniPlayerHome();
   if (recallDotMarker) {
     recallDotMarker.setMap(null);
     recallDotMarker = null;
