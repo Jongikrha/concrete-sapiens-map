@@ -32,14 +32,6 @@ let recallPool = [];
 let recallQueue = []; // pop()으로 뒤에서 하나씩 꺼내 쓰는 셔플 큐
 let recallCurrentStory = null;
 let recallDotMarker = null;
-// "5초 후 재생됩니다" 예고 후 실제 재생을 거는 타이머 — 카드가 바뀌거나
-// (hideRecallCard) 회상 모드가 끝나면 반드시 clearTimeout해서 엉뚱한
-// 타이밍에 다른 곡이 재생되지 않게 한다.
-let recallMusicTimer = null;
-// 기억 라디오(scope="songs")에서 "예고 없이 바로 재생" 구간에 들어섰는지
-// — 세션의 첫 곡 카드에서만 false, 그 뒤로는 계속 true. beginRecallWalk()가
-// 새 세션마다 리셋한다.
-let recallPlaylistStarted = false;
 // 별자리 개요에서 쓴 스토리 목록 — 공유 카드 생성 시 다시 계산하지 않고 재사용.
 let recallConstellationStories = null;
 
@@ -276,7 +268,6 @@ function buildRecallQueue(pool, avoidId) {
 function beginRecallWalk(pool) {
   recallPool = pool;
   recallQueue = buildRecallQueue(pool, null);
-  recallPlaylistStarted = false;
   showNextRecallMemory();
 }
 
@@ -328,10 +319,6 @@ function openRecallCard() {
   document.getElementById("recall-card-content").textContent = story.content;
 
   const musicEl = document.getElementById("recall-card-music");
-  if (recallMusicTimer) {
-    clearTimeout(recallMusicTimer);
-    recallMusicTimer = null;
-  }
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (videoId) {
     // "🎵 아티스트 — 곡명" 텍스트 줄은 없앴다(2026-08-20 피드백) — 미니
@@ -349,46 +336,17 @@ function openRecallCard() {
         : story.musicTitle
       : "";
 
-    // 기억산책(scope="mine")은 카드마다 매번 예고 후 재생 — 조용한 곳에서
-    // 갑자기 소리가 나면 놀랄 수 있어서다(2026-08-19 피드백). 기억 라디오
-    // (scope="songs")는 "켜놓고 다른 일을 해도 되는" 경험이 목적이라 첫
-    // 곡에서만 예고하고, 그 뒤로는(곡이 끝나 자동으로 넘어가든 직접 다음
-    // 으로 넘기든) 예고 없이 바로 이어 재생한다. 텍스트 예고 문구는
-    // 없앴지만, 음소거 상태로 미리 재생해뒀다가 5초 뒤 음소거만 푸는
-    // 동작 자체는 그대로 유지한다(조용한 곳에서 갑자기 소리가 나지 않게).
-    const isPlaylist = recallScope === "songs";
-    const needsWarning = !isPlaylist || !recallPlaylistStarted;
-
-    if (needsWarning) {
-      // 실제 재생은 지금(카드가 뜨는 시점, 아직 탭의 유효기간 안) 음소거로
-      // 미리 걸어두고, 5초 뒤엔 음소거만 푼다 — playMiniPlayerVideo 아래
-      // unmuteMiniPlayerIfStillPlaying 설명 참고.
-      playMiniPlayerVideo(videoId, musicLabel, { muted: true });
-      // 임시 진단 — 미니 플레이어 제목은 CSS로 잘려서(ellipsis) 안 보였다.
-      // alert()로 한 번에 모아서 보여준다. 원인 확인되면 이 블록 통째로
-      // 지운다(2026-08-20).
-      const debugLog = [`videoId=${videoId}`];
-      [300, 1500, 3000].forEach((delay) => {
-        setTimeout(() => {
-          if (!recallSessionOpen || recallCurrentStory !== story) return;
-          debugLog.push(`${delay}ms: ${getMiniPlayerDebugState()}`);
-        }, delay);
-      });
-      recallMusicTimer = setTimeout(() => {
-        recallMusicTimer = null;
-        if (!recallSessionOpen || recallCurrentStory !== story) return;
-        debugLog.push(`5000ms(unmute전): ${getMiniPlayerDebugState()}`);
-        unmuteMiniPlayerIfStillPlaying(videoId);
-        setTimeout(() => {
-          if (!recallSessionOpen || recallCurrentStory !== story) return;
-          debugLog.push(`5300ms(unmute후): ${getMiniPlayerDebugState()}`);
-          alert(debugLog.join("\n"));
-        }, 300);
-      }, 5000);
-    } else {
-      playMiniPlayerVideo(videoId, musicLabel);
-    }
-    if (isPlaylist) recallPlaylistStarted = true;
+    // "N초 후 재생" 예고(음소거 후 지연 해제)는 없앴다 — 실기기 테스트로
+    // 확인됨: 음소거로 미리 재생해두고 몇 초 뒤 음소거만 풀어도, 그 사이
+    // 탭 이벤트의 유효기간이 지나 iOS가 음소거 해제 자체를 막아버렸다
+    // (2026-08-20, "5000ms muted=true → unmute 직후 state=일시정지"로 실측
+    // 확인). 대신 카드가 뜨자마자 바로 소리 나게 재생한다. reliableCue는
+    // 여전히 쓴다 — 처음 영상을 받는 플레이어는 cueVideoById 직후 곧바로
+    // 다음 명령을 이어 부르면 로드 중 iframe이 재초기화되며 명령이
+    // 유실되는 별개의 레이스가 있었다(storySheet.js pendingCuePlayVideoId
+    // 주석 참고). 회상 카드는 실제 탭과 타이머 하나를 사이에 두고 열리는
+    // 흐름이라 이 경로가 더 안정적이다.
+    playMiniPlayerVideo(videoId, musicLabel, { reliableCue: true });
   } else {
     restoreMiniPlayerHome();
   }
@@ -398,10 +356,6 @@ function openRecallCard() {
 
 function hideRecallCard() {
   document.getElementById("recall-card").classList.remove("recall-card--visible");
-  if (recallMusicTimer) {
-    clearTimeout(recallMusicTimer);
-    recallMusicTimer = null;
-  }
 }
 
 function advanceRecall() {
@@ -427,7 +381,6 @@ function endRecallSession() {
   recallPool = [];
   recallQueue = [];
   recallCurrentStory = null;
-  recallPlaylistStarted = false;
   recallConstellationStories = null;
 
   renderMarkers();

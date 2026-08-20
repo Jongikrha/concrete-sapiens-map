@@ -40,22 +40,24 @@ let miniPlayerActuallyPlaying = false;
 let ytPlayer = null;
 let ytPlayerCreating = false;
 let ytApiReadyPromise = null;
-// cueVideoById 직후 곧바로 mute()/playVideo()를 이어 부르면, 처음
-// 영상을 받는 플레이어는 그 로드 과정에서 iframe 내부가 다시 초기화될 수
-// 있어 그 사이 보낸 명령이 유실되는 레이스가 있었다(2026-08-20 실기기
-// 확인 — mute()를 호출해도 isMuted()가 계속 false로 남음). 그래서 우리
-// 임의 타이밍이 아니라, 유튜브가 실제로 "큐잉 끝났다"고 알려주는
-// CUED 상태 이벤트를 받은 뒤에만 음소거+재생을 시도한다 — 그 사이엔 이
-// 변수에 요청을 걸어두고, onStateChange에서 소비한다.
-let pendingMutedVideoId = null;
+// cueVideoById 직후 곧바로 playVideo()를 이어 부르면, 처음 영상을 받는
+// 플레이어는 그 로드 과정에서 iframe 내부가 다시 초기화될 수 있어 그
+// 사이 보낸 명령이 유실되는 레이스가 실측 확인됐다(2026-08-20 — 회상
+// 카드의 "예고 후 재생"에서 발견. 예고 자체는 이후 없앴지만, 이 레이스
+// 회피 로직은 재생 안정성을 위해 그대로 남겨둔다). 우리 임의 타이밍이
+// 아니라, 유튜브가 실제로 "큐잉 끝났다"고 알려주는 CUED 상태 이벤트를
+// 받은 뒤에만 재생을 시도한다 — 그 사이엔 이 변수에 요청을 걸어두고,
+// onStateChange에서 소비한다. js/recall.js의 회상 카드가 쓴다(카드가
+// 뜨는 흐름이 실제 탭 이벤트와 타이머 하나를 사이에 두고 있어, 곧장
+// loadVideoById를 부르는 것보다 이 경로가 더 안정적이었다).
+let pendingCuePlayVideoId = null;
 
-function consumePendingMutedPlay(videoId, reason) {
-  if (!pendingMutedVideoId || pendingMutedVideoId !== videoId || pendingMutedVideoId !== activeMiniPlayerVideoId) return;
-  pendingMutedVideoId = null;
+function consumePendingCuePlay(videoId) {
+  if (!pendingCuePlayVideoId || pendingCuePlayVideoId !== videoId || pendingCuePlayVideoId !== activeMiniPlayerVideoId) return;
+  pendingCuePlayVideoId = null;
   if (!ytPlayer) return;
-  ytPlayer.mute();
+  ytPlayer.unMute();
   ytPlayer.playVideo();
-  console.log(`[mini-player] 음소거+재생 실행 (${reason})`);
 }
 
 // 곡이 끝까지 재생됐을 때(YT.PlayerState.ENDED) 알림 받을 콜백 — 지금은
@@ -125,9 +127,9 @@ function warmMiniPlayer() {
       },
       onStateChange: (e) => {
         // CUED(5) — 이제 정말로 로드가 끝났다는 실제 확인 신호. 이 시점
-        // 이후에만 음소거+재생을 걸어야 위 pendingMutedVideoId 주석에서
-        // 설명한 명령 유실 레이스가 없다.
-        if (e.data === YT.PlayerState.CUED) consumePendingMutedPlay(e.target.getVideoData().video_id, "CUED 이벤트");
+        // 이후에만 재생을 걸어야 위 pendingCuePlayVideoId 주석에서 설명한
+        // 명령 유실 레이스가 없다.
+        if (e.data === YT.PlayerState.CUED) consumePendingCuePlay(e.target.getVideoData().video_id);
         if (e.data === YT.PlayerState.PLAYING) miniPlayerActuallyPlaying = true;
         else if (e.data === YT.PlayerState.PAUSED) miniPlayerActuallyPlaying = false;
         else if (e.data === YT.PlayerState.ENDED) {
@@ -135,33 +137,14 @@ function warmMiniPlayer() {
           if (miniPlayerEndedCallback) miniPlayerEndedCallback();
         }
       },
-      // 자동재생 관련 원인 파악용 — 임베드 자체가 막힌 영상(저작권자가
-      // 퍼가기를 껐거나 삭제된 경우 등)이면 자동재생 정책과 무관하게 아예
-      // 재생이 안 된다. 이 콜백은 그런 경우를 구분하려고 콘솔에만 남긴다
-      // (2026-08-20, 원격 디버깅 없이도 나중에 확인 가능하도록).
+      // 임베드 자체가 막힌 영상(저작권자가 퍼가기를 껐거나 삭제된 경우 등)
+      // 이면 자동재생 정책과 무관하게 아예 재생이 안 된다 — 콘솔에 남겨서
+      // 나중에 구분할 수 있게 한다.
       onError: (e) => {
         console.warn("[mini-player] YouTube 재생 오류, code:", e.data);
-        // alert — 임시 진단용, 원인 확인되면 지운다(2026-08-20).
-        alert(`[디버그] 유튜브 재생 오류 code=${e.data}`);
       },
     },
   });
-}
-
-/**
- * 임시 진단용 — 원격 디버깅 없이도 지금 재생 상태를 화면에서 바로 볼 수
- * 있게 한다. 세 번째 자동재생 수정도 실기기에서 안 됐다는 보고를 받고,
- * 더 이상 코드만 보고 추측하지 않기 위해 넣었다(2026-08-20). 원인을
- * 확인하면 이 함수와 호출부를 지운다.
- */
-function getMiniPlayerDebugState() {
-  if (!ytPlayer) return "no-player";
-  if (typeof ytPlayer.getPlayerState !== "function") return "not-ready";
-  try {
-    return `state=${ytPlayer.getPlayerState()},muted=${ytPlayer.isMuted()}`;
-  } catch (e) {
-    return `throw:${e.message}`;
-  }
 }
 
 function openSheet(group, options = {}) {
@@ -208,7 +191,7 @@ function closeSheet() {
 // 두 번째 곡부터는(그리고 API가 미리 로드돼 있으면 첫 곡부터도) 재생이
 // 사용자의 탭과 같은 이벤트 틱 안에서 동기적으로 시작된다.
 // ------------------------------------------------------------
-function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
+function playMiniPlayerVideo(videoId, musicLabel, { reliableCue = false } = {}) {
   activeMiniPlayerVideoId = videoId;
   miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
@@ -234,22 +217,17 @@ function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   // 이 시점엔 이미 준비돼 있다 — 같은 탭 이벤트 안에서 동기적으로 곡만
   // 바꿔 재생한다.
   if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
-    if (muted) {
-      // cueVideoById 직후 곧바로 mute()/playVideo()를 이어 불렀더니 실기기
-      // 에서 mute()가 씹히는 레이스가 실측 확인됐다(2026-08-20, isMuted()가
-      // 계속 false로 남고 재생도 안 됨) — 처음 영상을 받는 플레이어는 로드
-      // 과정에서 iframe 내부가 다시 초기화될 수 있어 그 사이 보낸 명령이
-      // 유실된 것으로 보인다. 그래서 여기선 로드만 요청해두고, mute()/
-      // playVideo()는 실제 CUED 이벤트를 받은 뒤(pendingMutedVideoId 참고,
-      // warmMiniPlayer의 onStateChange)에만 실행한다.
-      pendingMutedVideoId = videoId;
+    if (reliableCue) {
+      // js/recall.js의 회상 카드 전용 경로 — pendingCuePlayVideoId 선언부
+      // 주석 참고.
+      pendingCuePlayVideoId = videoId;
       ytPlayer.cueVideoById(videoId);
       // CUED 이벤트가 혹시 안 오는 경우를 대비한 안전장치 — 이 시간 안에
-      // 이벤트로 처리되면 pendingMutedVideoId가 이미 비워져 있어 아무
+      // 이벤트로 처리되면 pendingCuePlayVideoId가 이미 비워져 있어 아무
       // 일도 안 한다.
-      setTimeout(() => consumePendingMutedPlay(videoId, "타임아웃"), 2500);
+      setTimeout(() => consumePendingCuePlay(videoId), 2500);
     } else {
-      pendingMutedVideoId = null;
+      pendingCuePlayVideoId = null;
       ytPlayer.unMute();
       ytPlayer.loadVideoById(videoId);
     }
@@ -261,25 +239,9 @@ function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   loadYoutubeIframeApi();
 }
 
-/**
- * 음소거 상태로 미리 재생 중인 곡을 나중에(예: 예고 카운트다운이 끝난 뒤)
- * 소리 나게 전환한다. 회상/라디오의 "N초 후 재생됩니다" 예고가 바로 이걸
- * 쓴다 — 예고가 끝나는 시점에 setTimeout으로 재생을 "새로 시작"하면 그
- * 호출은 사용자의 탭과 무관한 스크립트 호출이라 모바일 브라우저가 소리를
- * 막는다(탭의 "사용자 활성화" 유효기간은 몇 초 안에 만료된다). 반면 이미
- * 재생 중인 미디어의 음소거를 나중에 해제하는 건 "새 재생 시작"으로 보지
- * 않아 막히지 않는다 — 그래서 실제 재생은 카드가 뜨는 즉시 음소거로 걸어
- * 두고, 예고가 끝나면 음소거만 푼다(2026-08-20 확인, 기억 라디오 첫 곡이
- * 항상 안 나오던 문제).
- */
-function unmuteMiniPlayerIfStillPlaying(videoId) {
-  if (ytPlayer && typeof ytPlayer.unMute === "function" && activeMiniPlayerVideoId === videoId) {
-    ytPlayer.unMute();
-  }
-}
-
 function stopMiniPlayer() {
   activeMiniPlayerVideoId = null;
+  pendingCuePlayVideoId = null;
   miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
   // iframe을 지우지 않고 정지만 한다 — 프레임을 계속 재사용해야 위에서
