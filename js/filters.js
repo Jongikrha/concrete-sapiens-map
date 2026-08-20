@@ -365,10 +365,47 @@ function toggleSlider() {
   updateSliderLabel();
   updateSliderInfoBox();
   updateSliderFillStyle();
+  renderSliderTicks(range.min, range.max);
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
   renderTotalCountBanner();
+}
+
+// 트랙 아래 연도 눈금(2026-08-20 디자인 레퍼런스 반영) — min~max 사이를
+// 10년 단위(범위가 넓으면 20년 단위)로 나눠서 보여준다. min/max 그
+// 자체는 그 값이 "정각" 10/20년 단위가 아니어도 항상 양 끝에 포함시켜
+// 빈 눈금 없이 실제 데이터 범위를 그대로 보여준다.
+function renderSliderTicks(min, max) {
+  const box = document.getElementById("time-slider-ticks");
+  if (!box) return;
+  if (max <= min) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const span = max - min;
+  const step = span > 60 ? 20 : span > 24 ? 10 : span > 10 ? 5 : 1;
+  const years = new Set([min, max]);
+  for (let y = Math.ceil(min / step) * step; y < max; y += step) {
+    if (y > min) years.add(y);
+  }
+
+  // min/max는 항상 남기고, 그 사이 눈금 중 양 끝과 너무 가까운(연도 라벨
+  // 텍스트끼리 겹칠 만큼) 것만 지운다 — min/max가 step의 배수가 아니면
+  // (실제 데이터라 흔함) 바로 옆 눈금과 몇 년 안 차이 나는 경우가 있다.
+  const minGapYears = span * 0.08;
+  const kept = [...years]
+    .sort((a, b) => a - b)
+    .filter((y) => y === min || y === max || (y - min > minGapYears && max - y > minGapYears));
+
+  box.innerHTML = kept
+    .map((year) => {
+      const pct = ((year - min) / span) * 100;
+      const edgeClass = year === min ? " time-slider-tick--start" : year === max ? " time-slider-tick--end" : "";
+      return `<span class="time-slider-tick${edgeClass}" style="left:${pct}%">${year}</span>`;
+    })
+    .join("");
 }
 
 function closeSlider() {

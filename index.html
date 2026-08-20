@@ -76,18 +76,36 @@
 
       <!-- 시간 슬라이더 (누적 보기) -->
       <div class="time-slider-panel hidden" id="time-slider-panel">
-        <div class="time-slider-label">
-          <span class="time-slider-title-icon">📅</span>
-          <span id="time-slider-year-label"></span>
-          <button class="time-slider-close" id="time-slider-close">✕</button>
+        <div class="time-slider-header">
+          <span class="time-slider-icon-badge" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+          </span>
+          <div class="time-slider-header-text">
+            <h2 class="time-slider-title" id="time-slider-year-label"></h2>
+            <p class="time-slider-subtitle">시간을 선택해 그 시절의 기억을 만나보세요.</p>
+          </div>
+          <button class="time-slider-close" id="time-slider-close" aria-label="닫기">✕</button>
         </div>
         <div class="time-slider-mode-toggle">
-          <button class="time-slider-mode-btn time-slider-mode-btn--active" id="time-slider-mode-cumulative"><span class="time-slider-mode-icon">📅</span>~ 이 해까지</button>
-          <button class="time-slider-mode-btn" id="time-slider-mode-exact"><span class="time-slider-mode-icon">📅</span>이 해만</button>
+          <button class="time-slider-mode-btn time-slider-mode-btn--active" id="time-slider-mode-cumulative">
+            <span class="time-slider-mode-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+            </span>
+            ~ 이 해까지
+          </button>
+          <button class="time-slider-mode-btn" id="time-slider-mode-exact">
+            <span class="time-slider-mode-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+            </span>
+            이 해만
+          </button>
         </div>
-        <input type="range" id="time-slider-input" class="time-slider-input" />
+        <div class="time-slider-track-wrap">
+          <input type="range" id="time-slider-input" class="time-slider-input" />
+          <div class="time-slider-ticks" id="time-slider-ticks"></div>
+        </div>
         <div class="time-slider-info" id="time-slider-info"></div>
-        <button class="btn-primary time-slider-view-btn" id="time-slider-view-btn">이 기간으로 보기 <span class="time-slider-view-btn-chevron">›</span></button>
+        <button class="time-slider-view-btn" id="time-slider-view-btn">이 기간으로 보기 <span class="time-slider-view-btn-chevron">›</span></button>
       </div>
     </div>
 

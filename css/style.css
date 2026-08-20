@@ -696,57 +696,105 @@ body {
 }
 
 /* ------------------------------------------------------------
-   시간 슬라이더 (누적 보기)
+   시간 슬라이더 (누적 보기) — 2026-08-20 디자인 레퍼런스 반영,
+   전체적으로 이전보다 한 단계 크게.
    ------------------------------------------------------------ */
 .time-slider-panel {
-  width: min(66%, 420px);
+  width: min(84%, 480px);
   align-self: center;
-  background: var(--cs-paper);
-  border: 1px solid var(--cs-gray);
-  border-radius: 20px;
-  padding: 18px 18px 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 26px;
+  padding: 26px 24px 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
 
-.time-slider-label {
+.time-slider-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* 레퍼런스의 달력 아이콘(흰 배지 위 오렌지 띠)을 SVG 아이콘 + 배지로
+   재현 — 레퍼런스엔 배지 안에 "17"이 적혀 있었는데, 우리 기능은 특정
+   날짜가 아니라 "연도"를 고르는 거라 실제로 아무 의미도 없는 숫자를
+   그대로 베끼면 오해를 준다. 숫자 없이 달력 아이콘만 남긴다. */
+.time-slider-icon-badge {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--font-pretendard);
-  font-size: 17px;
-  font-weight: 700;
+  justify-content: center;
   color: var(--cs-text-main);
-  margin-bottom: 16px;
+  overflow: hidden;
 }
 
-.time-slider-title-icon {
-  font-size: 18px;
-  line-height: 1;
-  filter: grayscale(1) contrast(0.9) opacity(0.75);
+.time-slider-icon-badge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7px;
+  background: var(--cs-orange);
 }
 
-#time-slider-year-label {
+.time-slider-icon-badge svg {
+  margin-top: 4px;
+}
+
+.time-slider-header-text {
   flex: 1;
+  min-width: 0;
+}
+
+.time-slider-title {
+  margin: 0 0 4px;
+  font-family: var(--font-pretendard);
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--cs-text-main);
+  letter-spacing: -0.01em;
+}
+
+.time-slider-subtitle {
+  margin: 0;
+  font-family: var(--font-pretendard);
+  font-size: 13px;
+  color: var(--cs-text-muted);
 }
 
 .time-slider-close {
   flex-shrink: 0;
-  border: none;
-  background: none;
-  color: var(--cs-black);
-  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--cs-map-gray);
+  background: #fff;
+  color: var(--cs-text-muted);
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.08);
+}
+
+.time-slider-close:hover {
+  color: var(--cs-black);
 }
 
 .time-slider-mode-toggle {
   display: flex;
-  gap: 3px;
-  background: #fff;
-  border: 1px solid var(--cs-gray);
-  border-radius: var(--cs-radius-chip);
-  padding: 3px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 26px;
 }
 
 .time-slider-mode-btn {
@@ -754,44 +802,46 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-pretendard);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  padding: 9px 10px;
+  padding: 14px 10px;
   border-radius: var(--cs-radius-chip);
-  border: none;
-  background: transparent;
+  border: 1.5px solid var(--cs-map-gray);
+  background: #fff;
   color: var(--cs-text-muted);
   cursor: pointer;
-  transition: background var(--cs-transition-fast), color var(--cs-transition-fast);
+  transition: background var(--cs-transition-fast), color var(--cs-transition-fast), border-color var(--cs-transition-fast);
 }
 
 .time-slider-mode-btn--active {
-  background: var(--cs-orange);
-  color: #fff;
-  box-shadow: 0 3px 10px rgba(255, 90, 54, 0.35);
+  background: rgba(255, 90, 54, 0.08);
+  border-color: var(--cs-orange);
+  color: var(--cs-orange);
 }
 
 .time-slider-mode-icon {
-  font-size: 12px;
-  line-height: 1;
-  filter: grayscale(1) contrast(0.9) opacity(0.75);
-}
-
-.time-slider-mode-btn--active .time-slider-mode-icon {
-  filter: none;
-  opacity: 1;
+  display: flex;
+  flex-shrink: 0;
+  line-height: 0;
 }
 
 /* 네이티브 range 입력은 진행률(채워진 구간)을 CSS만으로 표현하지 못해
    실측 % 없이는 항상 트랙 전체가 같은 색으로 보인다 — js/filters.js가
    value가 바뀔 때마다 --slider-fill-pct(0~100)를 인라인으로 계산해 넣고,
    아래 background가 그 값 기준으로 주황(채움)/회색(남은 구간)을 가른다. */
+.time-slider-track-wrap {
+  position: relative;
+  padding-top: 4px;
+  padding-bottom: 26px;
+}
+
 .time-slider-input {
   --slider-fill-pct: 100%;
   appearance: none;
   -webkit-appearance: none;
+  display: block;
   width: 100%;
   height: 8px;
   border-radius: 999px;
@@ -808,22 +858,22 @@ body {
 .time-slider-input::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--cs-orange);
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 4px solid #fff;
+  box-shadow: 0 2px 10px rgba(255, 90, 54, 0.45);
   cursor: pointer;
 }
 
 .time-slider-input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--cs-orange);
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 4px solid #fff;
+  box-shadow: 0 2px 10px rgba(255, 90, 54, 0.45);
   cursor: pointer;
 }
 
@@ -833,17 +883,48 @@ body {
   background: transparent;
 }
 
+/* 트랙 아래 연도 눈금 — js/filters.js renderSliderTicks가 min~max
+   사이를 적당한 간격으로 나눠 채운다. 각 눈금은 트랙 위 실제 값
+   위치(%)에 절대좌표로 놓여서 슬라이더 진행률과 항상 맞는다. */
+.time-slider-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 20px;
+  height: 20px;
+}
+
+.time-slider-tick {
+  position: absolute;
+  top: 0;
+  font-family: var(--font-pretendard);
+  font-size: 12px;
+  color: var(--cs-text-muted);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.time-slider-tick--start {
+  transform: translateX(0);
+}
+
+.time-slider-tick--end {
+  transform: translateX(-100%);
+  color: var(--cs-orange);
+  font-weight: 700;
+}
+
 .time-slider-info {
   display: none;
   align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  padding: 14px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid var(--cs-gray);
+  gap: 16px;
+  margin-top: 4px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 90, 54, 0.06);
+  border: 1px solid rgba(255, 90, 54, 0.16);
   font-family: var(--font-pretendard);
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.6;
   color: var(--cs-text-main);
 }
@@ -854,14 +935,14 @@ body {
 
 .time-slider-info-icon {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: rgba(255, 90, 54, 0.12);
+  background: rgba(255, 90, 54, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 24px;
 }
 
 .time-slider-info-count {
@@ -874,14 +955,26 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 18px;
-  font-size: 14.5px;
-  padding: 13px;
-  border-radius: 14px;
+  width: 100%;
+  margin-top: 22px;
+  border: none;
+  font-size: 15.5px;
+  font-weight: 600;
+  padding: 16px;
+  border-radius: 999px;
+  background: var(--cs-orange);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(255, 90, 54, 0.32);
+  transition: background var(--cs-transition-fast);
+}
+
+.time-slider-view-btn:hover {
+  background: #e64f2d;
 }
 
 .time-slider-view-btn-chevron {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 /* ------------------------------------------------------------
