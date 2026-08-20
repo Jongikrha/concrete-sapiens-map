@@ -29,6 +29,12 @@ let sheetHighlightStoryId = null;
 let activeMiniPlayerVideoId = null;
 // 일시정지 상태 — 새 곡을 틀 때마다 autoplay로 시작하니 false로 리셋된다.
 let miniPlayerPaused = false;
+// 실제로 재생이 시작됐는지(YT.PlayerState.PLAYING) — activeMiniPlayerVideoId는
+// "마지막으로 재생을 요청한 곡"일 뿐이라, 모바일에서 자동재생이 조용히
+// 막히면 요청은 됐지만 실제로는 재생되지 않은 채로 남을 수 있다. 이 상태를
+// 따로 두지 않으면 카드 썸네일 재생 버튼을 다시 눌러도 "이미 재생 중이니
+// 정지"로 처리돼 재시도할 방법이 없었다(2026-08-20 확인).
+let miniPlayerActuallyPlaying = false;
 // 세션 내내 재사용하는 단일 유튜브 IFrame Player 인스턴스 —
 // playMiniPlayerVideo 아래 설명 참고.
 let ytPlayer = null;
@@ -113,6 +119,7 @@ function closeSheet() {
 // ------------------------------------------------------------
 function playMiniPlayerVideo(videoId, musicLabel) {
   activeMiniPlayerVideoId = videoId;
+  miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
   document.getElementById("mini-player").classList.remove("hidden");
 
@@ -161,7 +168,12 @@ function playMiniPlayerVideo(videoId, musicLabel) {
           e.target.playVideo();
         },
         onStateChange: (e) => {
-          if (e.data === YT.PlayerState.ENDED && miniPlayerEndedCallback) miniPlayerEndedCallback();
+          if (e.data === YT.PlayerState.PLAYING) miniPlayerActuallyPlaying = true;
+          else if (e.data === YT.PlayerState.PAUSED) miniPlayerActuallyPlaying = false;
+          else if (e.data === YT.PlayerState.ENDED) {
+            miniPlayerActuallyPlaying = false;
+            if (miniPlayerEndedCallback) miniPlayerEndedCallback();
+          }
         },
       },
     });
@@ -170,6 +182,7 @@ function playMiniPlayerVideo(videoId, musicLabel) {
 
 function stopMiniPlayer() {
   activeMiniPlayerVideoId = null;
+  miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
   // iframe을 지우지 않고 정지만 한다 — 프레임을 계속 재사용해야 위에서
   // 설명한 모바일 자동재생 문제가 다시 생기지 않는다.
@@ -410,7 +423,12 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
     btn.onclick = () => {
       const container = btn.closest(".story-youtube");
       const videoId = container.dataset.videoId;
-      if (activeMiniPlayerVideoId === videoId) stopMiniPlayer();
+      // 실제로 재생 중일 때만 "정지"로 처리한다 — 모바일에서 자동재생이
+      // 막혀 요청만 되고 소리는 안 나온 상태라면(miniPlayerActuallyPlaying
+      // 이 아직 false) 같은 버튼을 다시 눌렀을 때 그냥 멈추는 대신 재생을
+      // 다시 시도한다. 이번 탭은 사용자의 진짜 클릭 이벤트 안에서 동기적
+      // 으로 이뤄지니 첫 시도보다 성공할 가능성이 높다.
+      if (activeMiniPlayerVideoId === videoId && miniPlayerActuallyPlaying) stopMiniPlayer();
       else playMiniPlayerVideo(videoId, container.dataset.musicLabel || null);
       onChange();
     };

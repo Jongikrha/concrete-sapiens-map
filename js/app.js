@@ -6,6 +6,15 @@
 // ============================================================
 
 async function initApp() {
+  // 유튜브 IFrame Player API를 가장 먼저 받아둔다(fire-and-forget) — 사용자가
+  // 실제로 재생을 누를 때쯤엔 이미 로드가 끝나 있어야 그 탭과 같은 이벤트
+  // 틱 안에서 동기적으로 재생을 시작할 수 있다(storySheet.js
+  // playMiniPlayerVideo 설명 참고, 모바일 소리 없는 자동재생 문제 대응).
+  // Storage.init/Auth.init의 await 뒤로 미뤄두면 그 네트워크 호출이 느린
+  // 모바일 환경에서 API 로딩 시작 자체가 함께 밀려, 사용자가 지도 진입
+  // 직후 바로 곡을 누르면 아직 로딩 중이라 재생이 막히는 경우가 있었다
+  // (2026-08-20 확인) — 다른 초기화와 병렬로 최대한 일찍 시작한다.
+  loadYoutubeIframeApi();
   await Storage.init();
   await Auth.init();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
@@ -15,11 +24,6 @@ async function initApp() {
   renderMarkers();
   renderTotalCountBanner();
   handleInitialEntry();
-  // 유튜브 IFrame Player API를 미리 받아둔다(fire-and-forget) — 사용자가
-  // 실제로 재생을 누를 때쯤엔 이미 로드가 끝나 있어야 그 탭과 같은 이벤트
-  // 틱 안에서 동기적으로 재생을 시작할 수 있다(storySheet.js
-  // playMiniPlayerVideo 설명 참고, 모바일 소리 없는 자동재생 문제 대응).
-  loadYoutubeIframeApi();
 }
 
 function renderTotalCountBanner() {
