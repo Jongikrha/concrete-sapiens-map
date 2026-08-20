@@ -40,6 +40,24 @@ let miniPlayerActuallyPlaying = false;
 let ytPlayer = null;
 let ytPlayerCreating = false;
 let ytApiReadyPromise = null;
+// cueVideoById 직후 곧바로 mute()/playVideo()를 이어 부르면, 처음
+// 영상을 받는 플레이어는 그 로드 과정에서 iframe 내부가 다시 초기화될 수
+// 있어 그 사이 보낸 명령이 유실되는 레이스가 있었다(2026-08-20 실기기
+// 확인 — mute()를 호출해도 isMuted()가 계속 false로 남음). 그래서 우리
+// 임의 타이밍이 아니라, 유튜브가 실제로 "큐잉 끝났다"고 알려주는
+// CUED 상태 이벤트를 받은 뒤에만 음소거+재생을 시도한다 — 그 사이엔 이
+// 변수에 요청을 걸어두고, onStateChange에서 소비한다.
+let pendingMutedVideoId = null;
+
+function consumePendingMutedPlay(videoId, reason) {
+  if (!pendingMutedVideoId || pendingMutedVideoId !== videoId || pendingMutedVideoId !== activeMiniPlayerVideoId) return;
+  pendingMutedVideoId = null;
+  if (!ytPlayer) return;
+  ytPlayer.mute();
+  ytPlayer.playVideo();
+  console.log(`[mini-player] 음소거+재생 실행 (${reason})`);
+}
+
 // 곡이 끝까지 재생됐을 때(YT.PlayerState.ENDED) 알림 받을 콜백 — 지금은
 // 어딘가의 기억 플레이리스트(js/recall.js)만 등록해서 자동으로 다음 곡을
 // 잇는다. 아무도 등록하지 않았으면(보통의 카드 열람 등) 그냥 멈춘 채로
@@ -106,6 +124,10 @@ function warmMiniPlayer() {
         if (activeMiniPlayerVideoId) e.target.loadVideoById(activeMiniPlayerVideoId);
       },
       onStateChange: (e) => {
+        // CUED(5) — 이제 정말로 로드가 끝났다는 실제 확인 신호. 이 시점
+        // 이후에만 음소거+재생을 걸어야 위 pendingMutedVideoId 주석에서
+        // 설명한 명령 유실 레이스가 없다.
+        if (e.data === YT.PlayerState.CUED) consumePendingMutedPlay(e.target.getVideoData().video_id, "CUED 이벤트");
         if (e.data === YT.PlayerState.PLAYING) miniPlayerActuallyPlaying = true;
         else if (e.data === YT.PlayerState.PAUSED) miniPlayerActuallyPlaying = false;
         else if (e.data === YT.PlayerState.ENDED) {
@@ -213,17 +235,21 @@ function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   // 바꿔 재생한다.
   if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
     if (muted) {
-      // loadVideoById는 "로드"와 "자동재생 시도"가 한 동작으로 묶여 있어,
-      // 그 직전에 mute()를 걸어도 유튜브 iframe 내부에서 처리 순서가 100%
-      // 보장된다고 확신할 수 없었다(실제로 순서를 바꿔봐도 자동재생이
-      // 계속 안 됐다, 2026-08-20 재확인). 대신 cueVideoById로 자동재생 없이
-      // 로드만 해두고(이 단계는 재생 시도 자체가 없어 음소거 여부와 무관),
-      // mute()로 확실히 음소거를 건 뒤, 그제서야 우리가 직접 playVideo()를
-      // 호출한다 — 이 시점엔 이미 음소거가 적용된 상태라 레이스가 없다.
+      // cueVideoById 직후 곧바로 mute()/playVideo()를 이어 불렀더니 실기기
+      // 에서 mute()가 씹히는 레이스가 실측 확인됐다(2026-08-20, isMuted()가
+      // 계속 false로 남고 재생도 안 됨) — 처음 영상을 받는 플레이어는 로드
+      // 과정에서 iframe 내부가 다시 초기화될 수 있어 그 사이 보낸 명령이
+      // 유실된 것으로 보인다. 그래서 여기선 로드만 요청해두고, mute()/
+      // playVideo()는 실제 CUED 이벤트를 받은 뒤(pendingMutedVideoId 참고,
+      // warmMiniPlayer의 onStateChange)에만 실행한다.
+      pendingMutedVideoId = videoId;
       ytPlayer.cueVideoById(videoId);
-      ytPlayer.mute();
-      ytPlayer.playVideo();
+      // CUED 이벤트가 혹시 안 오는 경우를 대비한 안전장치 — 이 시간 안에
+      // 이벤트로 처리되면 pendingMutedVideoId가 이미 비워져 있어 아무
+      // 일도 안 한다.
+      setTimeout(() => consumePendingMutedPlay(videoId, "타임아웃"), 2500);
     } else {
+      pendingMutedVideoId = null;
       ytPlayer.unMute();
       ytPlayer.loadVideoById(videoId);
     }
