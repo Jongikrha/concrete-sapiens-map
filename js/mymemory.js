@@ -200,25 +200,11 @@ async function openMyMemoryList(kind, opts = {}) {
   const panel = document.getElementById("mymemory-panel");
   const stories = [...(await buildMyMemoryList(kind))].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  // 카드 마크업은 app.js의 renderRecentListItem을 그대로 재사용한다 —
+  // "지금까지 쌓인 기억"/"오늘의 기억"과 같은 카드 디자인을 여기서 다시
+  // 베끼면 나중에 한쪽만 고치고 잊어버리기 쉽다(2026-08-20).
   const listHtml = stories.length
-    ? stories.map((story) => {
-        const year = Storage.getStoryYear(story);
-        const title = Storage.getGroupTitle({
-          placeId: story.placeId,
-          officialPlaceName: story.officialPlaceName,
-          customName: story.customName,
-          address: story.address,
-        });
-        const reactionCount = story.reactionCount || 0;
-        return `
-          <div class="recent-item" data-id="${story.id}">
-            <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
-            <p class="recent-item-content">${escapeHtml(story.content)}</p>
-            <p class="recent-item-place">${escapeHtml(title)}</p>
-            ${reactionCount > 0 ? `<p class="recent-item-reaction">♡ ${reactionCount}명이 떠올랐어요</p>` : ""}
-          </div>
-        `;
-      }).join("")
+    ? stories.map((story) => renderRecentListItem(story, { reactionCount: story.reactionCount || 0 })).join("")
     : `<p class="recent-empty">${MY_MEMORY_EMPTY[kind]}</p>`;
 
   panel.innerHTML = `

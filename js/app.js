@@ -68,19 +68,48 @@ const SORT_TOGGLE_HTML = (activeSort) => `
   </div>
 `;
 
-function renderRecentListItem(story) {
+const RECENT_ITEM_PIN_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.4-7-11.5A7 7 0 0 1 19 9.5C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>`;
+const RECENT_ITEM_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>`;
+const RECENT_ITEM_SEND_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>`;
+
+// "지금까지 쌓인 기억"/"오늘의 기억"/"내 기억"(mymemory.js) 목록이 모두
+// 공유하는 항목 카드(2026-08-20 디자인 레퍼런스 반영) — 연도를 굵게
+// 강조하고, 장소/곡/공유를 한 줄 메타 정보로 내용 아래에 붙인다. 공유
+// 아이콘은 눌러서 바로 공유창을 여는 대신 순수 장식이다 — 항목 자체가
+// 이미 전체 클릭 영역(기억 카드로 이동)이라, 안에 또 다른 클릭 타깃을
+// 심으면 "항목을 눌렀는데 공유가 뜨는" 혼선이 생긴다. 진짜 공유는 카드
+// 상세(기억 카드)의 "기억 전하기" 버튼으로 안내한다.
+// options.reactionCount는 "나를 떠올린 기억"(mymemory.js)에서만 넘어와,
+// 몇 명이 반응했는지 짧게 덧붙인다.
+function renderRecentListItem(story, options = {}) {
   const year = Storage.getStoryYear(story);
+  const month = Storage.getStoryMonth(story);
   const title = Storage.getGroupTitle({
     placeId: story.placeId,
     officialPlaceName: story.officialPlaceName,
     customName: story.customName,
     address: story.address,
   });
+  const musicLabel = story.musicTitle
+    ? buildSongLabel({ artist: story.musicArtist, title: story.musicTitle })
+    : "";
+  const reactionCount = options.reactionCount || 0;
+
   return `
     <div class="recent-item" data-id="${story.id}">
-      <p class="recent-item-year">${year !== null ? `${year}년` : "시점 미상"}</p>
-      <p class="recent-item-content">${escapeHtml(story.content)}</p>
-      <p class="recent-item-place">${escapeHtml(title)}</p>
+      <div class="recent-item-date">
+        <p class="recent-item-year">${year !== null ? year : "···"}<span class="recent-item-year-unit">${year !== null ? "년" : ""}</span></p>
+        ${month ? `<p class="recent-item-month">${month}월</p>` : ""}
+      </div>
+      <div class="recent-item-body">
+        <p class="recent-item-content">${escapeHtml(story.content)}</p>
+        <div class="recent-item-meta">
+          <span class="recent-item-place">${RECENT_ITEM_PIN_SVG}${escapeHtml(title)}</span>
+          ${musicLabel ? `<span class="recent-item-song">${RECENT_ITEM_NOTE_SVG}${escapeHtml(musicLabel)}</span>` : ""}
+          <span class="recent-item-send">${RECENT_ITEM_SEND_SVG}</span>
+        </div>
+        ${reactionCount > 0 ? `<p class="recent-item-reaction">♡ ${reactionCount}명이 떠올랐어요</p>` : ""}
+      </div>
     </div>
   `;
 }
@@ -154,29 +183,53 @@ function closeRecentMemoriesModal() {
 // (dateMode:"now"면 다 올해) 실질적으로 순서가 안 바뀌는 죽은 옵션이
 // 되기 때문. 초 단위까지 갈리는 등록 순서(latest)만 남겨 "지금 뭐가
 // 올라오고 있나"에 집중한다(2026-08-14).
+//
+// 처음엔 5개만 보여주고 "더 불러오기"로 10개씩 더 연다(2026-08-20 디자인
+// 레퍼런스 반영). todayVisibleCount는 opts.visibleCount로 넘기지 않으면
+// 매번 5로 리셋된다 — 칩을 다시 눌러 새로 여는 경우가 이에 해당한다.
+// 카드 상세로 들어갔다 뒤로가기(goBackFromSheet)로 돌아올 때만 그 시점의
+// visibleCount를 이어받아, 더 불러온 상태가 스크롤 위치처럼 유지된다.
+let todayVisibleCount = 5;
+const TODAY_LOAD_MORE_STEP = 10;
+
 function openTodayMemoriesModal(opts = {}) {
   const panel = document.getElementById("today-panel");
   const stories = Storage.getTodayStories();
+  todayVisibleCount = opts.visibleCount || 5;
 
   const listHtml = stories.length
-    ? buildSortedListHtml(stories, "latest", renderRecentListItem)
+    ? buildSortedListHtml(stories, "latest", renderRecentListItem, { cap: todayVisibleCount })
     : `<p class="recent-empty">오늘 등록된 기억이 아직 없습니다.</p>`;
+  const hasMore = stories.length > todayVisibleCount;
 
   panel.innerHTML = `
     <div class="recent-header">
-      <h2 class="composer-title" style="margin:0;">오늘의 기억</h2>
-      <button class="recent-close" id="today-close">✕</button>
+      <div>
+        <h2 class="composer-title" style="margin:0 0 4px;">오늘의 기억</h2>
+        <p class="composer-subtitle" style="margin:0;">오늘 쌓인 기억들을 만나보세요</p>
+      </div>
+      <button class="recent-close" id="today-close" aria-label="닫기">✕</button>
     </div>
     ${listHtml}
+    ${hasMore ? `<button class="recent-load-more" id="today-load-more" type="button">더 불러오기 <span class="recent-load-more-chevron" aria-hidden="true">⌄</span></button>` : ""}
   `;
 
   panel.querySelector("#today-close").onclick = closeTodayMemoriesModal;
+
+  const loadMoreBtn = panel.querySelector("#today-load-more");
+  if (loadMoreBtn) {
+    loadMoreBtn.onclick = () => {
+      const scrollTop = panel.scrollTop;
+      openTodayMemoriesModal({ visibleCount: todayVisibleCount + TODAY_LOAD_MORE_STEP });
+      panel.scrollTop = scrollTop;
+    };
+  }
 
   panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeTodayMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "today", scrollTop, label: "오늘의 기억" });
+      navigateToStoryFromList(item.dataset.id, { kind: "today", scrollTop, visibleCount: todayVisibleCount, label: "오늘의 기억" });
     };
   });
 
@@ -215,7 +268,7 @@ function goBackFromSheet() {
   if (returnTo.kind === "recent") {
     openRecentMemoriesModal({ scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "today") {
-    openTodayMemoriesModal({ scrollTop: returnTo.scrollTop });
+    openTodayMemoriesModal({ scrollTop: returnTo.scrollTop, visibleCount: returnTo.visibleCount });
   } else if (returnTo.kind === "mymemory") {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "searchNearby") {
