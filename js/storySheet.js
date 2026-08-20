@@ -113,6 +113,13 @@ function warmMiniPlayer() {
           if (miniPlayerEndedCallback) miniPlayerEndedCallback();
         }
       },
+      // 자동재생 관련 원인 파악용 — 임베드 자체가 막힌 영상(저작권자가
+      // 퍼가기를 껐거나 삭제된 경우 등)이면 자동재생 정책과 무관하게 아예
+      // 재생이 안 된다. 이 콜백은 그런 경우를 구분하려고 콘솔에만 남긴다
+      // (2026-08-20, 원격 디버깅 없이도 나중에 확인 가능하도록).
+      onError: (e) => {
+        console.warn("[mini-player] YouTube 재생 오류, code:", e.data);
+      },
     },
   });
 }
@@ -187,16 +194,21 @@ function playMiniPlayerVideo(videoId, musicLabel, { muted = false } = {}) {
   // 이 시점엔 이미 준비돼 있다 — 같은 탭 이벤트 안에서 동기적으로 곡만
   // 바꿔 재생한다.
   if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
-    // 음소거는 반드시 loadVideoById보다 먼저 걸어야 한다 — 순서가 바뀌면
-    // (재생 시작 → 음소거) 재생이 "소리 있는 채로" 시작을 시도하는 그
-    // 짧은 순간에 브라우저가 이미 자동재생을 막아버려서, 뒤늦게 음소거를
-    // 걸어도 되살아나지 않는다(2026-08-20 확인 — 기억 라디오에서 자동
-    // 재생이 안 되고, 미니 플레이어에서 정지 후 수동으로 다시 눌러야만
-    // 재생되던 문제가 이거였다). postMessage 두 콜은 순서가 보장되므로
-    // 음소거 요청이 항상 loadVideoById보다 먼저 도착한다.
-    if (muted) ytPlayer.mute();
-    ytPlayer.loadVideoById(videoId);
-    if (!muted) ytPlayer.unMute();
+    if (muted) {
+      // loadVideoById는 "로드"와 "자동재생 시도"가 한 동작으로 묶여 있어,
+      // 그 직전에 mute()를 걸어도 유튜브 iframe 내부에서 처리 순서가 100%
+      // 보장된다고 확신할 수 없었다(실제로 순서를 바꿔봐도 자동재생이
+      // 계속 안 됐다, 2026-08-20 재확인). 대신 cueVideoById로 자동재생 없이
+      // 로드만 해두고(이 단계는 재생 시도 자체가 없어 음소거 여부와 무관),
+      // mute()로 확실히 음소거를 건 뒤, 그제서야 우리가 직접 playVideo()를
+      // 호출한다 — 이 시점엔 이미 음소거가 적용된 상태라 레이스가 없다.
+      ytPlayer.cueVideoById(videoId);
+      ytPlayer.mute();
+      ytPlayer.playVideo();
+    } else {
+      ytPlayer.unMute();
+      ytPlayer.loadVideoById(videoId);
+    }
     return;
   }
   // 아주 드물게(페이지 진입 직후 곧바로 탭) 아직 준비 전이면, warmMiniPlayer의
