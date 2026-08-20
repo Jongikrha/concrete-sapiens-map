@@ -29,14 +29,14 @@ function startFreePinComposer(lat, lng, prefillContent) {
   reverseGeocode(lat, lng).then(({ address, buildingName }) => {
     const addrEl = document.getElementById("composer-address-value");
     if (addrEl) {
-      addrEl.textContent = address || "주소를 확인할 수 없습니다";
+      addrEl.textContent = (address && Storage.abbreviateAddress(address)) || "주소를 확인할 수 없습니다";
     }
     // 아직 아무것도 안 적은 상태(사용자가 미리 타이핑하지 않은 경우)에만
     // 채워준다 — 값을 덮어써서 이미 입력한 이름을 지우면 안 되기 때문.
     // 등록된 건물명(예: "서울역")이 있으면 그걸 우선, 없으면 주소로 채운다.
     const nameInput = document.getElementById("input-place-name");
     if (nameInput && !nameInput.value.trim()) {
-      const prefillName = buildingName || address;
+      const prefillName = buildingName || (address && Storage.abbreviateAddress(address));
       if (prefillName) nameInput.value = prefillName;
     }
     if (pendingPin) pendingPin.address = address || null;
@@ -101,7 +101,7 @@ function openComposer(pin) {
       <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(nameValue)}" maxlength="40" />
     </div>
     ${nameHint}
-    <div class="field-address" id="composer-address-value">${escapeHtml(pin.address || "주소 확인 중...")}</div>
+    <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
   `;
 
   let dateMode = editing ? editing.dateMode : "past";

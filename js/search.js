@@ -224,12 +224,15 @@ function bindSearchEvents() {
         return;
       }
 
-      searchResults.innerHTML = data.slice(0, 6).map((place) => `
-        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}" data-address="${escapeHtml(place.road_address_name || place.address_name || "")}">
+      searchResults.innerHTML = data.slice(0, 6).map((place) => {
+        const rawAddress = place.road_address_name || place.address_name || "";
+        return `
+        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}" data-address="${escapeHtml(rawAddress)}">
           <strong>${escapeHtml(place.place_name)}</strong>
-          <span>${escapeHtml(place.road_address_name || place.address_name)}</span>
+          <span>${escapeHtml(Storage.abbreviateAddress(rawAddress))}</span>
         </li>
-      `).join("");
+      `;
+      }).join("");
       searchResults.classList.remove("hidden");
 
       searchResults.querySelectorAll(".search-result-item").forEach((item) => {
