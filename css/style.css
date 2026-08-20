@@ -1017,14 +1017,17 @@ body {
    끌 수 있다. bottom-toolbar 바로 위, 겹치지 않도록 아래
    ".mini-player:not(.hidden) ~ .bottom-toolbar" 규칙이 툴바를 밀어올린다
    — 툴바가 좁은 화면에서 2줄로 접혀도(아래 주석) 자기 bottom 기준으로
-   위쪽으로만 자라기 때문에 겹치지 않는다.
+   위쪽으로만 자라기 때문에 겹치지 않는다. z-index는 .recall-session
+   (110)보다 높여둔다 — 기억 라디오/기억산책은 이 미니 플레이어로 재생을
+   제어하는 화면인데, 정작 그 모달 밑에 깔려 정지/일시정지 버튼이 안
+   보이던 문제가 있었다(2026-08-20 확인).
    ------------------------------------------------------------ */
 .mini-player {
   position: absolute;
   bottom: 88px;
   left: 16px;
   right: 16px;
-  z-index: 21;
+  z-index: 120;
   display: flex;
   align-items: center;
   gap: 10px;
