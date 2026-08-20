@@ -5,9 +5,11 @@
 //
 // 1) 하단 "내 기억" 버튼(js/filters.js의 toggleMyMemoryMode) — 기존
 //    "지도에서 내 기억 보기"(startMyMemoryMode, 무변경)와 "기억산책"
-//    (startRecallConstellation, scope="mine") 중 고른다. 기억산책은 몰입
-//    리빌 전에 별자리 개요(showConstellationOverview)를 먼저 보여준다.
-//    선택 패널은 filters.js의 openTodayMission()과 같은 패턴 —
+//    (startRecallConstellationWithStories, scope="mine") 중 고른다.
+//    기억산책은 실제로 기억이 있는 연대가 둘 이상이면 어느 연대로 걸을지
+//    먼저 고르게 하고(openRecallDecadeChoice, 2026-08-20), 그다음 몰입
+//    리빌 전에 별자리 개요(showConstellationOverview)를 보여준다. 선택
+//    패널은 filters.js의 openTodayMission()과 같은 패턴 —
 //    #recall-choice-panel의 innerHTML만 갈아끼운다.
 // 2) 하단 "기억 라디오" 버튼(startMemoryRadio, scope="songs", 구 "어딘가의
 //    기억") — 이 서비스의 핵심 기능으로 두기로 해서(2026-08-19) 툴바에서
@@ -34,6 +36,9 @@ let recallCurrentStory = null;
 let recallDotMarker = null;
 // 별자리 개요에서 쓴 스토리 목록 — 공유 카드 생성 시 다시 계산하지 않고 재사용.
 let recallConstellationStories = null;
+// 기억산책 진입 시 고른 연대(예: 1990, 2000...) — null이면 "전체".
+// 별자리/공유 카드 제목에 쓴다(getConstellationTitle).
+let recallDecadeLabel = null;
 
 // ------------------------------------------------------------
 // "내 기억" 버튼의 선택지 — 지도에서 보기 / 기억산책
@@ -55,11 +60,77 @@ function openRecallEntryChoice() {
     closeRecallChoice();
     startMyMemoryMode();
   };
-  panel.querySelector("#recall-choice-walk-btn").onclick = () => {
-    closeRecallChoice();
-    startRecallConstellation();
+  panel.querySelector("#recall-choice-walk-btn").onclick = async () => {
+    const stories = await buildMyMemoryList("posted");
+    if (!stories.length) {
+      closeRecallChoice();
+      showToast("entry-toast", "아직 남긴 기억이 없어요", 2400);
+      return;
+    }
+    const buckets = getDecadeBuckets(stories);
+    // 연대가 하나뿐이거나(또는 날짜 정보가 없어 아예 못 나누면) 고를 것도
+    // 없어 바로 들어간다 — 그 하나의 연대로 라벨은 붙여준다.
+    if (buckets.length <= 1) {
+      closeRecallChoice();
+      startRecallConstellationWithStories(stories, buckets.length === 1 ? buckets[0].decade : null);
+    } else {
+      openRecallDecadeChoice(stories, buckets);
+    }
   };
   document.getElementById("recall-choice-overlay").classList.remove("hidden");
+}
+
+// 기억산책이 실제로 기억이 있는 연대만 골라 고르게 한다(2026-08-20) —
+// "나의 기억 지도" 공유가 항상 오늘 연도로만 찍혀서, 정작 기억 자체가
+// 다른 시대의 것이어도 그 맥락이 드러나지 않는다는 피드백. 연대별로
+// 나눠보면 비어 보이는 시절이 더 남기고 싶어지는 계기가 될 수도 있다는
+// 의도. dateMode가 없어 연도를 알 수 없는 기억(Storage.getStoryYear가
+// null)은 연대 버킷에서 빠지지만 "전체"에는 그대로 포함된다.
+function getDecadeBuckets(stories) {
+  const buckets = new Map();
+  stories.forEach((s) => {
+    const year = Storage.getStoryYear(s);
+    if (year === null) return;
+    const decade = Math.floor(year / 10) * 10;
+    if (!buckets.has(decade)) buckets.set(decade, []);
+    buckets.get(decade).push(s);
+  });
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([decade, decadeStories]) => ({ decade, stories: decadeStories }));
+}
+
+function openRecallDecadeChoice(stories, buckets) {
+  const panel = document.getElementById("recall-choice-panel");
+  const decadeButtonsHtml = buckets
+    .map(
+      ({ decade, stories: decadeStories }) =>
+        `<button class="btn-secondary recall-decade-btn" data-decade="${decade}" style="margin-top:8px;">${decade}년대 · ${decadeStories.length}개</button>`
+    )
+    .join("");
+  panel.innerHTML = `
+    <div class="daily-prompt-header">
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>기억산책</span>
+      <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="daily-prompt-hint">어느 시절의 기억을 걷고 싶으세요?</p>
+    <div class="daily-prompt-divider"></div>
+    ${decadeButtonsHtml}
+    <button class="btn-secondary" id="recall-decade-all-btn" style="margin-top:8px;">전체 · ${stories.length}개</button>
+  `;
+  panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
+  panel.querySelectorAll(".recall-decade-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const decade = Number(btn.dataset.decade);
+      const bucket = buckets.find((b) => b.decade === decade);
+      closeRecallChoice();
+      startRecallConstellationWithStories(bucket.stories, decade);
+    };
+  });
+  panel.querySelector("#recall-decade-all-btn").onclick = () => {
+    closeRecallChoice();
+    startRecallConstellationWithStories(stories, null);
+  };
 }
 
 function closeRecallChoice() {
@@ -67,15 +138,11 @@ function closeRecallChoice() {
 }
 
 // ------------------------------------------------------------
-// 진입 — 범위별로 풀을 구성한 뒤 세션을 연다
+// 진입 — 골라진(또는 자동으로 정해진) 스토리 목록으로 세션을 연다
 // ------------------------------------------------------------
-async function startRecallConstellation() {
-  const stories = await buildMyMemoryList("posted");
-  if (!stories.length) {
-    showToast("entry-toast", "아직 남긴 기억이 없어요", 2400);
-    return;
-  }
+function startRecallConstellationWithStories(stories, decade) {
   recallScope = "mine";
+  recallDecadeLabel = decade;
   openRecallSessionShell();
   showConstellationOverview(stories);
 }
@@ -146,9 +213,13 @@ function hideConstellationOverview() {
   document.getElementById("recall-constellation").classList.add("hidden");
 }
 
-// "당신의 기억은 서울·부산·경주 17곳에 남아 있습니다" — 활동량을 점수화하지
-// 않고, 도시명 상위 몇 개 + 장소(그룹) 개수만 담담하게 알려준다.
+// "당신의 1990년대 기억은 서울·부산·경주 17곳에 남아 있습니다" — 활동량을
+// 점수화하지 않고, 도시명 상위 몇 개 + 장소(그룹) 개수만 담담하게
+// 알려준다. 연대를 골랐으면(recallDecadeLabel) 그 맥락을 문장에도 반영한다
+// (2026-08-20) — 별자리 화면만 봐도 지금 어느 시절을 보고 있는지 알 수
+// 있게.
 function buildMemoryFactSentence(stories) {
+  const subject = recallDecadeLabel !== null ? `당신의 ${recallDecadeLabel}년대 기억은` : "당신의 기억은";
   const placeCount = Storage.groupStoriesByPlace(stories).length;
 
   const cityCounts = {};
@@ -163,8 +234,8 @@ function buildMemoryFactSentence(stories) {
     .map(([city]) => city);
 
   const placeLabel = `${placeCount}곳에 남아 있습니다.`;
-  if (topCities.length === 0) return `당신의 기억은 ${placeLabel}`;
-  return `당신의 기억은 ${topCities.join("·")} ${placeLabel}`;
+  if (topCities.length === 0) return `${subject} ${placeLabel}`;
+  return `${subject} ${topCities.join("·")} ${placeLabel}`;
 }
 
 // 좌표를 정사각 영역(size×size, offsetX/Y만큼 이동) 안에 min-max 정규화해
@@ -366,12 +437,21 @@ function endRecallSession() {
   recallQueue = [];
   recallCurrentStory = null;
   recallConstellationStories = null;
+  recallDecadeLabel = null;
 
   renderMarkers();
 }
 
+// 연대를 골랐으면 "나의 1990년대 기억 지도", 안 골랐으면("전체") 기존
+// 그대로 "나의 {오늘 연도}년 기억 지도".
+function getConstellationTitle() {
+  return recallDecadeLabel !== null
+    ? `나의 ${recallDecadeLabel}년대 기억 지도`
+    : `나의 ${new Date().getFullYear()}년 기억 지도`;
+}
+
 // ------------------------------------------------------------
-// 나의 {연도}년 기억 지도 — 공유 이미지
+// 나의 {연도}년/{연대}년대 기억 지도 — 공유 이미지
 // ------------------------------------------------------------
 function generateConstellationShareCard(stories) {
   const canvas = document.createElement("canvas");
@@ -382,11 +462,10 @@ function generateConstellationShareCard(stories) {
 
   const marginX = 96;
   const maxWidth = canvas.width - marginX * 2;
-  const year = new Date().getFullYear();
 
   ctx.font = "700 64px sans-serif";
   ctx.fillStyle = "#F4F3EF";
-  ctx.fillText(`나의 ${year}년 기억 지도`, marginX, 300);
+  ctx.fillText(getConstellationTitle(), marginX, 300);
 
   const artSize = 760;
   const artX = (canvas.width - artSize) / 2;
@@ -428,8 +507,7 @@ async function shareConstellationCard() {
   if (btn) btn.disabled = false;
   if (!blob) return;
 
-  const year = new Date().getFullYear();
-  const shareText = `나의 ${year}년 기억 지도`;
+  const shareText = getConstellationTitle();
   const file = new File([blob], "concrete-sapiens-my-memory-map.png", { type: "image/png" });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
