@@ -161,9 +161,10 @@ function playMiniPlayerVideo(videoId, musicLabel) {
       playerVars: { autoplay: 1, playsinline: 1 },
       events: {
         onReady: (e) => {
-          // .mini-player-frame(width/height 100%)을 직접 붙여야 44px
-          // 원형 마운트를 꽉 채운다 — API가 기본으로 만드는 iframe엔 이
-          // 클래스가 없다.
+          // .mini-player-frame을 직접 붙여야 44px 마운트에 맞는 크기와
+          // (2026-08-20부터) opacity:0 처리가 적용된다 — 마운트 자리에는
+          // 이제 정적 CD 그래픽만 보이고 이 iframe은 소리만 낸다. API가
+          // 기본으로 만드는 iframe엔 이 클래스가 없다.
           e.target.getIframe().classList.add("mini-player-frame");
           e.target.playVideo();
         },

@@ -109,11 +109,26 @@
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
-      <button class="tool-btn tool-btn--radio" id="btn-random">📻 기억 라디오</button>
+      <button class="tool-btn tool-btn--radio" id="btn-random">
+        <span class="tool-btn-radio-icon" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.8 5.8a9 9 0 0 0 0 12.4"/><path d="M18.2 5.8a9 9 0 0 1 0 12.4"/></svg>
+        </span>
+        기억 라디오
+      </button>
       <div class="bottom-toolbar-secondary">
-        <button class="tool-btn tool-btn--small" id="btn-my-location">내 주변</button>
-        <button class="tool-btn tool-btn--small" id="btn-timeslider">시간여행</button>
-        <button class="tool-btn tool-btn--small" id="btn-my-memory">내 기억</button>
+        <button class="tool-btn tool-btn--small" id="btn-my-location">
+          <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
+          내 주변
+        </button>
+        <button class="tool-btn tool-btn--small" id="btn-timeslider">
+          <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          시간여행
+        </button>
+        <span class="tool-btn-divider" aria-hidden="true"></span>
+        <button class="tool-btn tool-btn--small tool-btn--memory" id="btn-my-memory">
+          <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5S4 15.5 4 9.9A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8 2.9c0 5.6-8 10.6-8 10.6z"/></svg>
+          내 기억
+        </button>
       </div>
     </div>
 

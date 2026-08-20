@@ -948,19 +948,32 @@ body {
   display: none;
 }
 
+/* CD(바이닐) 디자인 — 사용자가 준 레퍼런스 사진(연한 원판+톤암+그루브
+   +라벨)을 그대로 쓰는 정적 이미지(assets/mini-player-cd.png)다. 재생
+   중인 곡이 무엇이든 항상 같은 그래픽만 보이며, 실제 유튜브 썸네일은
+   더 이상 보여주지 않는다(2026-08-20, "통째로 정적인 CD 그래픽" 요청).
+   크기(44px)는 이전과 동일. 오디오 재생 자체는 여전히 iframe(유튜브
+   IFrame Player)이 담당해야 해서 완전히 없애지는 못하고, 이 이미지
+   뒤로 완전히 숨겨서(opacity:0) 소리만 나오게 한다. */
 .mini-player-frame-mount {
+  position: relative;
   flex-shrink: 0;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--cs-map-gray);
+  background: #fff url("../assets/mini-player-cd.png") center / cover no-repeat;
+  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 
 .mini-player-frame {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .mini-player-title {
@@ -1069,12 +1082,17 @@ body {
   background: var(--cs-paper);
 }
 
-/* 기억 라디오 전용 — 나머지 3개보다 뚜렷이 크고 진하게(2026-08-19). */
+/* 기억 라디오 전용 — 나머지 3개보다 뚜렷이 크고 진하게(2026-08-19).
+   아이콘은 이모지 대신 오렌지 원형 배지 안 웨이브 SVG로(2026-08-20 디자인
+   레퍼런스 반영). */
 .tool-btn--radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   background: var(--cs-black);
   color: var(--cs-paper);
   border-color: var(--cs-black);
-  padding: 14px 32px;
+  padding: 10px 22px 10px 10px;
   font-size: 15px;
   font-weight: 600;
   box-shadow: 0 6px 20px rgba(47, 48, 49, 0.28);
@@ -1084,14 +1102,76 @@ body {
   background: #1c1d1e;
 }
 
+.tool-btn-radio-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  color: #fff;
+}
+
 /* 보조 버튼 줄(내 주변/시간여행/내 기억) — 기억 라디오보다 한 단계
    작게 눌러서 위계를 준다. background/색은 .tool-btn 기본값을 그대로
    쓰고, 크기만 줄인다(.tool-btn--active 등 상태 클래스와 배경이
    부딪히지 않게 하기 위함). */
 .tool-btn--small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 6px 13px;
   font-size: 12px;
   min-height: 34px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.tool-btn--small:hover {
+  background: var(--cs-map-gray);
+}
+
+/* 세 버튼을 개별 chip이 아니라 흰 알약(pill) 하나로 묶는다(2026-08-20
+   디자인 레퍼런스 반영) — 낱개 테두리/그림자/블러는 위 .tool-btn--small
+   에서 이미 지웠으니 그룹 컨테이너 하나에만 배경/모양을 준다.
+   버튼별 배경/hover는 .tool-btn--small(투명, 0,1,0)에 맡기고 여기서는
+   .tool-btn 자식을 다시 겨냥하지 않는다 — 그러면 특정도가
+   .tool-btn--memory/.tool-btn--active(둘 다 0,1,0)보다 높아져서 뒤에
+   오는 순서로 이기게 해둔 캐스케이드를 깨버린다(2026-08-20 확인 —
+   실제로 이 때문에 "내 기억" 버튼이 안 보이는 회귀가 있었다). */
+.bottom-toolbar-secondary {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--cs-paper);
+  border-radius: var(--cs-radius-chip);
+  padding: 5px 6px;
+  box-shadow: 0 4px 16px rgba(47, 48, 49, 0.12);
+}
+
+.tool-btn-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  background: var(--cs-gray);
+  margin: 0 3px;
+}
+
+/* 내 기억은 나머지 둘과 달리 검은 알약으로 강조해 눈에 띄게 한다 —
+   .tool-btn--active(토글 ON 상태, --cs-memory-core)가 이 뒤에 오는
+   순서를 유지해 켜졌을 때는 그 색으로 덮어쓴다. */
+.tool-btn--memory {
+  background: var(--cs-black);
+  color: var(--cs-paper);
+}
+
+.tool-btn--memory:hover {
+  background: #1c1d1e;
 }
 
 .tool-btn--active {
