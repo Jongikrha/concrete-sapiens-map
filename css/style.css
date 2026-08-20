@@ -1136,14 +1136,15 @@ body {
   background: var(--cs-map-gray);
 }
 
-/* 세 버튼을 개별 chip이 아니라 흰 알약(pill) 하나로 묶는다(2026-08-20
-   디자인 레퍼런스 반영) — 낱개 테두리/그림자/블러는 위 .tool-btn--small
-   에서 이미 지웠으니 그룹 컨테이너 하나에만 배경/모양을 준다.
-   버튼별 배경/hover는 .tool-btn--small(투명, 0,1,0)에 맡기고 여기서는
-   .tool-btn 자식을 다시 겨냥하지 않는다 — 그러면 특정도가
-   .tool-btn--memory/.tool-btn--active(둘 다 0,1,0)보다 높아져서 뒤에
-   오는 순서로 이기게 해둔 캐스케이드를 깨버린다(2026-08-20 확인 —
-   실제로 이 때문에 "내 기억" 버튼이 안 보이는 회귀가 있었다). */
+/* 세 버튼(내 주변/시간여행/내 기억)을 개별 chip이 아니라 흰 알약(pill)
+   하나로 묶는다(2026-08-20 디자인 레퍼런스 반영). 셋 다 평소엔 똑같이
+   생기고(.tool-btn--small, 투명·무테두리), 켜졌을 때만 .tool-btn--active
+   가 강조색으로 덮어쓴다 — "내 기억"만 항상 검게 채워 특별 취급했더니
+   "눌려 있는 느낌"이라는 피드백으로 다시 통일했다(2026-08-20). 여기서
+   .tool-btn 자식을 다시 겨냥하는 규칙을 추가하지 않는다 — 그러면 특정도가
+   .tool-btn--active(0,1,0)보다 높아져서 뒤에 오는 순서로 이기게 해둔
+   캐스케이드를 깨버린다(2026-08-20 확인 — 실제로 이 때문에 "내 기억"
+   버튼이 안 보이는 회귀가 있었다). */
 .bottom-toolbar-secondary {
   display: flex;
   align-items: center;
@@ -1152,26 +1153,6 @@ body {
   border-radius: var(--cs-radius-chip);
   padding: 5px 6px;
   box-shadow: 0 4px 16px rgba(47, 48, 49, 0.12);
-}
-
-.tool-btn-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 16px;
-  background: var(--cs-gray);
-  margin: 0 3px;
-}
-
-/* 내 기억은 나머지 둘과 달리 검은 알약으로 강조해 눈에 띄게 한다 —
-   .tool-btn--active(토글 ON 상태, --cs-memory-core)가 이 뒤에 오는
-   순서를 유지해 켜졌을 때는 그 색으로 덮어쓴다. */
-.tool-btn--memory {
-  background: var(--cs-black);
-  color: var(--cs-paper);
-}
-
-.tool-btn--memory:hover {
-  background: #1c1d1e;
 }
 
 .tool-btn--active {
