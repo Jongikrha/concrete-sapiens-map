@@ -340,13 +340,11 @@ function openRecallCard() {
     // 확인됨: 음소거로 미리 재생해두고 몇 초 뒤 음소거만 풀어도, 그 사이
     // 탭 이벤트의 유효기간이 지나 iOS가 음소거 해제 자체를 막아버렸다
     // (2026-08-20, "5000ms muted=true → unmute 직후 state=일시정지"로 실측
-    // 확인). 대신 카드가 뜨자마자 바로 소리 나게 재생한다. reliableCue는
-    // 여전히 쓴다 — 처음 영상을 받는 플레이어는 cueVideoById 직후 곧바로
-    // 다음 명령을 이어 부르면 로드 중 iframe이 재초기화되며 명령이
-    // 유실되는 별개의 레이스가 있었다(storySheet.js pendingCuePlayVideoId
-    // 주석 참고). 회상 카드는 실제 탭과 타이머 하나를 사이에 두고 열리는
-    // 흐름이라 이 경로가 더 안정적이다.
-    playMiniPlayerVideo(videoId, musicLabel, { reliableCue: true });
+    // 확인). cueVideoById+CUED 대기로 우회해보려던 시도도 검증 없이
+    // 복잡도만 더했던 것으로 보여 걷어냈다 — storySheet.js의 일반 카드
+    // 재생과 "다음 기억으로" 버튼이 이 세션 내내 안정적으로 써온 것과
+    // 똑같은 단순한 경로(곧장 재생)를 그대로 쓴다.
+    playMiniPlayerVideo(videoId, musicLabel);
   } else {
     restoreMiniPlayerHome();
   }
