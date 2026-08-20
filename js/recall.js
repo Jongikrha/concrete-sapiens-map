@@ -334,6 +334,11 @@ function openRecallCard() {
   }
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (videoId) {
+    // 화면 하단에 따로 뜨는 바 대신, 곡 정보 줄(musicEl) 바로 아래 카드 안에
+    // 넣는다(2026-08-20 피드백) — 회상 카드는 곡이 바뀔 때마다 항상 정지 후
+    // 다시 재생해서(advanceRecall의 stopMiniPlayer) 화면을 벗어나도 이어
+    // 듣는 시나리오가 없어, 시트 밖 상시 바로 뺄 이유가 없다.
+    attachMiniPlayerAfter(musicEl);
     const label = story.musicTitle
       ? story.musicArtist
         ? `${story.musicArtist} — ${story.musicTitle}`
@@ -375,6 +380,7 @@ function openRecallCard() {
   } else {
     musicEl.textContent = "";
     musicEl.classList.add("hidden");
+    restoreMiniPlayerHome();
   }
 
   document.getElementById("recall-card").classList.add("recall-card--visible");
@@ -395,6 +401,7 @@ function advanceRecall() {
 
 function endRecallSession() {
   stopMiniPlayer();
+  restoreMiniPlayerHome();
   if (recallDotMarker) {
     recallDotMarker.setMap(null);
     recallDotMarker = null;

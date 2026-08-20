@@ -1044,6 +1044,16 @@ body {
   display: none;
 }
 
+/* 회상 카드(.recall-card) 안에 끼워 넣을 때 쓰는 상태 — 화면 하단 고정
+   바 대신 곡 정보 줄 바로 밑, 카드 안의 일반 흐름 요소로 자리한다
+   (js/recall.js attachMiniPlayerAfter, 2026-08-20 피드백). */
+.mini-player--inline {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0 0 20px;
+}
+
 /* CD(바이닐) 디자인 — 사용자가 준 레퍼런스 사진(연한 원판+톤암+그루브
    +라벨)을 그대로 쓰는 정적 이미지(assets/mini-player-cd.png)다. 재생
    중인 곡이 무엇이든 항상 같은 그래픽만 보이며, 실제 유튜브 썸네일은
