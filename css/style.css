@@ -1816,13 +1816,6 @@ button.story-place-line:hover {
   border: 1px solid var(--cs-map-gray);
 }
 
-/* 재생 버튼 자리를 레퍼런스 사진 속 레코드판 그래픽으로(2026-08-20).
-   미니 플레이어(mini-player-cd.png)와 달리 이 버튼은 재생/정지를
-   토글하는 실제 컨트롤이라 ▶/⏸ 아이콘이 계속 보여야 한다 — 그래서
-   이미지 자체(assets/story-youtube-cd.png)는 레퍼런스의 중앙 플레이스
-   홀더 아이콘만 지우고 빈 라벨 자리로 남겨, 그 위에 아이콘을 얹는다.
-   "재생 중" 표시도 배경을 오렌지로 통째로 덮던 방식 대신(그러면 CD
-   그림이 안 보인다) 오렌지 테두리 링 + 아이콘 색으로만 준다. */
 .story-youtube-thumb {
   position: relative;
   z-index: 1;
@@ -1833,9 +1826,8 @@ button.story-place-line:hover {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: none;
-  background: #fff url("../assets/story-youtube-cd.png") center / cover no-repeat;
-  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.18);
+  border: 1.5px solid var(--cs-text-main);
+  background: transparent;
   padding: 0;
   cursor: pointer;
 }
@@ -1850,11 +1842,12 @@ button.story-place-line:hover {
 }
 
 .story-youtube-thumb--playing {
-  box-shadow: 0 0 0 2px var(--cs-orange), 0 1px 3px rgba(47, 48, 49, 0.18);
+  border-color: var(--cs-orange);
+  background: var(--cs-orange);
 }
 
 .story-youtube-thumb--playing .story-youtube-play {
-  color: var(--cs-orange);
+  color: #fff;
   padding-left: 0;
 }
 
@@ -1889,24 +1882,26 @@ button.story-place-line:hover {
   text-overflow: ellipsis;
 }
 
+/* 순수 CSS 그라디언트 나이테 대신 턴테이블 일러스트를 배경 누끼로
+   (2026-08-20 레퍼런스 반영). 원본엔 중앙 라벨이 주황이었는데, 이
+   카드에 이미 오렌지가 여러 곳(재생 중 버튼, 곡 태그 등)에 쓰이고
+   있어 장식까지 오렌지면 시선이 분산돼 실제 컬러는 빼고 회색조로
+   바꿨다(assets/story-youtube-turntable.png, 배경 투명 처리 + 라벨
+   탈색). 재생 버튼(.story-youtube-thumb)은 이 장식과 무관하게 원래
+   디자인(단색 원형 테두리)으로 되돌렸다. */
 .story-youtube-deco {
   position: absolute;
   z-index: 0;
-  right: -32px;
+  right: -28px;
   top: 50%;
   transform: translateY(-50%);
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  opacity: 0.55;
+  width: 150px;
+  height: 137px;
+  opacity: 0.9;
   pointer-events: none;
-  background:
-    radial-gradient(circle at center, var(--cs-gray) 0 2.5px, transparent 2.5px),
-    repeating-radial-gradient(circle at center, var(--cs-gray) 0, var(--cs-gray) 0.6px, transparent 0.6px, transparent 4px);
-  /* 얇은 나이테를 중심 근처는 진하게, 바깥은 서서히 사라지게 마스킹해서
-     과녁처럼 균일한 링이 아니라 CD 표면의 반사 그루브처럼 보이게 한다. */
-  -webkit-mask-image: radial-gradient(circle at center, #000 0%, #000 38%, transparent 80%);
-  mask-image: radial-gradient(circle at center, #000 0%, #000 38%, transparent 80%);
+  background: url("../assets/story-youtube-turntable.png") center / contain no-repeat;
+  -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 55%, transparent 100%);
 }
 
 .story-tags {
