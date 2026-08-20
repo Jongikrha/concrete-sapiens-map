@@ -1742,6 +1742,13 @@ button.story-place-line:hover {
   border: 1px solid var(--cs-map-gray);
 }
 
+/* 재생 버튼 자리를 레퍼런스 사진 속 레코드판 그래픽으로(2026-08-20).
+   미니 플레이어(mini-player-cd.png)와 달리 이 버튼은 재생/정지를
+   토글하는 실제 컨트롤이라 ▶/⏸ 아이콘이 계속 보여야 한다 — 그래서
+   이미지 자체(assets/story-youtube-cd.png)는 레퍼런스의 중앙 플레이스
+   홀더 아이콘만 지우고 빈 라벨 자리로 남겨, 그 위에 아이콘을 얹는다.
+   "재생 중" 표시도 배경을 오렌지로 통째로 덮던 방식 대신(그러면 CD
+   그림이 안 보인다) 오렌지 테두리 링 + 아이콘 색으로만 준다. */
 .story-youtube-thumb {
   position: relative;
   z-index: 1;
@@ -1752,8 +1759,9 @@ button.story-place-line:hover {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1.5px solid var(--cs-text-main);
-  background: transparent;
+  border: none;
+  background: #fff url("../assets/story-youtube-cd.png") center / cover no-repeat;
+  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.18);
   padding: 0;
   cursor: pointer;
 }
@@ -1768,12 +1776,11 @@ button.story-place-line:hover {
 }
 
 .story-youtube-thumb--playing {
-  border-color: var(--cs-orange);
-  background: var(--cs-orange);
+  box-shadow: 0 0 0 2px var(--cs-orange), 0 1px 3px rgba(47, 48, 49, 0.18);
 }
 
 .story-youtube-thumb--playing .story-youtube-play {
-  color: #fff;
+  color: var(--cs-orange);
   padding-left: 0;
 }
 
