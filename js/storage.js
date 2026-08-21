@@ -662,6 +662,25 @@ const Storage = {
   },
 
   /**
+   * 시/군/구/동(읍·면·리·가) 레벨까지만 남기고 번지수는 뗀다 — 기억
+   * 라디오(js/recall.js openRecallCard)에서 장소 이름을 안 붙인 자유
+   * 핀이면 지번 주소 전체("서울 중구 충무로4가 23-1")가 그대로 노출돼
+   * 너무 구체적으로 보인다는 피드백으로 추가(2026-08-21). 맨 끝에서부터
+   * "산" 또는 숫자(-숫자 포함)로만 된 토큰을 지번으로 보고 잘라낸다 —
+   * "산 123-4"처럼 산지번이 두 토큰으로 쪼개진 경우도 순서대로 둘 다
+   * 떨어진다. 이 축약은 기억 라디오 전용이라 카드/공유 등 다른 화면의
+   * getGroupAddressCaption/getGroupTitle은 그대로 abbreviateAddress를 쓴다.
+   */
+  getDongLevelAddress(address) {
+    if (!address) return address;
+    const tokens = this.abbreviateAddress(address).split(/\s+/);
+    while (tokens.length > 1 && /^(산|\d+(-\d+)?)$/.test(tokens[tokens.length - 1])) {
+      tokens.pop();
+    }
+    return tokens.join(" ");
+  },
+
+  /**
    * "서울·부산·경주" 같은 도시 단위 요약 문구(js/recall.js 별자리 기능)에
    * 쓰는 도시명 추출 — abbreviateAddress()는 시/도 레벨까지만 축약해서
    * "경상북도 경주시..."가 "경북 경주시..."로만 줄고 "경주"까지는 안

@@ -415,12 +415,17 @@ function openRecallCard() {
   if (!story) return;
 
   const year = Storage.getStoryYear(story);
-  const place = Storage.getGroupTitle({
-    placeId: story.placeId,
-    officialPlaceName: story.officialPlaceName,
-    customName: story.customName,
-    address: story.address,
-  });
+  // 장소 이름이 없어 주소로 폴백하는 경우, 기억 라디오에서만큼은 지번
+  // 번호까지 다 보여주지 않고 동/가 레벨까지만 보여준다(2026-08-21) —
+  // getGroupTitle 그대로 쓰면 "충무로4가 23-1"처럼 너무 구체적으로 나온다.
+  const place = (story.placeId && story.officialPlaceName) || story.customName
+    ? Storage.getGroupTitle({
+        placeId: story.placeId,
+        officialPlaceName: story.officialPlaceName,
+        customName: story.customName,
+        address: story.address,
+      })
+    : (story.address && Storage.getDongLevelAddress(story.address)) || "주소를 확인할 수 없는 곳";
   document.getElementById("recall-card-yearplace").innerHTML =
     `${year !== null ? year : "· · ·"} · <span class="recall-card-place">${escapeHtml(place)}</span>`;
   document.getElementById("recall-card-content").textContent = story.content;

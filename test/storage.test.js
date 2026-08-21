@@ -214,6 +214,20 @@ test("abbreviateAddress는 매칭되는 시/도가 없으면 원본을 그대로
   assert.equal(Storage.abbreviateAddress(null), null);
 });
 
+test("getDongLevelAddress는 시/도를 축약하고 지번(번지)을 잘라 동/가 레벨까지만 남긴다", () => {
+  assert.equal(Storage.getDongLevelAddress("서울특별시 중구 충무로4가 23-1"), "서울 중구 충무로4가");
+  assert.equal(Storage.getDongLevelAddress("경기도 성남시 분당구 정자동 178-1"), "경기 성남시 분당구 정자동");
+});
+
+test("getDongLevelAddress는 산지번(토큰이 둘로 쪼개진 경우)도 둘 다 잘라낸다", () => {
+  assert.equal(Storage.getDongLevelAddress("서울 종로구 부암동 산 12-3"), "서울 종로구 부암동");
+});
+
+test("getDongLevelAddress는 번지 없이 동/가까지만 있으면 그대로 반환하고, null이면 null을 반환한다", () => {
+  assert.equal(Storage.getDongLevelAddress("서울 중구 충무로4가"), "서울 중구 충무로4가");
+  assert.equal(Storage.getDongLevelAddress(null), null);
+});
+
 test("getGroupAddressCaption은 캡션으로 쓸 때 시/도 풀네임을 축약한다", () => {
   const group = {
     placeId: "kakao-1",
