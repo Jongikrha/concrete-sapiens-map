@@ -232,13 +232,23 @@ async function buildMyMemoryList(kind) {
 async function openMyMemoryList(kind, opts = {}) {
   closeAccountMenu();
   const panel = document.getElementById("mymemory-panel");
-  const stories = [...(await buildMyMemoryList(kind))].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const rawStories = await buildMyMemoryList(kind);
+  const renderItem = (story) => renderRecentListItem(story, { reactionCount: story.reactionCount || 0 });
 
   // 카드 마크업은 app.js의 renderRecentListItem을 그대로 재사용한다 —
   // "지금까지 쌓인 기억"/"오늘의 기억"과 같은 카드 디자인을 여기서 다시
   // 베끼면 나중에 한쪽만 고치고 잊어버리기 쉽다(2026-08-20).
-  const listHtml = stories.length
-    ? stories.map((story) => renderRecentListItem(story, { reactionCount: story.reactionCount || 0 })).join("")
+  //
+  // "내가 남긴 기억"만 시간여행순(연도·월 오름차순, 과거→현재)으로 보여준다
+  // — 자기 인생을 시간 순서대로 돌아보는 목적에 맞춘다(2026-08-21). 다른
+  // 목록(나를 떠올린/겹치는/전달한 기억 등)은 계속 최신 등록순 그대로 둔다.
+  const listHtml = rawStories.length
+    ? (kind === "posted"
+        ? buildSortedListHtml(rawStories, "timetravel", renderItem)
+        : [...rawStories]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .map(renderItem)
+            .join(""))
     : `<p class="recent-empty">${MY_MEMORY_EMPTY[kind]}</p>`;
 
   panel.innerHTML = `
