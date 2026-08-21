@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>콘크리트 사피엔스 지도</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <!-- 구글 검색 결과는 파비콘을 SVG만으로는 잘 못 읽어오는 경우가 있어
+       (2026-08-21 확인 — 검색 결과에 사이트 아이콘 대신 기본 지구본 아이콘이
+       뜸) PNG를 같이 둔다. SVG를 지원하는 브라우저는 위 태그를 그대로 쓰고,
+       그렇지 않은 곳(구글 크롤러 포함)은 이 PNG로 폴백한다. -->
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
   <!-- 구글 등 검색엔진 결과 스니펫용. 이 태그가 없으면 크롤러가 페이지
        안의 아무 텍스트(예: 카카오맵 API 키 미설정 시 안내 문구)를
        대신 긁어가는 문제가 있었다(2026-08-13 확인, 실제 검색 결과에
