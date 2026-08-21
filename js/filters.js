@@ -32,6 +32,35 @@ function consumePendingDailyPrompt() {
   return text;
 }
 
+// ------------------------------------------------------------
+// "이맘때 예전 기억" — 로그인한 유저가 이번 달(계절)에 해당하는 지난
+// 기억을 남긴 적 있으면, 요일별 오늘의 미션 로테이션보다 우선해서
+// "오늘의 미션" 칩/모달에 보여준다(2026-08-21). 이 서비스만 줄 수 있는
+// 유일한 재방문 트리거라 일반 로테이션보다 우선순위를 둔다.
+// 한 달에 한 번 "확인"할 때까지만 계속 노출하고(반복돼 보인다는 이유로
+// "근처 기억 발견 토스트"를 뺐던 것과 같은 원칙, mymemory.js 참고),
+// 확인하면 이번 달 안에는 다시 안 뜬다.
+// ------------------------------------------------------------
+const THROWBACK_SEEN_KEY = "concrete_sapiens_throwback_seen_month";
+
+function _currentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function markThrowbackSeenThisMonth() {
+  localStorage.setItem(THROWBACK_SEEN_KEY, _currentYearMonth());
+}
+
+// 로그인 안 했거나, 이번 달에 이미 확인했거나, 해당하는 기억이 없으면
+// null — 세 경우 모두 평소 "오늘의 미션" 로테이션으로 조용히 돌아간다.
+function getEligibleThrowbackStory() {
+  if (!Auth.getCurrentUser()) return null;
+  if (localStorage.getItem(THROWBACK_SEEN_KEY) === _currentYearMonth()) return null;
+  const myStories = Storage.getAllStories().filter((s) => Storage.isMyStory(s.id) && s.status !== "DELETED");
+  return Storage.getThrowbackMemory(myStories);
+}
+
 // 모바일(기존 CSS 브레이크포인트 600px와 동일)에서는 해시태그/곡 칩이
 // 너무 많아 여러 줄로 넘치는 게 부담스럽다는 피드백(2026-08-19) — 데스크톱
 // 노출 개수(CONFIG.TOP_HASHTAG_LIMIT/TOP_SONG_LIMIT)와 별개로 좁은 화면만
@@ -82,7 +111,10 @@ function renderHashtagChips() {
   // 색만 다르게 다시 살렸다(2026-08-14).
   const promptChip = document.createElement("button");
   promptChip.className = "chip chip--prompt";
-  promptChip.textContent = "오늘의 미션";
+  // "이맘때 예전 기억"이 있으면 평소 로테이션 라벨 대신 이걸 먼저 보여준다
+  // — 클릭했을 때 열리는 내용(openTodayMission)도 이 판단과 똑같은
+  // 기준(getEligibleThrowbackStory)을 다시 거쳐서 라벨과 항상 일치한다.
+  promptChip.textContent = getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션";
   promptChip.onclick = openTodayMission;
   wrap.appendChild(promptChip);
 
@@ -149,10 +181,19 @@ function renderHashtagChips() {
  * 쓰고, 나머지 3종은 눌렀을 때 그 연도/장소/기억으로 바로 데려간다.
  * 해당 종류를 보여줄 데이터가 없는 날(예: 이번 주 등록된 기억이 없는
  * 일요일)은 항상 답을 줄 수 있는 "질문"으로 조용히 대체한다.
+ *
+ * "이맘때 예전 기억"(throwback)이 있으면 이 요일별 로테이션보다 먼저
+ * 확인해서 덮어쓴다(2026-08-21) — 개인화된 회고 콘텐츠가 일반 로테이션
+ * 보다 훨씬 이 서비스다운 리마인더라 우선순위를 둔다.
  */
 function openTodayMission() {
   const panel = document.getElementById("daily-prompt-panel");
-  let type = Storage.getTodayMissionType();
+  const throwbackStory = getEligibleThrowbackStory();
+  let type = throwbackStory ? "throwback" : Storage.getTodayMissionType();
+  // 확인(CTA) 여부와 무관하게 이 모달을 한 번 열어서 보여준 순간
+  // "이번 달엔 확인했다"로 친다 — 클릭 안 하고 닫아도 칩이 매번 다시
+  // "이맘때 기억"으로 뜨면서 은근히 신경 쓰이는 걸 막는다.
+  if (throwbackStory) markThrowbackSeenThisMonth();
 
   let year = null, place = null, weekStory = null;
   if (type === "year") {
@@ -168,7 +209,28 @@ function openTodayMission() {
 
   let label, bodyHtml, hintHtml, ctaLabel, onConfirm;
 
-  if (type === "year") {
+  if (type === "throwback") {
+    const tYear = Storage.getStoryYear(throwbackStory);
+    const tDateLabel = Storage.getStoryDateLabel(throwbackStory);
+    const title = Storage.getGroupTitle({
+      placeId: throwbackStory.placeId,
+      officialPlaceName: throwbackStory.officialPlaceName,
+      customName: throwbackStory.customName,
+      address: throwbackStory.address,
+    });
+    const preview = throwbackStory.content.length > 60 ? `${throwbackStory.content.slice(0, 60)}…` : throwbackStory.content;
+    label = "이맘때의 기억";
+    bodyHtml = `<p class="daily-prompt-quote">${tYear}년 ${tDateLabel || ""}, 당신은<br>${escapeHtml(title)}에 이런 기억을 남겼어요.</p>`;
+    hintHtml = `<p class="daily-prompt-hint">&ldquo;${escapeHtml(preview)}&rdquo;</p>`;
+    ctaLabel = "다시 만나러 가기";
+    onConfirm = () => {
+      closeTodayMission();
+      clearFilters();
+      closeSlider();
+      closeMyMemoryMode();
+      flyToStory(throwbackStory, true);
+    };
+  } else if (type === "year") {
     label = "오늘의 시간";
     bodyHtml = `<p class="daily-prompt-quote">오늘은 ${year}년의 기억을<br>열어봅니다.</p>`;
     hintHtml = `<p class="daily-prompt-hint">그 해에 남겨진 기억들을 만나보세요.</p>`;

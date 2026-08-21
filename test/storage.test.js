@@ -504,6 +504,38 @@ test("getWeekOldestStory는 이번 주 등록된 기억이 없으면 null을 반
   assert.equal(Storage.getWeekOldestStory(), null);
 });
 
+test("getThrowbackMemory는 이번 달과 월이 같고 연도가 올해보다 이전인 기억만 후보로 삼는다", () => {
+  const now = new Date();
+  const thisMonth = String(now.getMonth() + 1).padStart(2, "0");
+  const thisYear = now.getFullYear();
+  const matching = createStory({ id: "match", dateMode: "past", referenceDate: `${thisYear - 3}-${thisMonth}` });
+  const wrongMonth = createStory({
+    id: "wrong-month", dateMode: "past",
+    referenceDate: `${thisYear - 3}-${String(((now.getMonth() + 6) % 12) + 1).padStart(2, "0")}`,
+  });
+  const thisYearSameMonth = createStory({ id: "this-year", dateMode: "past", referenceDate: `${thisYear}-${thisMonth}` });
+  const result = Storage.getThrowbackMemory([matching, wrongMonth, thisYearSameMonth]);
+  assert.equal(result.id, "match");
+});
+
+test("getThrowbackMemory는 계절이 이번 달을 포함하면 후보로 삼는다(겨울=12,1,2)", () => {
+  const now = new Date();
+  const thisMonth = now.getMonth() + 1;
+  const winterMonths = [12, 1, 2];
+  const thisYear = now.getFullYear();
+  const winterStory = createStory({ id: "winter", dateMode: "past", referenceDate: `${thisYear - 5}-WI` });
+  const result = Storage.getThrowbackMemory([winterStory]);
+  if (winterMonths.includes(thisMonth)) {
+    assert.equal(result.id, "winter");
+  } else {
+    assert.equal(result, null);
+  }
+});
+
+test("getThrowbackMemory는 후보가 없으면 null을 반환한다", () => {
+  assert.equal(Storage.getThrowbackMemory([]), null);
+});
+
 test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {
   const now = new Date();
   const todayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0).toISOString();

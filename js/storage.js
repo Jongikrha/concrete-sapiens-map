@@ -1134,6 +1134,33 @@ const Storage = {
   },
 
   /**
+   * "이맘때 예전 기억" — 이 앱은 일(day) 단위 날짜를 안 남겨서(월/계절
+   * 까지만) 진짜 "1년 전 오늘"은 못 만든다(2026-08-21 논의) — 대신 이번
+   * 달과 월/계절이 겹치고 연도가 올해보다 이전인 기억을 "이맘때"로
+   * 뭉뚱그려 찾는다. 후보가 여럿이면 다른 오늘의 미션과 같은 날짜 시드로
+   * 하나를 결정론적으로 고른다(같은 날 다시 열어도 항상 같은 기억).
+   * myStories는 호출부(js/filters.js)가 isMyStory로 이미 걸러서 넘긴다 —
+   * 계정 연결 판단은 여기서 하지 않는다.
+   */
+  getThrowbackMemory(myStories) {
+    const now = new Date();
+    const thisMonth = now.getMonth() + 1;
+    const thisYear = now.getFullYear();
+    const SEASON_MONTHS = { SP: [3, 4, 5], SU: [6, 7, 8], FA: [9, 10, 11], WI: [12, 1, 2] };
+
+    const candidates = myStories.filter((s) => {
+      const year = this.getStoryYear(s);
+      if (year === null || year >= thisYear) return false;
+      const month = this.getStoryMonth(s);
+      if (month !== null) return month === thisMonth;
+      const seasonCode = this.getStorySeasonCode(s);
+      return seasonCode ? SEASON_MONTHS[seasonCode].includes(thisMonth) : false;
+    });
+    if (candidates.length === 0) return null;
+    return candidates[this._missionSeedIndex("throwback", candidates.length)];
+  },
+
+  /**
    * 목록 정렬 공통 로직 — "지금까지 쌓인 기억"/"오늘의 기억" 모달과 기억
    * 카드(스팟/해시태그) 목록이 전부 같은 3가지 정렬을 쓴다:
    * - "latest"(최신 등록순): createdAt 내림차순, 시점 유무 구분 없음
