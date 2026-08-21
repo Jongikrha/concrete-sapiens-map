@@ -72,6 +72,14 @@ const RECALL_CHOICE_WALK_ICON_SVG = `
 // "내 기억" 버튼의 선택지 — 지도에서 보기 / 기억산책
 // ------------------------------------------------------------
 function openRecallEntryChoice() {
+  // 시간여행(슬라이더)이 열려 있으면 먼저 닫는다 — time-slider-panel은
+  // 전체 화면을 덮는 오버레이가 아니라 하단 툴바가 그대로 클릭되는
+  // 인라인 패널이라, 슬라이더를 켠 채로 "내 기억" 버튼을 눌러도 이
+  // 선택 모달이 그 위에 그냥 얹혀서 둘이 동시에 보이는 문제가 있었다
+  // (2026-08-21). startMyMemoryMode/openRecallSessionShell은 각자
+  // 선택 이후 시점에 closeSlider를 부르지만, 그 전인 선택 모달
+  // 단계에서는 아무도 안 불러서 여기서 진입 시점에 바로 닫는다.
+  closeSlider();
   const panel = document.getElementById("recall-choice-panel");
   panel.innerHTML = `
     <div class="daily-prompt-header">
