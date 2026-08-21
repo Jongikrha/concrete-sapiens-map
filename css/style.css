@@ -1289,9 +1289,20 @@ body {
   align-items: center;
   gap: 3px;
   background: var(--cs-paper);
+  border: 1px solid var(--cs-gray);
   border-radius: var(--cs-radius-chip);
   padding: 5px 6px;
   box-shadow: 0 4px 16px rgba(47, 48, 49, 0.12);
+}
+
+/* 지도 배경(연한 회색·크림톤)과 알약 배경(--cs-paper) 색이 비슷해 세
+   버튼(내 주변/시간여행/내 기억)이 눈에 잘 안 띈다는 피드백(2026-08-21)
+   — 테두리를 주고, 아이콘만 브랜드 오렌지로 포인트를 줘서(텍스트는
+   그대로 두어 "눌려 있는 느낌" 피드백, 2026-08-20 재발은 피한다) 대비를
+   높인다. 활성 상태(.tool-btn--active)는 배경 자체가 진해지니 아이콘도
+   그때는 버튼 color(--cs-paper)를 그대로 따라가야 해서 여기서 제외한다. */
+.tool-btn--small:not(.tool-btn--active) > .tool-btn-icon {
+  color: var(--cs-orange);
 }
 
 .tool-btn--active {
@@ -2963,7 +2974,9 @@ button.story-place-line:hover {
 }
 
 /* "내 기억" 선택 카드(지도에서 보기 / 기억산책) — 세로로 쌓인 두 버튼
-   대신 아이콘 카드 두 개를 나란히 두는 디자인으로 변경(2026-08-20). */
+   대신 아이콘 카드 두 개를 나란히 두는 디자인으로 변경(2026-08-20).
+   아이콘 88px+세로 패딩 26px이 "시간여행"(time-slider-panel, 아이콘
+   배지 48px)보다 훨씬 크고 무거워 보인다는 피드백으로 축소(2026-08-21). */
 .recall-choice-grid {
   display: flex;
   gap: 12px;
@@ -2976,8 +2989,8 @@ button.story-place-line:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 26px 10px;
+  gap: 10px;
+  padding: 16px 10px;
   border: 1.5px solid rgba(255, 90, 54, 0.35);
   border-radius: 16px;
   background: var(--cs-paper);
@@ -2991,8 +3004,8 @@ button.story-place-line:hover {
 }
 
 .recall-choice-card-icon {
-  width: 88px;
-  height: 88px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: rgba(255, 90, 54, 0.08);
   display: flex;
@@ -3010,8 +3023,21 @@ button.story-place-line:hover {
   line-height: 1.35;
 }
 
-/* 이 패널만 X를 좀 더 굵고 크게 — 다른 모달의 daily-prompt-close에는
-   영향 없게 패널 안에서만 오버라이드한다. */
+/* 이 패널만 제목/X를 "시간여행"(time-slider-title, 21px/800)과 같은
+   크기로 — 다른 daily-prompt-header 재사용 모달(오늘의 질문 등)에는
+   영향 없게 패널 안에서만 오버라이드한다(2026-08-21). */
+#recall-choice-panel .daily-prompt-label {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--cs-text-main);
+  letter-spacing: -0.01em;
+}
+
+#recall-choice-panel .daily-prompt-dot {
+  width: 10px;
+  height: 10px;
+}
+
 #recall-choice-panel .daily-prompt-close {
   font-size: 22px;
   color: var(--cs-black);

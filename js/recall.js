@@ -45,7 +45,7 @@ let recallDecadeLabel = null;
 // icons의 "map"/"map-pin" 글리프(24×24 그리드)를 그대로 가져와 위치만
 // 옮겼다 — 흔히 쓰는 검증된 모양이라 직접 새로 그리는 것보다 안전하다.
 const RECALL_CHOICE_MAP_ICON_SVG = `
-  <svg viewBox="0 0 64 64" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg viewBox="0 0 64 64" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <g transform="translate(2,12) scale(1.6)" stroke="#2F3031" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
       <line x1="8" y1="2" x2="8" y2="18" />
@@ -58,7 +58,7 @@ const RECALL_CHOICE_MAP_ICON_SVG = `
   </svg>
 `;
 const RECALL_CHOICE_WALK_ICON_SVG = `
-  <svg viewBox="0 0 64 64" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg viewBox="0 0 64 64" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M8 50 C 18 50, 18 36, 28 36 C 38 36, 38 22, 46 22"
       stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.5 8" />
     <g transform="translate(44,8)">
