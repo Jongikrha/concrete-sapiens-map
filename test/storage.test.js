@@ -329,6 +329,15 @@ test("toggleReaction은 두 번째 호출(같은 사람이 다시 누름) 시 �
   assert.equal(Storage.hasReacted("s1"), false);
 });
 
+test("toggleReaction은 자기 글(isMyStory)에는 반응 수를 늘리지 않는다", async () => {
+  Storage._setClient(createFakeClient([{ storyId: "s1" }]));
+  Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
+  await Storage.refreshMyStoryIds();
+  const result = Storage.toggleReaction("s1");
+  assert.equal(result.reactionCount, 0);
+  assert.equal(Storage.hasReacted("s1"), false);
+});
+
 test("getTopHashtags는 사용 빈도 내림차순으로 정렬하고 limit만큼만 반환한다", () => {
   Storage._setCache([
     createStory({ id: "s1", hashtags: ["회사", "카페"] }),

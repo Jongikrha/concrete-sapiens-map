@@ -800,7 +800,7 @@ function renderStoryItem(story, options = {}) {
       ${overlapCount > 0 ? `<p class="story-overlap-caption">같은 해의 기억이 이곳에 ${overlapCount}개 더 있어요</p>` : ""}
 
       <div class="action-row-split">
-        <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}">
+        <button class="reaction-btn ${reacted ? "reaction-btn--active" : ""}" data-id="${story.id}" ${isMine ? `disabled title="자신의 기억에는 공감할 수 없어요"` : ""}>
           <span class="dot-icon">${reacted ? "●" : "♡"}</span>
           떠올랐어요
         </button>

@@ -1990,6 +1990,11 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
+.reaction-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .share-btn {
   color: var(--cs-text-muted);
 }

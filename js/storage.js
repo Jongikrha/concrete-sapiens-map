@@ -229,6 +229,10 @@ const Storage = {
   toggleReaction(storyId) {
     const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
+    // 자기 글에는 스스로 "떠올랐어요"를 누를 수 없다 — storySheet.js가
+    // 버튼을 disabled로 막아두지만, 클라이언트 상태만으로 판단하는 낙관적
+    // 업데이트 계층이라 여기서도 한 번 더 막아 데이터 정합성을 지킨다.
+    if (this.isMyStory(storyId)) return target;
 
     const reactedSet = this._getReactedSet();
     target.reactionCount = target.reactionCount || 0;
