@@ -108,13 +108,28 @@ function renderOverlapFeed(messages) {
     return;
   }
   feed.innerHTML = messages
-    .map((m) => `<button type="button" class="overlap-feed-item" data-story-id="${m.storyId}">${escapeHtml(m.text)}</button>`)
+    .map(
+      (m) => `
+    <button type="button" class="overlap-feed-item" data-story-id="${m.storyId}">
+      <span class="overlap-feed-item-icon">${RECENT_ITEM_PIN_SVG}</span>
+      <span class="overlap-feed-item-text">${escapeHtml(m.text)}</span>
+      ${m.year !== null ? `<span class="overlap-feed-item-year">${m.year}</span>` : ""}
+    </button>`
+    )
     .join("");
   feed.classList.remove("hidden");
+  // 한 번 누른 알림은 그 즉시 목록에서 사라진다 — overlapSeenIds는 이미
+  // 메뉴를 여는 시점(markNotificationsSeen)에 전부 저장돼 다음 접속부터는
+  // 새 겹침으로 다시 안 뜨지만, 이 DOM 자체는 다음 refreshNotificationBadge
+  // 호출 전까지(=같은 세션에서 메뉴를 다시 열어도) 그대로 남아있어서 눌러본
+  // 항목이 계속 보이는 문제가 있었다(2026-08-21).
   feed.querySelectorAll(".overlap-feed-item").forEach((btn) => {
     btn.onclick = () => {
+      const storyId = btn.dataset.storyId;
+      btn.remove();
+      if (!feed.querySelector(".overlap-feed-item")) feed.classList.add("hidden");
       closeAccountMenu();
-      navigateToStoryFromList(btn.dataset.storyId, { kind: "mymemory", listKind: "overlap" });
+      navigateToStoryFromList(storyId, { kind: "mymemory", listKind: "overlap" });
     };
   });
 }
@@ -204,7 +219,7 @@ async function refreshNotificationBadge() {
     .filter(Boolean)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5)
-    .map((s) => ({ storyId: s.id, text: buildOverlapMessage(s) }));
+    .map((s) => ({ storyId: s.id, text: buildOverlapMessage(s), year: Storage.getStoryYear(s) }));
   renderOverlapFeed(messages);
 }
 
@@ -224,7 +239,6 @@ function markNotificationsSeen() {
 
 function renderAccountAvatar() {
   const wrap = document.getElementById("account-menu-wrap");
-  const avatar = document.getElementById("account-avatar");
   const user = Auth.getCurrentUser();
 
   if (!user) {
@@ -234,7 +248,6 @@ function renderAccountAvatar() {
   }
 
   wrap.classList.remove("hidden");
-  avatar.textContent = (user.email || "?").charAt(0).toUpperCase();
   document.getElementById("account-menu-email").textContent = user.email || "";
   refreshNotificationBadge();
 }
@@ -386,10 +399,10 @@ function bindAccountMenuEvents() {
   };
   document.getElementById("menu-logout").onclick = handleLogout;
 
-  document.addEventListener("click", (e) => {
-    const wrap = document.getElementById("account-menu-wrap");
-    if (!wrap.contains(e.target)) closeAccountMenu();
-  });
+  // 메뉴가 우상단 드롭다운에서 중앙 시트(overlay)로 바뀌면서(2026-08-21)
+  // "바깥 클릭 시 닫기"도 다른 오버레이(mymemory-overlay 등)와 같은
+  // 방식으로 통일한다 — 바깥 여백(backdrop)을 직접 눌렀을 때만 닫힌다.
+  bindOverlayClickToClose("account-menu", closeAccountMenu);
 
   bindOverlayClickToClose("mymemory-overlay", closeMyMemoryList);
 }
