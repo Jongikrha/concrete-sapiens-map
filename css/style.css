@@ -1810,7 +1810,10 @@ body {
   font-size: 20px;
   line-height: 1;
   letter-spacing: -0.3px;
-  color: var(--cs-orange);
+  /* 오렌지는 이 앱에서 작은 스파크(하이라이트 아이콘, 반응 활성 상태)로만
+     쓰는데 월 전체를 오렌지로 칠하면 정작 더 큰 연도보다 시각적으로
+     힘이 쏠려 보였다 — 무채색으로 되돌린다(2026-08-21). */
+  color: var(--cs-text-muted);
   margin: 0;
 }
 
