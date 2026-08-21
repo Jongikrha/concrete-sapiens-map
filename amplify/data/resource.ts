@@ -103,6 +103,21 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 가벼운 퍼널 이벤트 로그 — "이맘때 기억" 노출/클릭, 작성 폼 시작/완료
+  // 같은 지표를 세려고 추가(2026-08-21). PageView와 같은 write-only
+  // 텔레메트리 패턴 — 게스트도 쓰기만, 관리자만 읽는다. type은 자유
+  // 문자열("throwback_opened", "throwback_confirmed", "composer_opened",
+  // "composer_submitted")로 두고 종류가 늘어도 스키마 변경 없이 대응한다.
+  AppEvent: a
+    .model({
+      type: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['create']),
+      allow.authenticated('identityPool').to(['create']),
+      allow.group('Admins').to(['read']),
+    ]),
+
   // 회원 깃발(어드민 전용 메모/표시) — userId를 기본키로 써서 회원 한 명당
   // 레코드 하나(있으면 깃발 켜짐, 없으면 꺼짐)로 단순하게 다룬다. Cognito
   // 커스텀 속성으로는 못 만든다 — UserPool Schema는 생성 후 CDK로 업데이트가

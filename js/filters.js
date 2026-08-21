@@ -193,7 +193,10 @@ function openTodayMission() {
   // 확인(CTA) 여부와 무관하게 이 모달을 한 번 열어서 보여준 순간
   // "이번 달엔 확인했다"로 친다 — 클릭 안 하고 닫아도 칩이 매번 다시
   // "이맘때 기억"으로 뜨면서 은근히 신경 쓰이는 걸 막는다.
-  if (throwbackStory) markThrowbackSeenThisMonth();
+  if (throwbackStory) {
+    markThrowbackSeenThisMonth();
+    Storage.logEvent("throwback_opened");
+  }
 
   let year = null, place = null, weekStory = null;
   if (type === "year") {
@@ -224,6 +227,7 @@ function openTodayMission() {
     hintHtml = `<p class="daily-prompt-hint">&ldquo;${escapeHtml(preview)}&rdquo;</p>`;
     ctaLabel = "다시 만나러 가기";
     onConfirm = () => {
+      Storage.logEvent("throwback_confirmed");
       closeTodayMission();
       clearFilters();
       closeSlider();

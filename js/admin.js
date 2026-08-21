@@ -379,12 +379,36 @@ function buildDailyVisitCounts(pageViews, days = 14) {
   return result; // 오늘이 맨 앞
 }
 
+// 이벤트 타입별 개수 + "노출→확인" 전환율 — "이맘때 기억"/작성 폼 같은
+// 새 기능이 실제로 쓰이는지 나중에 눈으로 확인할 수 있게 한다(2026-08-21).
+// 새 이벤트 타입이 추가돼도 이 함수는 그대로 두고 FUNNEL_PAIRS에 한 줄만
+// 추가하면 된다.
+const FUNNEL_PAIRS = [
+  { label: "이맘때 기억", openType: "throwback_opened", confirmType: "throwback_confirmed" },
+  { label: "작성 폼", openType: "composer_opened", confirmType: "composer_submitted" },
+];
+
+function buildFunnelHtml(appEvents) {
+  const counts = {};
+  appEvents.forEach((e) => {
+    counts[e.type] = (counts[e.type] || 0) + 1;
+  });
+  return FUNNEL_PAIRS.map(({ label, openType, confirmType }) => {
+    const opened = counts[openType] || 0;
+    const confirmed = counts[confirmType] || 0;
+    const rate = opened > 0 ? Math.round((confirmed / opened) * 100) : 0;
+    return `<div class="top-story-row"><span>${escapeHtml(label)} — 노출 ${opened} → 확인 ${confirmed}</span><span>${rate}%</span></div>`;
+  }).join("");
+}
+
 async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
   const pageViews = await Storage.listPageViews();
+  const appEvents = await Storage.listAppEvents();
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
+  const funnelHtml = buildFunnelHtml(appEvents);
 
   const topStories = [...Storage.getAllStories()]
     .filter((s) => (s.viewCount || 0) > 0)
@@ -418,6 +442,8 @@ async function renderVisitsTab() {
     <div class="daily-visit-chart">${dailyHtml}</div>
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
+    <div class="admin-section-title">기능별 전환율</div>
+    ${funnelHtml}
   `;
 }
 

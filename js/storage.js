@@ -357,6 +357,22 @@ const Storage = {
   },
 
   /**
+   * 가벼운 퍼널 이벤트 로그 — "이맘때 기억"/작성 폼 시작·완료처럼, 새
+   * 기능이 실제로 쓰이는지 나중에 어드민에서 확인할 수 있게 남긴다.
+   * PageView와 같은 write-only/fire-and-forget 패턴(2026-08-21).
+   */
+  logEvent(type) {
+    if (!client) return;
+    client.models.AppEvent.create({ type })
+      .catch((e) => console.error("이벤트 로그 기록 실패", type, e));
+  },
+
+  /** 어드민 전용 — 이벤트 로그 전체 조회(PageView의 listPageViews와 같은 패턴). */
+  async listAppEvents() {
+    return fetchAll("AppEvent");
+  },
+
+  /**
    * 관리자 전용 — 방문 로그 전체 조회. refresh()에 안 끼워넣는 이유: 게스트는
    * PageView read 권한이 없어서, 일반 방문자 부팅 흐름에서 이걸 부르면 매번
    * 권한 에러만 콘솔에 쌓인다. admin.js가 로그인 후에만 명시적으로 부른다.

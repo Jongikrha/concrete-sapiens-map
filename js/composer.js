@@ -102,6 +102,10 @@ function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
   const editing = pin.editingStory || null;
+  // 수정 모드는 "새로 쓰기 시작"이 아니라 퍼널 지표에서 제외한다
+  // (2026-08-21 — 작성 폼 완료율을 보려는 목적이라, 수정 진입까지 섞이면
+  // 왜곡된다).
+  if (!editing) Storage.logEvent("composer_opened");
 
   const namePlaceholder = pin.isFreePin
     ? "이 장소를 뭐라고 부르시나요?"
@@ -485,6 +489,7 @@ function openComposer(pin) {
       Storage.saveStory(story, {
         onFail: () => showToast("entry-toast", "기억이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
       });
+      Storage.logEvent("composer_submitted");
       const currentUser = Auth.getCurrentUser();
       if (currentUser) {
         Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
