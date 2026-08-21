@@ -62,6 +62,63 @@ function _saveNotifSeenState(state) {
   localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(state));
 }
 
+// 이름 끝 글자의 받침 유무로 "이/가"를 고른다(한글 유니코드 블록
+// 오프셋 공식). 한글이 아니거나(영문 닉네임 등) 빈 문자열이면 받침 있는
+// 쪽("이")을 기본값으로 쓴다 — "겹치는 기억" 문구(buildOverlapMessage)
+// 전용, 이 앱 다른 곳(예: storySheet.js authorNameWithHonorific)은 항상
+// "님"만 붙여 조사가 필요 없었어서 이번에 처음 필요해졌다.
+function pickSubjectJosa(word) {
+  if (!word) return "이";
+  const code = word.charCodeAt(word.length - 1);
+  if (code < 0xac00 || code > 0xd7a3) return "이";
+  return (code - 0xac00) % 28 === 0 ? "가" : "이";
+}
+
+// "겹치는 기억" 알림을 점뿐 아니라 문구로도 보여주기 위한 한 줄 텍스트
+// (2026-08-21). 연도를 남기지 않은 기억(dateMode 미상)은 "OO년의 기억"이
+// 어색해 문구를 다르게 축약한다.
+function buildOverlapMessage(story) {
+  const author = story.displayAuthorName || "익명";
+  const place = Storage.getGroupTitle({
+    placeId: story.placeId,
+    officialPlaceName: story.officialPlaceName,
+    customName: story.customName,
+    address: story.address,
+  });
+  const year = Storage.getStoryYear(story);
+  const josa = pickSubjectJosa(author);
+  return year !== null
+    ? `${author}${josa} ${place}에 ${year}년의 기억을 남겼습니다`
+    : `${author}${josa} ${place}에 새 기억을 남겼습니다`;
+}
+
+// 계정 메뉴의 "겹치는 기억" 항목 바로 아래에 최근 새로 발견된 겹침을
+// 문구 리스트로 보여준다 — 점만으로는 "뭐가 바뀐 건지 모르겠다"는
+// 피드백(2026-08-20, reaction-count-caption 도입 배경과 같은 이유)이
+// 반응 말고 겹침에도 똑같이 적용될 걸로 보여 먼저 반영한다. 화면에
+// 튀어나오는 토스트 대신 메뉴 안에 넣은 이유는 "근처 기억 발견 토스트"를
+// 반복된다는 이유로 하루 만에 없앤 전례(project_nearby_discovery_toast_removed)
+// 때문 — 사용자가 열어볼 때만 보이면 같은 피로감이 없다.
+function renderOverlapFeed(messages) {
+  const feed = document.getElementById("account-menu-overlap-feed");
+  if (!feed) return;
+  if (messages.length === 0) {
+    feed.classList.add("hidden");
+    feed.innerHTML = "";
+    return;
+  }
+  feed.innerHTML = messages
+    .map((m) => `<button type="button" class="overlap-feed-item" data-story-id="${m.storyId}">${escapeHtml(m.text)}</button>`)
+    .join("");
+  feed.classList.remove("hidden");
+  feed.querySelectorAll(".overlap-feed-item").forEach((btn) => {
+    btn.onclick = () => {
+      closeAccountMenu();
+      navigateToStoryFromList(btn.dataset.storyId, { kind: "mymemory", listKind: "overlap" });
+    };
+  });
+}
+
 // 로그인한 사용자만 대상 — 비로그인 상태는 아바타 자체가 없어(위
 // renderAccountAvatar) 뱃지를 붙일 자리가 없다.
 async function refreshNotificationBadge() {
@@ -75,69 +132,87 @@ async function refreshNotificationBadge() {
     dot.classList.add("hidden");
     if (recalledDot) recalledDot.classList.add("hidden");
     if (overlapDot) overlapDot.classList.add("hidden");
+    renderOverlapFeed([]);
     _pendingNotifState = null;
     return;
   }
 
   const myStories = await buildMyMemoryList("posted");
   const seen = _getNotifSeenState();
-  const currentState = {};
-  let hasNew = false;
-  // "나를 떠올린 기억"/"겹치는 기억" 메뉴 항목 전용 — 각자 자기 원인만
-  // 추적한다(반응 vs 같은 장소·근처 새 기억).
+  const seenOverlapIds = new Set(seen.overlapSeenIds || []);
+  // overlapSeenIds가 아예 없으면(이 문구 알림 도입 이전) — 그동안 점으로만
+  // 알려온 기존 겹침을 한꺼번에 문구로 쏟아내지 않는다. 지금 겹쳐 있는
+  // 것들은 이미 "본 것"으로 조용히 기준선을 세우고, 이 시점 이후 새로
+  // 생기는 것만 문구로 보여준다.
+  const isFirstOverlapRun = !seen.overlapSeenIds;
+
+  const perStoryState = {};
+  const currentOverlapIds = new Set();
+  const overlapStoriesById = new Map();
   let hasNewReaction = false;
-  let hasNewOverlap = false;
   let seenUpdated = false;
 
   myStories.forEach((story) => {
     const reactionCount = story.reactionCount || 0;
-    // 반경 1km 안의 "다른 사람" 기억 개수 — 내가 같은 장소/근처에 또
-    // 다른 내 기억을 남긴 경우는 "겹침"으로 안 친다. "겹치는 기억" 목록
-    // (buildMyMemoryList의 "overlap")도 isMyStory로 내 글을 빼고
-    // 보여주는데, 여기서 안 빼면 알림 점만 켜지고 정작 목록엔 아무것도
-    // 안 뜨는 불일치가 생긴다(2026-08-20 제보 — 내 글끼리 겹쳐 써도
-    // 알림이 왔다).
-    const nearbyCount = Storage.getStoriesNear(story.lat, story.lng, OVERLAP_RADIUS_METERS)
-      .filter((s) => s.id !== story.id && !Storage.isMyStory(s.id)).length;
-    currentState[story.id] = { reactionCount, nearbyCount };
+    perStoryState[story.id] = { reactionCount };
 
     const prev = seen[story.id];
     if (!prev) {
-      // 뱃지 도입 이후 처음 추적하는 내 글. reactionCount는 이 알림
+      // 뱃지 도입 이후 처음 추적하는 내 글 — reactionCount는 이 알림
       // 기능 이전부터 카드에 이미 보이던 값이라, 과거 활동이 한꺼번에
       // "새 알림"으로 안 터지게 지금 값을 그대로 기준값으로 조용히
-      // 저장한다. 반면 nearbyCount(반경 1km 겹침)는 이 알림 말고는
-      // 어디에도 노출된 적 없는 정보라 "처음 계산되는 순간"이 곧
-      // 사용자에게는 "새로 발견하는 순간"과 같다 — 그래서 기준값을
-      // 0으로 저장해, 이미 존재하던 근처 기억도 다음 새로고침에서
-      // 정상적으로 알려준다(실제 값은 계정 메뉴를 열 때 currentState로
-      // 확정 저장된다 — 아래 markNotificationsSeen 참고).
-      seen[story.id] = { reactionCount, nearbyCount: 0 };
+      // 저장한다.
+      seen[story.id] = { reactionCount };
       seenUpdated = true;
-      if (nearbyCount > 0) {
-        hasNew = true;
-        hasNewOverlap = true;
-      }
-      return;
+    } else if (reactionCount > prev.reactionCount) {
+      hasNewReaction = true;
     }
-    if (reactionCount > prev.reactionCount) hasNewReaction = true;
-    // prev.nearbyCount가 없는(이 지표 도입 전에 저장된) 기록도 ||0로
-    // 0 기준 취급되어 위와 같은 원칙으로 동작한다.
-    if (nearbyCount > (prev.nearbyCount || 0)) hasNewOverlap = true;
-    if (reactionCount > prev.reactionCount || hasNewOverlap) {
-      hasNew = true;
-    }
+
+    // 반경 1km 안의 "다른 사람" 기억 — 내가 같은 장소/근처에 또 다른 내
+    // 기억을 남긴 경우는 "겹침"으로 안 친다(2026-08-20, isMyStory로 제외
+    // 안 하면 알림 점만 켜지고 "겹치는 기억" 목록엔 아무것도 안 뜨는
+    // 불일치가 생겼었다).
+    Storage.getStoriesNear(story.lat, story.lng, OVERLAP_RADIUS_METERS)
+      .filter((s) => s.id !== story.id && !Storage.isMyStory(s.id))
+      .forEach((s) => {
+        currentOverlapIds.add(s.id);
+        overlapStoriesById.set(s.id, s);
+      });
   });
 
+  let newOverlapIds = [];
+  if (isFirstOverlapRun) {
+    seen.overlapSeenIds = [...currentOverlapIds];
+    seenUpdated = true;
+  } else {
+    newOverlapIds = [...currentOverlapIds].filter((id) => !seenOverlapIds.has(id));
+  }
+
   if (seenUpdated) _saveNotifSeenState(seen);
-  _pendingNotifState = currentState;
-  dot.classList.toggle("hidden", !hasNew);
+  // markNotificationsSeen이 그대로 저장할 다음 seen 상태 전체(스토리별
+  // reactionCount + overlapSeenIds) — 지금 더 이상 안 쓰는 storyId는
+  // (예: 삭제된 내 글) 자연히 빠져서 매번 최신 상태로 교체된다.
+  _pendingNotifState = { ...perStoryState, overlapSeenIds: [...currentOverlapIds] };
+
+  const hasNewOverlap = newOverlapIds.length > 0;
+  dot.classList.toggle("hidden", !(hasNewReaction || hasNewOverlap));
   if (recalledDot) recalledDot.classList.toggle("hidden", !hasNewReaction);
   if (overlapDot) overlapDot.classList.toggle("hidden", !hasNewOverlap);
+
+  const messages = newOverlapIds
+    .map((id) => overlapStoriesById.get(id))
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5)
+    .map((s) => ({ storyId: s.id, text: buildOverlapMessage(s) }));
+  renderOverlapFeed(messages);
 }
 
 // 계정 메뉴를 열어야 "확인했다"로 치고 스냅샷을 저장한다 — 아바타만
-// 보고 지나치거나 새로고침만 하는 건 확인으로 안 친다.
+// 보고 지나치거나 새로고침만 하는 건 확인으로 안 친다. 문구 리스트
+// 자체는 지우지 않는다 — 방금 켠 메뉴에서 사용자가 읽어야 할 내용이라,
+// 지금 세션 동안은 계속 보이다가 다음 앱 재실행 때(overlapSeenIds가
+// 커밋된 뒤) 자연히 빈 목록으로 바뀐다.
 function markNotificationsSeen() {
   if (_pendingNotifState) _saveNotifSeenState(_pendingNotifState);
   document.getElementById("account-notif-dot").classList.add("hidden");
