@@ -302,49 +302,155 @@ body {
 }
 
 /* ------------------------------------------------------------
-   기능 안내 투어 모달 내용(help-tour-panel) — 스텝별 스크린샷 + 캡션
+   기능 안내 투어 모달 내용(help-tour-panel) — 스텝별 카드 미리보기 + 캡션
    ------------------------------------------------------------ */
-/* 원본 스크린샷은(특히 기억 카드/작성폼처럼 세로로 긴 화면) 그대로
-   넣으면 캡션/이전·다음 버튼이 한참 아래로 밀려 스크롤을 많이 해야
-   보인다 — 미리보기는 위쪽만 살짝 보여주는 "peek" 형태로 높이를
-   제한한다(2026-08-21). */
-.help-tour-image {
-  display: block;
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  object-position: top;
-  border-radius: 12px;
-  border: 1px solid var(--cs-gray);
+/* 모든 스텝이 같은 크기의 모달로 보이도록 패널 자체를 고정 높이로 잡고
+   내용은 넘치면 잘라낸다(2026-08-21 목업 기준 — 기억을 발견해요 스텝은
+   카드 본문이 중간에 잘려도 의도된 모습). composer-card-inner의
+   max-height:86vh + overflow-y:auto보다 우선하도록 id 선택자로 덮어쓴다. */
+#help-tour-panel {
+  display: flex;
+  flex-direction: column;
+  height: min(560px, 78vh);
+  overflow: hidden;
+}
+
+.help-tour-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  margin-bottom: 20px;
 }
 
 .help-tour-dots {
   display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 16px 0;
+  gap: 8px;
 }
 
 .help-tour-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--cs-gray);
+  flex-shrink: 0;
 }
 
 .help-tour-dot--active {
   background: var(--cs-orange);
 }
 
-.help-tour-nav {
-  display: flex;
-  gap: 8px;
+.help-tour-close {
+  border: none;
+  background: none;
+  color: var(--cs-black);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
 }
 
-.help-tour-nav .btn-primary,
-.help-tour-nav .btn-secondary {
+.help-tour-close:hover {
+  color: var(--cs-orange);
+}
+
+.help-tour-body {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.help-tour-image {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--cs-gray);
+  flex-shrink: 0;
+}
+
+.help-tour-title {
+  font-family: var(--font-maruburi);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--cs-black);
   margin: 0;
+}
+
+.help-tour-desc {
+  font-family: var(--font-pretendard);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--cs-text-muted);
+  margin: 0;
+}
+
+/* "내기억" 스텝(지도로 보고/기억산책 선택 카드) 전용 — 다른 스텝처럼
+   큰 제목을 새로 달지 않고, 카드 안 소제목을 그대로 살리는 대신 아래는
+   왼쪽 오렌지 바가 달린 인용구 스타일로 보여준다(목업 기준). */
+.help-tour-quote {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+}
+
+.help-tour-quote::before {
+  content: "";
+  width: 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: var(--cs-orange);
+  opacity: 0.5;
+}
+
+.help-tour-quote p {
+  font-family: var(--font-pretendard);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--cs-text-muted);
+  margin: 0;
+}
+
+.help-tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+  flex-shrink: 0;
+  margin-top: 20px;
+}
+
+.help-tour-nav--single .help-tour-next {
+  width: 100%;
+}
+
+.help-tour-prev-link {
+  border: none;
+  background: none;
+  padding: 8px;
+  font-family: var(--font-pretendard);
+  font-size: 14px;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+  margin-right: auto;
+}
+
+.help-tour-prev-link:hover {
+  color: var(--cs-black);
+}
+
+.help-tour-nav .help-tour-next {
+  width: auto;
+  margin: 0;
+  padding-left: 40px;
+  padding-right: 40px;
+  flex-shrink: 0;
+}
+
+.help-tour-nav--single .help-tour-next {
+  width: 100%;
 }
 
 /* ------------------------------------------------------------
