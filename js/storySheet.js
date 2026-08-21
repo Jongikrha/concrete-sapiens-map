@@ -930,20 +930,47 @@ async function copyPlaceShareLink(group) {
 // navigator.share가 있으면 OS 공유 시트로 이미지를 바로 첨부해서
 // 넘기고, 없으면(대부분의 PC 브라우저) 이미지를 다운로드한다.
 // ------------------------------------------------------------
+// 글자 단위로만 잘라 띄어쓰기(단어 경계)를 무시하던 걸 고쳤다(2026-08-21
+// 확인 — "정동진에"가 "정동진"/"에"로 줄바꿈되는 등 실제 띄어쓰기와
+// 무관하게 찢어져 보였다). 줄바꿈(\n)은 문단 구분으로 먼저 존중하고,
+// 각 문단 안에서는 공백 기준으로 단어를 쌓다가 넘치면 줄을 바꾼다.
+// 단어 하나가 그 자체로 maxWidth보다 넓은 드문 경우(긴 URL 등)만
+// 글자 단위로 강제 분할한다.
 function wrapCanvasText(ctx, text, maxWidth) {
-  const chars = text.split("");
   const lines = [];
-  let line = "";
-  chars.forEach((ch) => {
-    const test = line + ch;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = ch;
-    } else {
-      line = test;
-    }
+  text.split("\n").forEach((paragraph) => {
+    const words = paragraph.split(" ");
+    let line = "";
+    words.forEach((word) => {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width <= maxWidth || !line) {
+        if (ctx.measureText(word).width > maxWidth) {
+          // 단어 자체가 한 줄보다 넓다 — 그 단어만 글자 단위로 쪼갠다.
+          if (line) {
+            lines.push(line);
+            line = "";
+          }
+          let chunk = "";
+          for (const ch of word) {
+            const chunkTest = chunk + ch;
+            if (ctx.measureText(chunkTest).width > maxWidth && chunk) {
+              lines.push(chunk);
+              chunk = ch;
+            } else {
+              chunk = chunkTest;
+            }
+          }
+          line = chunk;
+        } else {
+          line = test;
+        }
+      } else {
+        lines.push(line);
+        line = word;
+      }
+    });
+    lines.push(line);
   });
-  if (line) lines.push(line);
   return lines;
 }
 
@@ -1017,9 +1044,17 @@ function generateShareCard(story) {
   }
   cursorY += 100;
 
+  // 노래가 첨부된 기억이면 인용구 아래에 "🎧 아티스트 · 곡명"을 한 줄로
+  // 보여준다(2026-08-21) — 앱 안 카드(renderYoutubeEmbed)와 같은 표기.
+  // 아래 maxQuoteLines 계산에서 이 줄이 들어갈 자리를 미리 빼둔다.
+  const musicLabel = story.musicTitle
+    ? (story.musicArtist ? `${story.musicArtist} · ${story.musicTitle}` : story.musicTitle)
+    : null;
+  const musicReserve = musicLabel ? 70 : 0;
+
   const footerY = canvas.height - 200;
   const lineHeight = 76;
-  const maxQuoteLines = Math.max(3, Math.floor((footerY - 40 - cursorY) / lineHeight));
+  const maxQuoteLines = Math.max(3, Math.floor((footerY - 40 - musicReserve - cursorY) / lineHeight));
 
   ctx.font = "400 52px serif";
   ctx.fillStyle = "#F4F3EF";
@@ -1030,11 +1065,20 @@ function generateShareCard(story) {
     quoteLines[quoteLines.length - 1] = last.slice(0, Math.max(0, last.length - 1)) + "…";
   }
   quoteLines.forEach((line, i) => ctx.fillText(line, marginX, cursorY + i * lineHeight));
+  cursorY += quoteLines.length * lineHeight;
+
+  if (musicLabel) {
+    ctx.font = "700 32px sans-serif";
+    ctx.fillStyle = "#FF5A36";
+    let musicLine = wrapCanvasText(ctx, `🎧 ${musicLabel}`, maxWidth)[0];
+    if (ctx.measureText(`🎧 ${musicLabel}`).width > maxWidth) musicLine = musicLine.slice(0, Math.max(0, musicLine.length - 1)) + "…";
+    ctx.fillText(musicLine, marginX, cursorY + 46);
+  }
 
   ctx.font = "700 38px sans-serif";
   ctx.fillStyle = "#F4F3EF";
   ctx.fillText("이 기억의 장소를 지도에서", marginX, footerY);
-  ctx.fillText("열어보세요 →", marginX, footerY + 52);
+  ctx.fillText("열어보세요", marginX, footerY + 52);
 
   drawShareCardBrandFooter(ctx, canvas, marginX);
 
@@ -1099,7 +1143,7 @@ function generatePlaceShareCard(group) {
   ctx.font = "700 38px sans-serif";
   ctx.fillStyle = "#F4F3EF";
   ctx.fillText("이 장소의 기억들을 지도에서", marginX, footerY);
-  ctx.fillText("열어보세요 →", marginX, footerY + 52);
+  ctx.fillText("열어보세요", marginX, footerY + 52);
 
   drawShareCardBrandFooter(ctx, canvas, marginX);
 
@@ -1124,20 +1168,14 @@ async function shareStoryCard(storyId) {
   if (btn) btn.disabled = false;
   if (!blob) return;
 
-  const url = buildStoryUrl(story.publicId);
-  const title = Storage.getGroupTitle({
-    placeId: story.placeId,
-    officialPlaceName: story.officialPlaceName,
-    customName: story.customName,
-    address: story.address,
-  });
-  const year = Storage.getStoryYear(story);
-  const shareText = `여기 이런 기억이 남아 있었어.\n${title}${year ? " · " + year : ""}`;
+  // 예전엔 text/url도 같이 넘겼는데, 카카오톡 등 일부 공유 대상이 이걸
+  // 이미지와 별도의 텍스트 메시지로 더 보내서 "메시지가 따라온다"는
+  // 피드백으로 뺐다(2026-08-21) — 이미지 파일 하나만 전달한다.
   const file = new File([blob], "concrete-sapiens-memory.png", { type: "image/png" });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
+      await navigator.share({ files: [file] });
       Storage.incrementShareCount(storyId);
       Storage.markShared(storyId);
       return;
@@ -1175,14 +1213,13 @@ async function sharePlaceCard(group) {
   if (btn) btn.disabled = false;
   if (!blob) return;
 
-  const url = buildPlaceUrl(group.key);
-  const title = Storage.getGroupTitle(group);
-  const shareText = `여기 ${group.stories.length}개의 기억이 쌓여 있어.\n${title}`;
+  // 개별 기억 공유(shareStoryCard)와 같은 이유로 text/url 없이 이미지
+  // 파일만 넘긴다(2026-08-21).
   const file = new File([blob], "concrete-sapiens-place.png", { type: "image/png" });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ title: "콘크리트 사피엔스 지도", text: shareText, url, files: [file] });
+      await navigator.share({ files: [file] });
       return;
     } catch (e) {
       // 공유 시트를 취소했거나 실패 — 아래 다운로드로 넘어가지 않고 그냥 종료
