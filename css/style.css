@@ -1776,47 +1776,55 @@ body {
 }
 
 /* ------------------------------------------------------------
-   날짜 블록 — 연도는 "정보"가 아니라 이 기억의 표지(cover) 역할을
-   하는 시각적 오브젝트다. YYYY년 MM월 형식의 일반적인 날짜 UI로
-   디자인하지 않는다. "년"은 표기하지 않으며, 연도(76px)와
-   월(24px)은 약 3:1 비율로 배치한 좌측 정렬 2단 구조다. 연도-월
-   간격은 6~8px로 밀착시켜 하나의 "날짜 덩어리"로 인식시키고,
-   날짜 블록과 본문 사이는 34px로 분리해 "날짜"와 "이야기"를
-   시각적으로 확실히 나눈다. ···(신고) 메뉴는 이 블록에 절대
+   날짜 블록 — 예전엔 연도(74px)를 "정보"가 아니라 이 기억의 표지(cover)
+   역할을 하는 큰 시각적 오브젝트로 디자인했었는데(연도/월 2단 좌측
+   정렬), "날짜와 이야기 부분을 더 담백하게" 바꾸고 싶다는 요청으로
+   한 줄짜리 일반적인 날짜 표기로 되돌렸다(2026-08-21 디자인 레퍼런스
+   반영) — 연도+월을 한 줄에, 월은 연도보다 작고 브랜드 오렌지로 살짝만
+   강조한다. 날짜 블록과 본문 사이는 큰 여백 대신 얇은 구분선
+   (.story-date-divider)으로 나눈다. ···(신고) 메뉴는 이 블록에 절대
    두지 않는다 — 작성자 줄로 옮겨서 날짜 영역의 순수성을 지킨다.
    ------------------------------------------------------------ */
 .story-date-block {
-  margin: 0 0 34px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 14px;
   text-align: left;
 }
 
 .story-year {
   font-family: var(--font-maruburi);
-  font-weight: 300;
-  font-size: 74px;
-  line-height: 0.92;
-  letter-spacing: -2.5px;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -1px;
   color: var(--cs-black);
   margin: 0;
 }
 
 .story-month {
   font-family: var(--font-maruburi);
-  font-weight: 400;
-  font-size: 23px;
-  line-height: 1.2;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
   letter-spacing: -0.3px;
-  color: #777775;
-  margin: 7px 0 0;
+  color: var(--cs-orange);
+  margin: 0;
+}
+
+.story-date-divider {
+  border-top: 1px solid var(--cs-gray);
+  margin: 0 0 16px;
 }
 
 @media (max-width: 420px) {
   .story-year {
-    font-size: 58px;
-    letter-spacing: -2px;
+    font-size: 32px;
+    letter-spacing: -0.5px;
   }
   .story-month {
-    font-size: 18px;
+    font-size: 17px;
   }
 }
 

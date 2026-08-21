@@ -780,6 +780,7 @@ function renderStoryItem(story, options = {}) {
         <p class="story-year">${yearMain}</p>
         ${month ? `<p class="story-month">${month}월</p>` : ""}
       </div>
+      <div class="story-date-divider"></div>
       ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
       ${renderYoutubeEmbed(story)}
