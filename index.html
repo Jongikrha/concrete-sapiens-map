@@ -191,6 +191,13 @@
       <div class="composer-card"><div class="composer-card-inner" id="daily-prompt-panel"></div></div>
     </div>
 
+    <!-- 첫 방문 환영 모달 — 브라우저당 한 번만(js/app.js maybeShowWelcomeOverlay,
+         2026-08-21). 공유 링크(?story=/?place=)로 들어온 경우는 이미 구체적인
+         맥락이 있어 안 띄운다. -->
+    <div class="overlay hidden" id="welcome-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="welcome-panel"></div></div>
+    </div>
+
     <!-- 회원가입/로그인 (기억 남기기 진입 시 게이트) -->
     <div class="overlay hidden" id="auth-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="auth-panel"></div></div>

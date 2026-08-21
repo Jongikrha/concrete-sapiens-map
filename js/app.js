@@ -25,6 +25,40 @@ async function initApp() {
   renderMarkers();
   renderTotalCountBanner();
   handleInitialEntry();
+  maybeShowWelcomeOverlay();
+}
+
+// 브라우저당 한 번만 보여주는 첫 방문 환영 모달(2026-08-21) — 초대
+// 링크로 들어온 사람이 지도만 덩그러니 보고 "이게 뭐 하는 서비스지?"부터
+// 시작하는 문제. 공유 링크(?story=/?place=)로 들어온 경우는 이미 구체적인
+// 맥락(특정 기억/장소)이 있어 생략한다 — handleInitialEntry가 그 흐름을
+// 담당하므로 여기선 URL 파라미터만 다시 확인한다.
+const WELCOME_SEEN_KEY = "concrete_sapiens_welcome_seen_v1";
+
+function maybeShowWelcomeOverlay() {
+  if (localStorage.getItem(WELCOME_SEEN_KEY)) return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("story") || params.get("place")) return;
+
+  const panel = document.getElementById("welcome-panel");
+  panel.innerHTML = `
+    <div class="daily-prompt-header">
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>콘크리트 사피엔스 지도</span>
+      <button class="daily-prompt-close" id="welcome-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="daily-prompt-quote">도시는 건물로 만들어지지만,<br>장소는 기억으로 만들어집니다.</p>
+    <p class="daily-prompt-hint">사람들이 실제 장소에 남긴 기억들이 이 지도 위에 쌓여 있어요. 지도를 돌아다니며 낯선 기억을 발견하고, 당신의 기억도 이 자리에 남겨보세요.</p>
+    <div class="daily-prompt-divider"></div>
+    <button class="btn-primary" id="welcome-confirm">둘러보기 시작</button>
+  `;
+  panel.querySelector("#welcome-close").onclick = closeWelcomeOverlay;
+  panel.querySelector("#welcome-confirm").onclick = closeWelcomeOverlay;
+  document.getElementById("welcome-overlay").classList.remove("hidden");
+}
+
+function closeWelcomeOverlay() {
+  localStorage.setItem(WELCOME_SEEN_KEY, "1");
+  document.getElementById("welcome-overlay").classList.add("hidden");
 }
 
 function renderTotalCountBanner() {
@@ -462,6 +496,7 @@ function bindUIEvents() {
   bindOverlayClickToClose("today-overlay", closeTodayMemoriesModal);
   bindOverlayClickToClose("slider-period-overlay", closeSliderPeriodModal);
   bindOverlayClickToClose("daily-prompt-overlay", closeTodayMission);
+  bindOverlayClickToClose("welcome-overlay", closeWelcomeOverlay);
   bindOverlayClickToClose("changepw-overlay", closeChangePasswordPanel);
   // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소
