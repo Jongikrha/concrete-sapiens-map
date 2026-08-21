@@ -509,7 +509,7 @@ function updateSliderInfoBox() {
   const desc = sliderMode === "exact"
     ? `${sliderYear}년에 남겨진 기억들을 만나보세요.`
     : `${sliderYear}년까지 남겨진 기억들을 만나보세요.`;
-  box.innerHTML = `<span class="time-slider-info-icon">💡</span><span>${desc}<br><span class="time-slider-info-count">총 ${count.toLocaleString()}개의 기억이 있습니다.</span></span>`;
+  box.innerHTML = `<span class="time-slider-info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.6c.6.5 1 1.3 1 2.4h6c0-1.1.4-1.9 1-2.4A7 7 0 0 0 12 2z"/></svg></span><span>${desc}<br><span class="time-slider-info-count">총 ${count.toLocaleString()}개의 기억이 있습니다.</span></span>`;
   box.classList.toggle("visible", count > 0);
 }
 
@@ -580,7 +580,7 @@ function closeMyMemoryMode() {
 }
 
 function getSliderPeriodTitle() {
-  return sliderMode === "exact" ? `${sliderYear}년의 기억` : `~ ${sliderYear}년까지의 기억`;
+  return sliderMode === "exact" ? `${sliderYear}년의 기억` : `~${sliderYear}년까지의 기억`;
 }
 
 function updateSliderLabel() {

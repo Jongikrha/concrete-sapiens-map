@@ -83,11 +83,10 @@ function openRecallEntryChoice() {
   const panel = document.getElementById("recall-choice-panel");
   panel.innerHTML = `
     <div class="daily-prompt-header">
-      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>내 기억</span>
+      <span class="daily-prompt-label">내 기억</span>
       <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
     </div>
     <p class="daily-prompt-hint">어떻게 보고 싶으세요?</p>
-    <div class="daily-prompt-divider"></div>
     <div class="recall-choice-grid">
       <button type="button" class="recall-choice-card" id="recall-choice-map-btn">
         <span class="recall-choice-card-icon">${RECALL_CHOICE_MAP_ICON_SVG}</span>
