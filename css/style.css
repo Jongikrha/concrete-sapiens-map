@@ -1523,8 +1523,9 @@ body {
   padding-right: 32px;
   /* 기억이 1개뿐이면 정렬 토글이 안 보이는데(sort-toggle의 여백이
      사라짐), 그러면 주소 바로 아래 연도가 너무 붙어 보인다 — 토글
-     유무와 상관없이 항상 최소한의 여백을 보장한다. */
-  margin-bottom: 16px;
+     유무와 상관없이 항상 최소한의 여백을 보장한다(2026-08-21, 주소와
+     연도 사이가 좁아 보인다는 피드백으로 16px→28px). */
+  margin-bottom: 28px;
 }
 
 .story-spot-count {
@@ -1796,7 +1797,7 @@ body {
 .story-year {
   font-family: var(--font-maruburi);
   font-weight: 700;
-  font-size: 40px;
+  font-size: 46px;
   line-height: 1;
   letter-spacing: -1px;
   color: var(--cs-black);
@@ -1820,11 +1821,11 @@ body {
 
 @media (max-width: 420px) {
   .story-year {
-    font-size: 32px;
+    font-size: 37px;
     letter-spacing: -0.5px;
   }
   .story-month {
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 
