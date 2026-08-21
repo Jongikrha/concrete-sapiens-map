@@ -81,6 +81,16 @@ const DAILY_PROMPTS = [
   "누군가를 배웅하며 눈물을 참았던 곳이 있나요?",
 ];
 
+// referenceDate("YYYY-MM")의 월 자리에 정확한 월 대신 넣을 수 있는 계절
+// 코드 — 연도는 기억나도 월까진 확실하지 않은 경우가 많다는 피드백으로
+// 도입(2026-08-21). 새 필드를 만드는 대신 기존 문자열 필드를 그대로 써서
+// 백엔드 스키마 변경 없이 배포한다. 정렬(getStoryMonthSortValue)에서는
+// 그 계절의 "마지막 달 바로 뒤" 위치로 끼워 넣는다 — 겨울(12월~다음해
+// 2월)처럼 해를 넘기는 계절도 이렇게 하면 "그 해 12월 다음"으로 고정돼
+// 애매함이 없다.
+const SEASON_LABELS = { SP: "봄", SU: "여름", FA: "가을", WI: "겨울" };
+const SEASON_SORT_OFFSET = { SP: 5.5, SU: 8.5, FA: 11.5, WI: 12.5 };
+
 let client = null;
 let _cache = [];
 let _bannedWords = [];
@@ -920,13 +930,48 @@ const Storage = {
 
   getStoryMonth(story) {
     if (story.dateMode === "past" && story.referenceDate) {
-      const parts = story.referenceDate.split("-");
-      return parts[1] ? parseInt(parts[1], 10) : null;
+      const raw = story.referenceDate.split("-")[1];
+      if (!raw || SEASON_LABELS[raw]) return null;
+      return parseInt(raw, 10);
     }
     if (story.dateMode === "now") {
       return new Date(story.createdAt).getMonth() + 1;
     }
     return null;
+  },
+
+  /** referenceDate 월 자리가 계절 코드(SP/SU/FA/WI)면 그 코드를, 아니면 null. */
+  getStorySeasonCode(story) {
+    if (story.dateMode !== "past" || !story.referenceDate) return null;
+    const raw = story.referenceDate.split("-")[1];
+    return SEASON_LABELS[raw] ? raw : null;
+  },
+
+  getStorySeasonLabel(story) {
+    const code = this.getStorySeasonCode(story);
+    return code ? SEASON_LABELS[code] : null;
+  },
+
+  /**
+   * 카드 등에서 월/계절 자리에 그대로 넣을 텍스트 — 정확한 월이 있으면
+   * "3월", 계절만 있으면 "봄"(월 접미사 없음), 둘 다 없으면 null.
+   */
+  getStoryDateLabel(story) {
+    const month = this.getStoryMonth(story);
+    if (month !== null) return `${month}월`;
+    return this.getStorySeasonLabel(story);
+  },
+
+  /**
+   * sortStoriesForDisplay 전용 — 정확한 월이 있으면 그 숫자, 계절만
+   * 있으면 SEASON_SORT_OFFSET으로 그 계절의 마지막 달 바로 뒤에 끼워
+   * 넣는다(위 SEASON_SORT_OFFSET 주석 참고).
+   */
+  getStoryMonthSortValue(story) {
+    const month = this.getStoryMonth(story);
+    if (month !== null) return month;
+    const code = this.getStorySeasonCode(story);
+    return code ? SEASON_SORT_OFFSET[code] : null;
   },
 
   getStoriesByYear(year) {
@@ -1090,7 +1135,7 @@ const Storage = {
     dated.sort((a, b) => {
       const ay = this.getStoryYear(a), by = this.getStoryYear(b);
       if (ay !== by) return dir * (ay - by);
-      const am = this.getStoryMonth(a) || 0, bm = this.getStoryMonth(b) || 0;
+      const am = this.getStoryMonthSortValue(a) || 0, bm = this.getStoryMonthSortValue(b) || 0;
       if (am !== bm) return dir * (am - bm);
       // 연도·월까지 같으면(예: 이번 달 안에서) 등록 시각으로 한 번 더
       // 갈라준다 — 안 그러면 같은 달로 묶인 기억들 사이의 순서가

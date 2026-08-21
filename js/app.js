@@ -84,7 +84,7 @@ const RECENT_ITEM_SEND_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fi
 // 몇 명이 반응했는지 짧게 덧붙인다.
 function renderRecentListItem(story, options = {}) {
   const year = Storage.getStoryYear(story);
-  const month = Storage.getStoryMonth(story);
+  const dateLabel = Storage.getStoryDateLabel(story);
   const title = Storage.getGroupTitle({
     placeId: story.placeId,
     officialPlaceName: story.officialPlaceName,
@@ -100,7 +100,7 @@ function renderRecentListItem(story, options = {}) {
     <div class="recent-item" data-id="${story.id}">
       <div class="recent-item-date">
         <p class="recent-item-year">${year !== null ? year : "···"}<span class="recent-item-year-unit">${year !== null ? "년" : ""}</span></p>
-        ${month ? `<p class="recent-item-month">${month}월</p>` : ""}
+        ${dateLabel ? `<p class="recent-item-month">${dateLabel}</p>` : ""}
       </div>
       <div class="recent-item-body">
         <p class="recent-item-content">${escapeHtml(story.content)}</p>

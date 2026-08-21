@@ -739,7 +739,7 @@ function formatReactionDisplay(count) {
 
 function renderStoryItem(story, options = {}) {
   const numericYear = Storage.getStoryYear(story);
-  const month = Storage.getStoryMonth(story);
+  const dateLabel = Storage.getStoryDateLabel(story);
   const yearMain = numericYear !== null ? numericYear : "· · ·";
   const tagsHtml = story.hashtags.map((t) => `<button class="hashtag-link" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join(" ");
   const reacted = Storage.hasReacted(story.id);
@@ -778,7 +778,7 @@ function renderStoryItem(story, options = {}) {
     <div class="story-item" data-story-id="${story.id}">
       <div class="story-date-block">
         <p class="story-year">${yearMain}</p>
-        ${month ? `<p class="story-month">${month}월</p>` : ""}
+        ${dateLabel ? `<p class="story-month">${dateLabel}</p>` : ""}
       </div>
       <div class="story-date-divider"></div>
       ${locationHtml}

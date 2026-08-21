@@ -53,6 +53,17 @@ function buildYearOptions(selectedYear) {
   return opts;
 }
 
+// 계절 코드(js/storage.js SEASON_LABELS와 동일) — 연도는 기억나도 정확한
+// 월까진 확신이 없는 경우를 위해 월 select 맨 아래 묶어서 넣는다
+// (2026-08-21). 새 입력 UI를 따로 만들지 않고 이미 있는 월 select에
+// 옵션만 추가하는 이유: 사용자가 배워야 할 새 조작이 없다.
+const SEASON_OPTIONS = [
+  ["SP", "봄"],
+  ["SU", "여름"],
+  ["FA", "가을"],
+  ["WI", "겨울"],
+];
+
 function buildMonthOptions(selectedMonth) {
   let opts = `<option value="">월</option>`;
   for (let m = 1; m <= 12; m++) {
@@ -60,6 +71,11 @@ function buildMonthOptions(selectedMonth) {
     // 있어 문자열로 그대로 비교하면 옵션 값(7)과 안 맞는다 — 숫자로 비교.
     opts += `<option value="${m}" ${Number(m) === Number(selectedMonth) ? "selected" : ""}>${m}월</option>`;
   }
+  opts += `<optgroup label="정확한 월이 기억나지 않으면">`;
+  SEASON_OPTIONS.forEach(([code, label]) => {
+    opts += `<option value="${code}" ${code === selectedMonth ? "selected" : ""}>${label}</option>`;
+  });
+  opts += `</optgroup>`;
   return opts;
 }
 
@@ -139,6 +155,7 @@ function openComposer(pin) {
           <select id="input-year">${buildYearOptions(initialYear)}</select>
           <select id="input-month">${buildMonthOptions(initialMonth)}</select>
         </div>
+        <div class="field-hint ${dateMode !== "past" ? "hidden" : ""}" id="month-season-hint">정확한 월이 기억나지 않으면 월 선택에서 봄/여름/가을/겨울을 골라도 돼요.</div>
       </div>
 
       <div class="composer-field-group">
@@ -289,6 +306,7 @@ function openComposer(pin) {
       panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
       btn.classList.add("mode-btn--active");
       document.getElementById("year-month-row").classList.toggle("hidden", dateMode !== "past");
+      document.getElementById("month-season-hint").classList.toggle("hidden", dateMode !== "past");
     };
   });
 

@@ -259,6 +259,37 @@ test("getStoryMonth는 dateMode가 now일 때 createdAt에서 월을 뽑는다",
   assert.equal(Storage.getStoryMonth(story), 5);
 });
 
+test("getStoryMonth는 referenceDate의 월 자리가 계절 코드면 null을 반환한다", () => {
+  const story = createStory({ dateMode: "past", referenceDate: "1998-SU" });
+  assert.equal(Storage.getStoryMonth(story), null);
+});
+
+test("getStorySeasonLabel/getStorySeasonCode는 계절 코드가 있을 때만 라벨/코드를 반환한다", () => {
+  const summer = createStory({ dateMode: "past", referenceDate: "1998-SU" });
+  const withMonth = createStory({ dateMode: "past", referenceDate: "1998-03" });
+  assert.equal(Storage.getStorySeasonCode(summer), "SU");
+  assert.equal(Storage.getStorySeasonLabel(summer), "여름");
+  assert.equal(Storage.getStorySeasonCode(withMonth), null);
+  assert.equal(Storage.getStorySeasonLabel(withMonth), null);
+});
+
+test("getStoryDateLabel은 정확한 월이 있으면 'N월', 계절만 있으면 계절 이름을 반환한다", () => {
+  const withMonth = createStory({ dateMode: "past", referenceDate: "1998-03" });
+  const withSeason = createStory({ dateMode: "past", referenceDate: "1998-WI" });
+  const withNeither = createStory({ dateMode: "unknown", referenceDate: null });
+  assert.equal(Storage.getStoryDateLabel(withMonth), "3월");
+  assert.equal(Storage.getStoryDateLabel(withSeason), "겨울");
+  assert.equal(Storage.getStoryDateLabel(withNeither), null);
+});
+
+test("sortStoriesForDisplay(timetravel)는 계절을 그 계절의 마지막 달 바로 뒤에 끼워 넣는다", () => {
+  const mar = createStory({ id: "mar", dateMode: "past", referenceDate: "2000-03" });
+  const spring = createStory({ id: "spring", dateMode: "past", referenceDate: "2000-SP" });
+  const jun = createStory({ id: "jun", dateMode: "past", referenceDate: "2000-06" });
+  const { dated } = Storage.sortStoriesForDisplay([jun, spring, mar], "timetravel");
+  assert.deepEqual(dated.map((s) => s.id), ["mar", "spring", "jun"]);
+});
+
 test("saveStory는 캐시에 즉시 반영되고 저장한 값을 그대로 반환한다", () => {
   const story = createStory({ id: "s1" });
   const saved = Storage.saveStory(story);
