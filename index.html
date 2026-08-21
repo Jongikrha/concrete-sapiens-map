@@ -10,6 +10,17 @@
        뜸) PNG를 같이 둔다. SVG를 지원하는 브라우저는 위 태그를 그대로 쓰고,
        그렇지 않은 곳(구글 크롤러 포함)은 이 PNG로 폴백한다. -->
   <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
+  <!-- 홈 화면에 추가(PWA) — 오프라인/서비스워커까지는 아니고, "브라우저
+       탭 대신 홈 화면 아이콘으로" 재방문 문턱을 낮추는 정도가 목적
+       (2026-08-21). manifest.json은 Android/데스크톱 크롬이 읽고,
+       apple-touch-icon/meta 태그는 iOS 사파리 "홈 화면에 추가"가 읽는다
+       (iOS는 manifest.json을 온전히 지원하지 않는다). -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2F3031" />
+  <link rel="apple-touch-icon" href="assets/icon-512.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="콘크리트 사피엔스" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <!-- 구글 등 검색엔진 결과 스니펫용. 이 태그가 없으면 크롤러가 페이지
        안의 아무 텍스트(예: 카카오맵 API 키 미설정 시 안내 문구)를
        대신 긁어가는 문제가 있었다(2026-08-13 확인, 실제 검색 결과에
