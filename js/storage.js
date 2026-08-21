@@ -984,13 +984,17 @@ const Storage = {
   /**
    * sortStoriesForDisplay 전용 — 정확한 월이 있으면 그 숫자, 계절만
    * 있으면 SEASON_SORT_OFFSET으로 그 계절의 마지막 달 바로 뒤에 끼워
-   * 넣는다(위 SEASON_SORT_OFFSET 주석 참고).
+   * 넣는다(위 SEASON_SORT_OFFSET 주석 참고). 월도 계절도 없이 연도만
+   * 있는 기억(2026-08-21, 월/계절 입력을 선택사항으로 바꾸며 생긴
+   * 케이스)은 그 해의 맨 마지막(12.6)으로 보낸다 — 맨 앞으로 보내면
+   * 1월보다도 앞서는 것처럼 보여 어색하다.
    */
   getStoryMonthSortValue(story) {
     const month = this.getStoryMonth(story);
     if (month !== null) return month;
     const code = this.getStorySeasonCode(story);
-    return code ? SEASON_SORT_OFFSET[code] : null;
+    if (code) return SEASON_SORT_OFFSET[code];
+    return 12.6;
   },
 
   getStoriesByYear(year) {
@@ -1154,7 +1158,7 @@ const Storage = {
     dated.sort((a, b) => {
       const ay = this.getStoryYear(a), by = this.getStoryYear(b);
       if (ay !== by) return dir * (ay - by);
-      const am = this.getStoryMonthSortValue(a) || 0, bm = this.getStoryMonthSortValue(b) || 0;
+      const am = this.getStoryMonthSortValue(a), bm = this.getStoryMonthSortValue(b);
       if (am !== bm) return dir * (am - bm);
       // 연도·월까지 같으면(예: 이번 달 안에서) 등록 시각으로 한 번 더
       // 갈라준다 — 안 그러면 같은 달로 묶인 기억들 사이의 순서가

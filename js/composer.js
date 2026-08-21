@@ -155,7 +155,7 @@ function openComposer(pin) {
           <select id="input-year">${buildYearOptions(initialYear)}</select>
           <select id="input-month">${buildMonthOptions(initialMonth)}</select>
         </div>
-        <div class="field-hint ${dateMode !== "past" ? "hidden" : ""}" id="month-season-hint">정확한 월이 기억나지 않으면 월 선택에서 봄/여름/가을/겨울을 골라도 돼요.</div>
+        <div class="field-hint ${dateMode !== "past" ? "hidden" : ""}" id="month-season-hint">월은 선택사항이에요. 정확한 월이 기억나지 않으면 봄/여름/가을/겨울을 고르거나, 아예 비워둬도 돼요.</div>
       </div>
 
       <div class="composer-field-group">
@@ -412,8 +412,12 @@ function openComposer(pin) {
       alert("부적절한 단어가 포함되어 있어 남길 수 없어요. 표현을 조금 바꿔주세요.");
       return;
     }
-    if (dateMode === "past" && (!yearInput || !monthInput)) {
-      alert("기억의 연도와 월을 선택해주세요.");
+    // 월/계절은 선택사항이다(2026-08-21) — 연도는 기억나도 정확한 월까진
+    // 확신이 없는 경우가 많다는 피드백. 연도만은 계속 필수로 둔다(getStoryYear
+    // 기반 기능들 — 시간여행, 같은 해의 다른 기억 등 — 이 전부 연도에 기대고
+    // 있어서, 연도까지 빠지면 "과거"를 고른 의미가 없어진다).
+    if (dateMode === "past" && !yearInput) {
+      alert("기억의 연도를 선택해주세요.");
       return;
     }
     if (dateMode === "unknown") {
@@ -455,7 +459,9 @@ function openComposer(pin) {
       authorMode,
       displayAuthorName: authorMode === "custom" ? authorInput : "익명",
       dateMode,
-      referenceDate: dateMode === "past" ? `${yearInput}-${String(monthInput).padStart(2, "0")}` : null,
+      referenceDate: dateMode === "past"
+        ? (monthInput ? `${yearInput}-${String(monthInput).padStart(2, "0")}` : yearInput)
+        : null,
     };
 
     let story;

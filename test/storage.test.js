@@ -304,6 +304,19 @@ test("sortStoriesForDisplay(timetravel)는 계절을 그 계절의 마지막 달
   assert.deepEqual(dated.map((s) => s.id), ["mar", "spring", "jun"]);
 });
 
+test("getStoryMonthSortValue는 월/계절이 둘 다 없이 연도만 있으면 12.6(그 해 맨 마지막)을 반환한다", () => {
+  const yearOnly = createStory({ dateMode: "past", referenceDate: "2000" });
+  assert.equal(Storage.getStoryMonthSortValue(yearOnly), 12.6);
+});
+
+test("sortStoriesForDisplay(timetravel)는 월/계절 없이 연도만 있는 기억을 그 해의 맨 마지막(12월 뒤)에 둔다", () => {
+  const dec = createStory({ id: "dec", dateMode: "past", referenceDate: "2000-12" });
+  const yearOnly = createStory({ id: "year-only", dateMode: "past", referenceDate: "2000" });
+  const nextYear = createStory({ id: "next-year", dateMode: "past", referenceDate: "2001-01" });
+  const { dated } = Storage.sortStoriesForDisplay([nextYear, yearOnly, dec], "timetravel");
+  assert.deepEqual(dated.map((s) => s.id), ["dec", "year-only", "next-year"]);
+});
+
 test("saveStory는 캐시에 즉시 반영되고 저장한 값을 그대로 반환한다", () => {
   const story = createStory({ id: "s1" });
   const saved = Storage.saveStory(story);
