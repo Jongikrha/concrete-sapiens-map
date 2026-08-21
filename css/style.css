@@ -273,6 +273,81 @@ body {
 }
 
 /* ------------------------------------------------------------
+   기능 안내 투어 버튼("?", 검색창 옆) — 언제든 다시 열어보는 기능 소개
+   (js/helpTour.js, 2026-08-21). 아바타보다 존재감을 낮춰 눈에는 띄되
+   방해되지 않게, 옅은 배경 + 테두리로만 둔다.
+   ------------------------------------------------------------ */
+.help-tour-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--cs-gray);
+  background: rgba(244, 243, 239, 0.88);
+  color: var(--cs-text-main);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.help-tour-btn:hover {
+  background: var(--cs-paper);
+  border-color: var(--cs-orange);
+  color: var(--cs-orange);
+}
+
+/* ------------------------------------------------------------
+   기능 안내 투어 모달 내용(help-tour-panel) — 스텝별 스크린샷 + 캡션
+   ------------------------------------------------------------ */
+/* 원본 스크린샷은(특히 기억 카드/작성폼처럼 세로로 긴 화면) 그대로
+   넣으면 캡션/이전·다음 버튼이 한참 아래로 밀려 스크롤을 많이 해야
+   보인다 — 미리보기는 위쪽만 살짝 보여주는 "peek" 형태로 높이를
+   제한한다(2026-08-21). */
+.help-tour-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 12px;
+  border: 1px solid var(--cs-gray);
+}
+
+.help-tour-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.help-tour-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cs-gray);
+}
+
+.help-tour-dot--active {
+  background: var(--cs-orange);
+}
+
+.help-tour-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.help-tour-nav .btn-primary,
+.help-tour-nav .btn-secondary {
+  flex: 1;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------
    계정 아바타 / GNB
    ------------------------------------------------------------ */
 .account-menu-wrap {

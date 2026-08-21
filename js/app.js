@@ -497,6 +497,8 @@ function bindUIEvents() {
   bindOverlayClickToClose("slider-period-overlay", closeSliderPeriodModal);
   bindOverlayClickToClose("daily-prompt-overlay", closeTodayMission);
   bindOverlayClickToClose("welcome-overlay", closeWelcomeOverlay);
+  bindOverlayClickToClose("help-tour-overlay", closeHelpTour);
+  document.getElementById("help-tour-btn").onclick = openHelpTour;
   bindOverlayClickToClose("changepw-overlay", closeChangePasswordPanel);
   // auth-overlay는 배경 클릭으로 안 닫는다 — 가입/인증 도중 실수로 바깥을
   // 눌러서 입력 중이던 내용이 날아가는 걸 막기 위함(명시적으로 취소

@@ -62,6 +62,12 @@
           </div>
           <ul class="search-results hidden" id="search-results"></ul>
         </div>
+        <!-- 언제든 다시 볼 수 있는 기능 안내(2026-08-21) — 첫 방문 환영
+             모달(welcome-overlay)은 한 번만 뜨고 서비스 컨셉만 짧게
+             설명하는데, 기억산책/기억 라디오/시간여행처럼 하단 툴바
+             아이콘만으로는 뭔지 감이 안 올 수 있는 기능들을 다시
+             찾아볼 자리가 없어서 추가한다. -->
+        <button class="help-tour-btn" id="help-tour-btn" aria-label="기능 안내 보기">?</button>
 
         <!-- 계정 아바타(GNB) — 로그인 상태일 때만 표시 -->
         <div class="account-menu-wrap hidden" id="account-menu-wrap">
@@ -209,6 +215,12 @@
       <div class="composer-card"><div class="composer-card-inner" id="welcome-panel"></div></div>
     </div>
 
+    <!-- 기능 안내 투어(검색창 옆 "?" 버튼, js/helpTour.js, 2026-08-21) —
+         단계별(Step 1~5)로 넘겨보는 기능 소개. -->
+    <div class="overlay hidden" id="help-tour-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="help-tour-panel"></div></div>
+    </div>
+
     <!-- 회원가입/로그인 (기억 남기기 진입 시 게이트) -->
     <div class="overlay hidden" id="auth-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="auth-panel"></div></div>
@@ -311,6 +323,7 @@
   <script src="js/mymemory.js"></script>
   <script src="js/recall.js"></script>
   <script src="js/scrollFade.js"></script>
+  <script src="js/helpTour.js"></script>
   <script>
     if (
       !CONFIG.KAKAO_APP_KEY ||
