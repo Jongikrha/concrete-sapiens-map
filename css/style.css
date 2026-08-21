@@ -880,6 +880,9 @@ body {
 .time-slider-panel {
   width: min(84%, 480px);
   align-self: center;
+  /* 검색창 바로 아래 바짝 붙어 뜨던 걸 조금 내렸다 — 하단 툴바(특히
+     "내 기억" 버튼)와는 겹치지 않을 만큼만(2026-08-21). */
+  margin-top: 72px;
   background: #fff;
   border: 1px solid var(--cs-map-gray);
   border-radius: 26px;
