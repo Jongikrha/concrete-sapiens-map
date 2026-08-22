@@ -14,10 +14,14 @@
 // 2) 하단 "기억 라디오" 버튼(startMemoryRadio → openRadioChannelChoice,
 //    scope="songs", 구 "어딘가의 기억") — 이 서비스의 핵심 기능으로 두기로
 //    해서(2026-08-19) 툴바에서 혼자 크게 뜬다. 탭하면 바로 재생하지 않고
-//    채널(전체 랜덤/연대별/주제별 — 주제는 RADIO_THEME_GROUPS로 큐레이션한
-//    4개 묶음 중 곡이 10개 이상인 것만, 2026-08-22)부터 고르게 한다 —
-//    1)의 openRecallDecadeChoice와 같은 recall-choice-overlay/panel을
-//    재사용. 고른 채널의 곡만 모아 랜덤
+//    채널(전체 랜덤/연대별/주제별 — 주제는 해시태그 하나하나를 곡 수 많은
+//    순으로 줄세워 상위 4개만 카드로, 나머지는 "더보기"에서 10곡 이상인
+//    것만, 2026-08-23. 이전엔 사람이 미리 묶은 4개 그룹(RADIO_THEME_GROUPS)
+//    이었는데, 자유입력 태그가 계속 늘어날 때마다 그룹을 다시 손봐야 하는
+//    유지보수 부담을 없애려고 큐레이션을 접었다 — 표기가 갈라지는 경우
+//    (#제주/#제주도)나 상위 4개가 시간에 따라 바뀌는 것도 감수하기로 함)
+//    부터 고르게 한다 — 1)의 openRecallDecadeChoice와 같은
+//    recall-choice-overlay/panel을 재사용. 고른 채널의 곡만 모아 랜덤
 //    플레이리스트처럼 계속 재생하고, 지도도 밤처럼 어둡게 바꾼다
 //    (enterRecallNightMode — 기억산책엔 안 준다, 개인적 산책과 배경
 //    라디오의 분위기를 다르게 두려는 의도). 첫 곡만 "N초 후 재생됩니다"
@@ -239,8 +243,8 @@ function startMemoryRadio() {
 }
 
 // 라디오 채널 선택 — 전체 랜덤 / 연대별(getDecadeBuckets 재사용) / 주제별
-// (RADIO_THEME_GROUPS로 큐레이션한 4개 묶음 중 곡이 10개 이상인 것만,
-// 텅 빈 채널이 뜨지 않게). 카드 그리드 디자인은 기억산책 연대 선택
+// (해시태그별로 곡이 10개 이상인 것만, 곡 수 많은 순 상위 4개는 카드로,
+// 나머지는 "더보기"로). 카드 그리드 디자인은 기억산책 연대 선택
 // (openRecallDecadeChoice)의 .recall-decade-card를 그대로 재사용하되,
 // 여기선 2열 그리드로 배치한다(2026-08-22 목업 레퍼런스).
 function openRadioChannelChoice() {
@@ -251,7 +255,9 @@ function openRadioChannelChoice() {
   }
   closeSlider();
   const decadeBuckets = getDecadeBuckets(pool);
-  const themeBuckets = getRadioThemeBuckets(pool);
+  const tagBuckets = getRadioTagBuckets(pool);
+  const topTagBuckets = tagBuckets.slice(0, 4);
+  const moreTagBuckets = tagBuckets.slice(4);
 
   const decadeButtonsHtml = decadeBuckets
     .map(
@@ -264,17 +270,24 @@ function openRadioChannelChoice() {
       `
     )
     .join("");
-  const themeButtonsHtml = themeBuckets
+  const tagButtonsHtml = topTagBuckets
     .map(
-      ({ label, stories }, i) => `
-        <button type="button" class="recall-decade-card recall-radio-theme-btn" data-idx="${i}">
-          <span class="recall-decade-card-icon">${RADIO_THEME_ICONS[label] || RADIO_THEME_ICON_FALLBACK_SVG}</span>
-          <span class="recall-decade-card-text">${escapeHtml(label)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+      ({ tag, stories }, i) => `
+        <button type="button" class="recall-decade-card recall-radio-tag-btn" data-idx="${i}">
+          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
           <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
         </button>
       `
     )
     .join("");
+  const moreButtonHtml = moreTagBuckets.length
+    ? `
+        <button type="button" class="recall-decade-card" id="recall-radio-more-btn">
+          <span class="recall-decade-card-text">더보기 <span class="recall-decade-card-count">· ${moreTagBuckets.length}개</span></span>
+          <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+        </button>
+      `
+    : "";
 
   const panel = document.getElementById("recall-choice-panel");
   panel.innerHTML = `
@@ -291,7 +304,8 @@ function openRadioChannelChoice() {
     </button>
     <div class="recall-radio-channel-grid">
       ${decadeButtonsHtml}
-      ${themeButtonsHtml}
+      ${tagButtonsHtml}
+      ${moreButtonHtml}
     </div>
   `;
   panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
@@ -307,14 +321,56 @@ function openRadioChannelChoice() {
       beginMemoryRadioChannel(bucket.stories, `${decade}년대`);
     };
   });
-  panel.querySelectorAll(".recall-radio-theme-btn").forEach((btn) => {
+  panel.querySelectorAll(".recall-radio-tag-btn").forEach((btn) => {
     btn.onclick = () => {
-      const bucket = themeBuckets[Number(btn.dataset.idx)];
+      const bucket = topTagBuckets[Number(btn.dataset.idx)];
       closeRecallChoice();
-      beginMemoryRadioChannel(bucket.stories, bucket.label);
+      beginMemoryRadioChannel(bucket.stories, bucket.tag);
     };
   });
+  if (moreTagBuckets.length) {
+    panel.querySelector("#recall-radio-more-btn").onclick = () => {
+      openRadioMoreTagsChoice(moreTagBuckets);
+    };
+  }
   document.getElementById("recall-choice-overlay").classList.remove("hidden");
+}
+
+// "더보기" — 상위 4개에 못 든 나머지 해시태그 채널(10곡 이상만)을 세로
+// 목록으로 보여준다. 카드 그리드가 아니라 기억산책 연대 목록과 같은
+// .recall-decade-list 세로 배치를 쓴다 — 항목 수가 들쭉날쭉해서 그리드보다
+// 자연스럽다. 뒤로가기는 storySheet.js의 .sheet-back-link를 그대로 재사용.
+function openRadioMoreTagsChoice(moreTagBuckets) {
+  const panel = document.getElementById("recall-choice-panel");
+  const tagButtonsHtml = moreTagBuckets
+    .map(
+      ({ tag, stories }, i) => `
+        <button type="button" class="recall-decade-card recall-radio-more-tag-btn" data-idx="${i}">
+          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+          <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+        </button>
+      `
+    )
+    .join("");
+  panel.innerHTML = `
+    <div class="daily-prompt-header">
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>기억 라디오</span>
+      <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
+    </div>
+    <button type="button" class="sheet-back-link" id="recall-radio-more-back">← 채널 선택</button>
+    <div class="recall-decade-list">
+      ${tagButtonsHtml}
+    </div>
+  `;
+  panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
+  panel.querySelector("#recall-radio-more-back").onclick = openRadioChannelChoice;
+  panel.querySelectorAll(".recall-radio-more-tag-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const bucket = moreTagBuckets[Number(btn.dataset.idx)];
+      closeRecallChoice();
+      beginMemoryRadioChannel(bucket.stories, bucket.tag);
+    };
+  });
 }
 
 // "전체 취합" 카드 아이콘 — 오디오 이퀄라이저 막대. 연대 선택의 별
@@ -328,73 +384,28 @@ const RADIO_ALL_EQUALIZER_ICON_SVG = `
     <rect x="20" y="1" width="3" height="21" rx="1.3"/>
   </svg>
 `;
-const RADIO_THEME_HEART_ICON_SVG = `
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FF5A36" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M20.8 7.7c0-2.7-2.2-4.5-4.6-4.5-1.6 0-3.1.9-3.9 2.3-.8-1.4-2.3-2.3-3.9-2.3-2.4 0-4.6 1.8-4.6 4.5C3.8 12.5 12 19 12 19s8.2-6.5 8.2-11.3z"/>
-  </svg>
-`;
-// 가족/친구·청춘 두 채널이 목업에서도 같은 "두 사람" 글리프를 그대로
-// 재사용한다 — 굳이 다른 아이콘을 새로 만들지 않는다.
-const RADIO_THEME_PEOPLE_ICON_SVG = `
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="9" cy="8" r="3" stroke="#2F3031" stroke-width="1.8"/>
-    <path d="M4 19c0-3 2.2-5 5-5s5 2 5 5" stroke="#2F3031" stroke-width="1.8"/>
-    <circle cx="16.5" cy="8" r="2.6" stroke="#FF5A36" stroke-width="1.8"/>
-    <path d="M14.2 13.6c2.2.3 4.1 2 4.6 4.4" stroke="#FF5A36" stroke-width="1.8"/>
-  </svg>
-`;
-const RADIO_THEME_SUITCASE_ICON_SVG = `
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2F3031" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="7" width="18" height="13" rx="2.2"/>
-    <path d="M8.5 7V5.2C8.5 4 9.4 3 10.7 3h2.6c1.3 0 2.2 1 2.2 2.2V7" stroke="#FF5A36"/>
-    <path d="M3 12.5h18"/>
-  </svg>
-`;
-const RADIO_THEME_ICON_FALLBACK_SVG = RADIO_THEME_PEOPLE_ICON_SVG;
-const RADIO_THEME_ICONS = {
-  "첫사랑·그리움": RADIO_THEME_HEART_ICON_SVG,
-  "가족": RADIO_THEME_PEOPLE_ICON_SVG,
-  "친구·청춘": RADIO_THEME_PEOPLE_ICON_SVG,
-  "여행": RADIO_THEME_SUITCASE_ICON_SVG,
-};
-
-// 주제 채널 — 해시태그 하나하나를 그대로 채널로 쓰면 "무엇을 묶었는지"가
-// 안 보이고 비슷한 태그(예: 첫사랑/짝사랑/썸)가 각자 따로 10곡을 못 채워
-// 채널로 못 뜨는 문제가 있었다. 그래서 의미가 겹치는 해시태그를 사람이
-// 미리 4개 묶음으로 큐레이션해둔다(2026-08-22, jongik.rha 제안 —
-// 처음엔 "첫사랑·설렘"과 "추억·그리움"을 따로 뒀다가, 정서적으로
-// 겹치는 부분이 많아 하나로 합쳤다). 목록은 그때그때 감이 아니라 실제
-// 운영 데이터(prod AppSync, 노래가 첨부된 활성 기억 203개 기준)의
-// 해시태그 빈도를 직접 집계해서 뽑았다 — 예를 들어 "강원도"는 예시로
-// 거론됐지만 실제로 쓰인 적이 없어 빼고, 대신 실제 상위 태그인
-// "제주도"/"해운대"/"강릉"/"광안리"를 넣었다. 이 정도 마진(그룹당
-// 42~53곡)이면 곡이 좀 늘어나도 10곡 밑으로 안 떨어질 여유가 있다. 새
-// 해시태그가 계속 늘어나는 자유입력 특성상 이 목록은 주기적으로 다시
-// 훑어봐야 한다 — 완전 자동화된 클러스터링은 아니다.
-//
-// 태그는 저장된 그대로 "#" 포함 형태로 적는다 — extractHashtags(js/
-// composer.js)가 본문 인라인 "#태그"든 태그 입력창이든 항상 "#"을 붙여
-// 저장하기 때문에(hashtags 필드에 "#추억"처럼 들어있음), "#" 없이
-// 적으면 절대 매치가 안 된다(2026-08-22 첫 배포 버전에서 이 실수로
-// 주제 채널이 하나도 안 떴던 걸 실제 데이터 조회로 발견해 수정).
-const RADIO_THEME_GROUPS = [
-  { label: "첫사랑·그리움", tags: ["#첫사랑", "#짝사랑", "#썸", "#고백", "#데이트", "#커플", "#사랑", "#소개팅", "#연애", "#이별", "#추억", "#그리움", "#옛기억", "#과거", "#기억", "#회상", "#후회", "#아쉬움"] },
-  { label: "가족", tags: ["#가족", "#엄마", "#아빠", "#아버지", "#어머니", "#부부", "#결혼", "#육아", "#남편", "#할머니", "#할아버지", "#효도", "#부모님"] },
-  { label: "친구·청춘", tags: ["#친구", "#우정", "#대학생", "#스무살", "#고등학생", "#어린시절", "#취준생", "#취업", "#첫직장", "#직장생활", "#군대", "#신촌", "#신림동", "#고시촌"] },
-  { label: "여행", tags: ["#여행", "#바다", "#부산", "#제주도", "#제주", "#여수", "#강릉", "#해운대", "#광안리", "#안목해변", "#한강", "#대구", "#전주", "#혼자여행", "#강원도"] },
-];
-
-// 라디오 곡 풀(pool) 안에서 RADIO_THEME_GROUPS 각각에 해당하는 곡을
-// 모은다 — 한 곡이 그룹 안 여러 태그를 갖고 있어도 중복 없이 한 번만
-// 세고, 곡이 10곡 미만이면 텅 빈 채널이 뜨지 않게 그 그룹은 뺀다
-// (2026-08-22). RADIO_THEME_GROUPS 순서를 그대로 유지한다 — 곡 수로
-// 재정렬하면 매번 순서가 바뀌어 "어디 있더라"를 못 찾는다.
-function getRadioThemeBuckets(pool) {
-  return RADIO_THEME_GROUPS.map(({ label, tags }) => {
-    const tagSet = new Set(tags);
-    const stories = pool.filter((s) => (s.hashtags || []).some((tag) => tagSet.has(tag)));
-    return { label, stories };
-  }).filter(({ stories }) => stories.length >= 10);
+// 주제 채널 — 해시태그 하나하나를 그대로 채널로 쓴다(2026-08-23). 이전엔
+// 의미가 겹치는 태그를 사람이 미리 4개 묶음(RADIO_THEME_GROUPS)으로
+// 큐레이션했는데, 자유입력 태그가 계속 늘어날 때마다 그 목록을 다시
+// 훑어봐야 하는 유지보수 부담이 있었다. 개별 태그로 가면 "#제주"/
+// "#제주도"처럼 표기가 갈라져 같은 의미가 다른 채널로 보이거나, 비슷한
+// 태그가 각자 10곡을 못 채워 채널로 못 뜨는 경우가 다시 생길 수 있지만,
+// 동의어 매핑을 유지보수하는 비용이 더 크다고 판단해 그대로 감수하기로
+// 했다(jongik.rha 확인). 곡 수 상위 4개만 카드로, 나머지 10곡 이상인
+// 태그는 "더보기"로 — 매번 pool을 즉석 집계하는 방식이라 새 해시태그가
+// 늘어나도 코드를 손볼 필요가 없다.
+function getRadioTagBuckets(pool) {
+  const byTag = new Map();
+  pool.forEach((s) => {
+    (s.hashtags || []).forEach((tag) => {
+      if (!byTag.has(tag)) byTag.set(tag, []);
+      byTag.get(tag).push(s);
+    });
+  });
+  return [...byTag.entries()]
+    .map(([tag, stories]) => ({ tag, stories }))
+    .filter(({ stories }) => stories.length >= 10)
+    .sort((a, b) => b.stories.length - a.stories.length);
 }
 
 function beginMemoryRadioChannel(pool, channelLabel) {
