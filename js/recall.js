@@ -272,9 +272,9 @@ function openRadioChannelChoice() {
     .join("");
   const tagButtonsHtml = topTagBuckets
     .map(
-      ({ tag, stories }, i) => `
+      ({ tag, songCount }, i) => `
         <button type="button" class="recall-decade-card recall-radio-tag-btn" data-idx="${i}">
-          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${songCount}곡</span></span>
           <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
         </button>
       `
@@ -344,9 +344,9 @@ function openRadioMoreTagsChoice(moreTagBuckets) {
   const panel = document.getElementById("recall-choice-panel");
   const tagButtonsHtml = moreTagBuckets
     .map(
-      ({ tag, stories }, i) => `
+      ({ tag, songCount }, i) => `
         <button type="button" class="recall-decade-card recall-radio-more-tag-btn" data-idx="${i}">
-          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+          <span class="recall-decade-card-text">${escapeHtml(tag)} <span class="recall-decade-card-count">· ${songCount}곡</span></span>
           <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
         </button>
       `
@@ -394,6 +394,32 @@ const RADIO_ALL_EQUALIZER_ICON_SVG = `
 // 했다(jongik.rha 확인). 곡 수 상위 4개만 카드로, 나머지 10곡 이상인
 // 태그는 "더보기"로 — 매번 pool을 즉석 집계하는 방식이라 새 해시태그가
 // 늘어나도 코드를 손볼 필요가 없다.
+// "같은 노래"의 기준은 유튜브 영상 ID가 아니라 사용자가 작성 폼에 직접
+// 입력하는 아티스트+곡명(musicTitle/musicArtist)이다 — 곡 상세/인기곡
+// 집계(Storage.getStoriesForSong 등)가 이미 쓰는 Storage.normalizeSongKey를
+// 그대로 재사용한다(2026-08-23). 15명이 각자 다른 유튜브 링크로 같은
+// 노래를 붙여도 이 기준으로는 하나로 묶인다. 곡명을 못 입력한 기억(빈
+// musicTitle)은 판단 불가라 중복 제거 대상에서 빼고 그대로 둔다
+// (getStoriesForSong의 `if (!title) return []` 가드와 같은 이유).
+function dedupeStoriesBySong(stories) {
+  const seen = new Set();
+  return stories.filter((s) => {
+    if (!s.musicTitle) return true;
+    const key = Storage.normalizeSongKey(s.musicArtist, s.musicTitle);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// "10곡"의 "곡"은 이야기(story) 개수가 아니라 서로 다른 노래 개수를
+// 뜻한다 — 같은 노래를 여러 사람이 각자 다른 기억으로 남겼을 때, 그
+// 노래를 겹쳐 세면 실제로는 곡 종류가 적은데도 채널이 뜰 수 있다
+// (2026-08-23, jongik.rha 지적). 재생 목록(stories)엔 겹치는 곡의
+// 기억도 전부 그대로 두고, "몇 곡인지" 판단(10곡 컷 + 카드에 뜨는
+// 숫자)에서만 dedupeStoriesBySong으로 중복 제거한다 — 실제 재생
+// 시작(beginMemoryRadioChannel)에서 한 번 더 곡 단위로 걸러지므로,
+// 여기서 stories를 미리 줄여둘 필요는 없다.
 function getRadioTagBuckets(pool) {
   const byTag = new Map();
   pool.forEach((s) => {
@@ -403,16 +429,21 @@ function getRadioTagBuckets(pool) {
     });
   });
   return [...byTag.entries()]
-    .map(([tag, stories]) => ({ tag, stories }))
-    .filter(({ stories }) => stories.length >= 10)
-    .sort((a, b) => b.stories.length - a.stories.length);
+    .map(([tag, stories]) => ({ tag, stories, songCount: dedupeStoriesBySong(stories).length }))
+    .filter(({ songCount }) => songCount >= 10)
+    .sort((a, b) => b.songCount - a.songCount);
 }
 
+// 라디오 재생은 같은 노래가 두 번 나오지 않게 채널 시작 시점에 pool을
+// 곡 단위로 한 번 줄인다(2026-08-23). recallPool(js/recall.js
+// showNextRecallMemory)이 큐가 바닥나면 이 값 그대로 재셔플하므로, 라디오를
+// 끄기 전까지 세션 내내 같은 곡이 반복되지 않는다 — 기억산책(scope="mine")
+// 은 이 함수를 거치지 않아 영향 없다.
 function beginMemoryRadioChannel(pool, channelLabel) {
   recallScope = "songs";
   openRecallSessionShell();
   showToast("entry-toast", `${channelLabel} 채널로 재생을 시작해요`, 2000);
-  beginRecallWalk(pool);
+  beginRecallWalk(dedupeStoriesBySong(pool));
 }
 
 // 진입 경로별 공통 처리 — 다른 필터 모드와 상호배타를
