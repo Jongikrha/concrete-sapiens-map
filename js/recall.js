@@ -14,8 +14,9 @@
 // 2) 하단 "기억 라디오" 버튼(startMemoryRadio → openRadioChannelChoice,
 //    scope="songs", 구 "어딘가의 기억") — 이 서비스의 핵심 기능으로 두기로
 //    해서(2026-08-19) 툴바에서 혼자 크게 뜬다. 탭하면 바로 재생하지 않고
-//    채널(전체 랜덤/연대별/주제별 — 주제는 해시태그 곡이 10개 이상인 것만,
-//    2026-08-22)부터 고르게 한다 — 1)의 openRecallDecadeChoice와 같은
+//    채널(전체 랜덤/연대별/주제별 — 주제는 RADIO_THEME_GROUPS로 큐레이션한
+//    5개 묶음 중 곡이 10개 이상인 것만, 2026-08-22)부터 고르게 한다 —
+//    1)의 openRecallDecadeChoice와 같은
 //    recall-choice-overlay/panel을 재사용. 고른 채널의 곡만 모아 랜덤
 //    플레이리스트처럼 계속 재생하고, 지도도 밤처럼 어둡게 바꾼다
 //    (enterRecallNightMode — 기억산책엔 안 준다, 개인적 산책과 배경
@@ -238,7 +239,8 @@ function startMemoryRadio() {
 }
 
 // 라디오 채널 선택 — 전체 랜덤 / 연대별(getDecadeBuckets 재사용) / 주제별
-// (해시태그 곡이 10개 이상인 것만, 텅 빈 채널이 뜨지 않게).
+// (RADIO_THEME_GROUPS로 큐레이션한 5개 묶음 중 곡이 10개 이상인 것만,
+// 텅 빈 채널이 뜨지 않게).
 function openRadioChannelChoice() {
   const pool = Storage.getVisibleStories().filter((s) => Storage.extractYoutubeVideoId(s.youtubeUrl));
   if (!pool.length) {
@@ -257,8 +259,8 @@ function openRadioChannelChoice() {
     .join("");
   const themeButtonsHtml = themeBuckets
     .map(
-      ({ tag, stories }, i) =>
-        `<button class="btn-secondary recall-radio-theme-btn" data-idx="${i}" style="margin-top:8px;">#${escapeHtml(tag)} · ${stories.length}곡</button>`
+      ({ label, stories }, i) =>
+        `<button class="btn-secondary recall-radio-theme-btn" data-idx="${i}" style="margin-top:8px;">${escapeHtml(label)} · ${stories.length}곡</button>`
     )
     .join("");
 
@@ -291,27 +293,37 @@ function openRadioChannelChoice() {
     btn.onclick = () => {
       const bucket = themeBuckets[Number(btn.dataset.idx)];
       closeRecallChoice();
-      beginMemoryRadioChannel(bucket.stories, `#${bucket.tag}`);
+      beginMemoryRadioChannel(bucket.stories, bucket.label);
     };
   });
   document.getElementById("recall-choice-overlay").classList.remove("hidden");
 }
 
-// 주제 채널 후보 — 라디오 곡 풀(pool) 안에서 해시태그별로 묶어 10곡 이상인
-// 것만 채널로 내놓는다. 자유입력 해시태그라 커버리지가 들쭉날쭉해서, 곡
-// 하나짜리 텅 빈 채널이 뜨는 걸 막기 위한 최소 기준(2026-08-22).
+// 주제 채널 — 해시태그 하나하나를 그대로 채널로 쓰면 "무엇을 묶었는지"가
+// 안 보이고 비슷한 태그(예: 첫사랑/짝사랑/썸)가 각자 따로 10곡을 못 채워
+// 채널로 못 뜨는 문제가 있었다. 그래서 의미가 겹치는 해시태그를 사람이
+// 미리 5개 묶음으로 큐레이션해둔다(2026-08-22, jongik.rha 제안). 새
+// 해시태그가 계속 늘어나는 자유입력 특성상 이 목록은 주기적으로 다시
+// 훑어봐야 한다 — 완전 자동화된 클러스터링은 아니다.
+const RADIO_THEME_GROUPS = [
+  { label: "첫사랑·설렘", tags: ["첫사랑", "짝사랑", "썸", "고백", "데이트", "커플", "사랑"] },
+  { label: "추억·그리움", tags: ["추억", "그리움"] },
+  { label: "가족", tags: ["부부", "아버지", "남편", "효도", "어머니", "아빠", "가족", "할머니", "할아버지", "엄마", "결혼"] },
+  { label: "친구·청춘", tags: ["친구", "어린시절", "우정", "대학생"] },
+  { label: "여행", tags: ["여행", "바다", "여수", "부산", "강원도", "대구"] },
+];
+
+// 라디오 곡 풀(pool) 안에서 RADIO_THEME_GROUPS 각각에 해당하는 곡을
+// 모은다 — 한 곡이 그룹 안 여러 태그를 갖고 있어도 중복 없이 한 번만
+// 세고, 곡이 10곡 미만이면 텅 빈 채널이 뜨지 않게 그 그룹은 뺀다
+// (2026-08-22). RADIO_THEME_GROUPS 순서를 그대로 유지한다 — 곡 수로
+// 재정렬하면 매번 순서가 바뀌어 "어디 있더라"를 못 찾는다.
 function getRadioThemeBuckets(pool) {
-  const buckets = new Map();
-  pool.forEach((s) => {
-    (s.hashtags || []).forEach((tag) => {
-      if (!buckets.has(tag)) buckets.set(tag, []);
-      buckets.get(tag).push(s);
-    });
-  });
-  return [...buckets.entries()]
-    .filter(([, stories]) => stories.length >= 10)
-    .sort((a, b) => b[1].length - a[1].length)
-    .map(([tag, stories]) => ({ tag, stories }));
+  return RADIO_THEME_GROUPS.map(({ label, tags }) => {
+    const tagSet = new Set(tags);
+    const stories = pool.filter((s) => (s.hashtags || []).some((tag) => tagSet.has(tag)));
+    return { label, stories };
+  }).filter(({ stories }) => stories.length >= 10);
 }
 
 function beginMemoryRadioChannel(pool, channelLabel) {
