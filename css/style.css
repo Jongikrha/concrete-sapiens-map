@@ -874,27 +874,28 @@ body {
 }
 
 /* ------------------------------------------------------------
-   시간 슬라이더 (누적 보기) — 2026-08-20 디자인 레퍼런스 반영,
-   전체적으로 이전보다 한 단계 크게.
+   시간 슬라이더 (누적 보기) — 2026-08-22 디자인 레퍼런스 반영으로
+   축소. 모바일에서 이전 크기가 하단 툴바(기억 라디오 버튼)와 겹치는
+   문제가 있어 부제 텍스트/여러 연도 눈금 줄을 걷어내고 여백도 줄였다.
    ------------------------------------------------------------ */
 .time-slider-panel {
-  width: min(84%, 480px);
+  width: min(84%, 420px);
   align-self: center;
   /* 검색창 바로 아래 바짝 붙어 뜨던 걸 조금 내렸다 — 하단 툴바(특히
      "내 기억" 버튼)와는 겹치지 않을 만큼만(2026-08-21). */
-  margin-top: 72px;
+  margin-top: 64px;
   background: #fff;
   border: 1px solid var(--cs-map-gray);
-  border-radius: 26px;
-  padding: 26px 24px 24px;
+  border-radius: 22px;
+  padding: 18px 18px 16px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
 
 .time-slider-header {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 22px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 /* 레퍼런스의 달력 아이콘(흰 배지 위 오렌지 띠)을 SVG 아이콘 + 배지로
@@ -904,9 +905,9 @@ body {
 .time-slider-icon-badge {
   position: relative;
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 13px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   background: #fff;
   border: 1px solid var(--cs-map-gray);
   display: flex;
@@ -936,30 +937,23 @@ body {
 }
 
 .time-slider-title {
-  margin: 0 0 4px;
+  margin: 0;
   font-family: var(--font-pretendard);
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--cs-text-main);
   letter-spacing: -0.01em;
 }
 
-.time-slider-subtitle {
-  margin: 0;
-  font-family: var(--font-pretendard);
-  font-size: 13px;
-  color: var(--cs-text-muted);
-}
-
 .time-slider-close {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1px solid var(--cs-map-gray);
   background: #fff;
   color: var(--cs-text-muted);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -974,8 +968,8 @@ body {
 
 .time-slider-mode-toggle {
   display: flex;
-  gap: 10px;
-  margin-bottom: 26px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .time-slider-mode-btn {
@@ -985,9 +979,9 @@ body {
   justify-content: center;
   gap: 8px;
   font-family: var(--font-pretendard);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 14px 10px;
+  padding: 11px 8px;
   border-radius: var(--cs-radius-chip);
   border: 1.5px solid var(--cs-map-gray);
   background: #fff;
@@ -1015,7 +1009,7 @@ body {
 .time-slider-track-wrap {
   position: relative;
   padding-top: 4px;
-  padding-bottom: 26px;
+  padding-bottom: 22px;
 }
 
 .time-slider-input {
@@ -1064,49 +1058,31 @@ body {
   background: transparent;
 }
 
-/* 트랙 아래 연도 눈금 — js/filters.js renderSliderTicks가 min~max
-   사이를 적당한 간격으로 나눠 채운다. 각 눈금은 트랙 위 실제 값
-   위치(%)에 절대좌표로 놓여서 슬라이더 진행률과 항상 맞는다. */
-.time-slider-ticks {
+/* 트랙 위 현재 값 하나만 썸을 따라다니며 표시 — js/filters.js
+   updateSliderValueLabel이 위치(%)를 계산해 넣는다. */
+.time-slider-value {
   position: absolute;
   left: 0;
-  right: 0;
-  top: 20px;
-  height: 20px;
-}
-
-.time-slider-tick {
-  position: absolute;
-  top: 0;
-  font-family: var(--font-pretendard);
-  font-size: 12px;
-  color: var(--cs-text-muted);
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
-.time-slider-tick--start {
-  transform: translateX(0);
-}
-
-.time-slider-tick--end {
-  transform: translateX(-100%);
+  top: 18px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
   color: var(--cs-orange);
-  font-weight: 700;
+  white-space: nowrap;
 }
 
 .time-slider-info {
   display: none;
   align-items: center;
-  gap: 16px;
-  margin-top: 4px;
-  padding: 18px;
-  border-radius: 20px;
+  gap: 12px;
+  margin-top: 2px;
+  padding: 14px 16px;
+  border-radius: 18px;
   background: var(--cs-map-gray);
   border: none;
   font-family: var(--font-pretendard);
-  font-size: 14.5px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.5;
   color: var(--cs-text-main);
 }
 
@@ -1116,8 +1092,8 @@ body {
 
 .time-slider-info-icon {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #fff;
   border: 1px solid var(--cs-gray);
@@ -1138,11 +1114,11 @@ body {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  margin-top: 22px;
+  margin-top: 16px;
   border: none;
-  font-size: 15.5px;
+  font-size: 14.5px;
   font-weight: 600;
-  padding: 16px;
+  padding: 13px;
   border-radius: 999px;
   background: var(--cs-map-gray);
   color: var(--cs-text-main);

@@ -519,6 +519,7 @@ function bindUIEvents() {
     updateSliderLabel();
     updateSliderInfoBox();
     updateSliderFillStyle();
+    updateSliderValueLabel();
     renderMarkers();
   });
 
