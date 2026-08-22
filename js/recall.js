@@ -11,15 +11,18 @@
 //    리빌 전에 별자리 개요(showConstellationOverview)를 보여준다. 선택
 //    패널은 filters.js의 openTodayMission()과 같은 패턴 —
 //    #recall-choice-panel의 innerHTML만 갈아끼운다.
-// 2) 하단 "기억 라디오" 버튼(startMemoryRadio, scope="songs", 구 "어딘가의
-//    기억") — 이 서비스의 핵심 기능으로 두기로 해서(2026-08-19) 툴바에서
-//    혼자 크게 뜬다. 내 기억을 포함한 전체 공개 기억 중 노래가 첨부된
-//    것만 모아 랜덤 플레이리스트처럼 계속 재생하고, 지도도 밤처럼
-//    어둡게 바꾼다(enterRecallNightMode — 기억산책엔 안 준다, 개인적
-//    산책과 배경 라디오의 분위기를 다르게 두려는 의도). 첫 곡만 "N초 후
-//    재생됩니다" 예고를 보여주고, 그다음부터는(곡이 끝나 자동으로
-//    넘어가든 "다음 기억으로"를 직접 누르든) 예고 없이 바로 재생된다 —
-//    켜놓고 다른 일을 해도 되게.
+// 2) 하단 "기억 라디오" 버튼(startMemoryRadio → openRadioChannelChoice,
+//    scope="songs", 구 "어딘가의 기억") — 이 서비스의 핵심 기능으로 두기로
+//    해서(2026-08-19) 툴바에서 혼자 크게 뜬다. 탭하면 바로 재생하지 않고
+//    채널(전체 랜덤/연대별/주제별 — 주제는 해시태그 곡이 10개 이상인 것만,
+//    2026-08-22)부터 고르게 한다 — 1)의 openRecallDecadeChoice와 같은
+//    recall-choice-overlay/panel을 재사용. 고른 채널의 곡만 모아 랜덤
+//    플레이리스트처럼 계속 재생하고, 지도도 밤처럼 어둡게 바꾼다
+//    (enterRecallNightMode — 기억산책엔 안 준다, 개인적 산책과 배경
+//    라디오의 분위기를 다르게 두려는 의도). 첫 곡만 "N초 후 재생됩니다"
+//    예고를 보여주고, 그다음부터는(곡이 끝나 자동으로 넘어가든 "다음
+//    기억으로"를 직접 누르든) 예고 없이 바로 재생된다 — 켜놓고 다른 일을
+//    해도 되게.
 //
 // 별자리에서 점을 잇는 선은 실제 카카오 지도가 아니라 이 파일 안의 별도
 // 캔버스에 그린다 — 2026-08-13에 실제 지도 위에서 점을 선으로 이었다가
@@ -192,15 +195,96 @@ function startRecallConstellationWithStories(stories, decade) {
 
 // 하단 "기억 라디오" 버튼(구 "어딘가의 기억") — 내 기억을 포함한 전체
 // 공개 기억 중 노래가 첨부된 것만 모아 랜덤 플레이리스트처럼 계속
-// 재생한다(2026-08-19).
+// 재생한다(2026-08-19). 탭하면 바로 재생하지 않고 채널(전체/연대별/
+// 주제별)을 먼저 고르게 한다(2026-08-22) — 기억산책의 연대 선택
+// (openRecallDecadeChoice)과 같은 recall-choice-overlay/panel을 그대로
+// 재활용해 새 화면 자리 없이도 붙일 수 있다. 탭 한 번이 늘어나는
+// 트레이드오프는 감수하기로 했다.
 function startMemoryRadio() {
+  openRadioChannelChoice();
+}
+
+// 라디오 채널 선택 — 전체 랜덤 / 연대별(getDecadeBuckets 재사용) / 주제별
+// (해시태그 곡이 10개 이상인 것만, 텅 빈 채널이 뜨지 않게).
+function openRadioChannelChoice() {
   const pool = Storage.getVisibleStories().filter((s) => Storage.extractYoutubeVideoId(s.youtubeUrl));
   if (!pool.length) {
     showToast("entry-toast", "아직 노래가 담긴 기억이 없어요", 2400);
     return;
   }
+  closeSlider();
+  const decadeBuckets = getDecadeBuckets(pool);
+  const themeBuckets = getRadioThemeBuckets(pool);
+
+  const decadeButtonsHtml = decadeBuckets
+    .map(
+      ({ decade, stories }) =>
+        `<button class="btn-secondary recall-radio-decade-btn" data-decade="${decade}" style="margin-top:8px;">${decade}년대 · ${stories.length}곡</button>`
+    )
+    .join("");
+  const themeButtonsHtml = themeBuckets
+    .map(
+      ({ tag, stories }, i) =>
+        `<button class="btn-secondary recall-radio-theme-btn" data-idx="${i}" style="margin-top:8px;">#${escapeHtml(tag)} · ${stories.length}곡</button>`
+    )
+    .join("");
+
+  const panel = document.getElementById("recall-choice-panel");
+  panel.innerHTML = `
+    <div class="daily-prompt-header">
+      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>기억 라디오</span>
+      <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="daily-prompt-hint">어떤 채널을 들으시겠어요?</p>
+    <div class="daily-prompt-divider"></div>
+    <button class="btn-secondary" id="recall-radio-all-btn" style="margin-top:8px;">전체 랜덤 · ${pool.length}곡</button>
+    ${decadeButtonsHtml}
+    ${themeButtonsHtml}
+  `;
+  panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
+  panel.querySelector("#recall-radio-all-btn").onclick = () => {
+    closeRecallChoice();
+    beginMemoryRadioChannel(pool, "전체 랜덤");
+  };
+  panel.querySelectorAll(".recall-radio-decade-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const decade = Number(btn.dataset.decade);
+      const bucket = decadeBuckets.find((b) => b.decade === decade);
+      closeRecallChoice();
+      beginMemoryRadioChannel(bucket.stories, `${decade}년대`);
+    };
+  });
+  panel.querySelectorAll(".recall-radio-theme-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const bucket = themeBuckets[Number(btn.dataset.idx)];
+      closeRecallChoice();
+      beginMemoryRadioChannel(bucket.stories, `#${bucket.tag}`);
+    };
+  });
+  document.getElementById("recall-choice-overlay").classList.remove("hidden");
+}
+
+// 주제 채널 후보 — 라디오 곡 풀(pool) 안에서 해시태그별로 묶어 10곡 이상인
+// 것만 채널로 내놓는다. 자유입력 해시태그라 커버리지가 들쭉날쭉해서, 곡
+// 하나짜리 텅 빈 채널이 뜨는 걸 막기 위한 최소 기준(2026-08-22).
+function getRadioThemeBuckets(pool) {
+  const buckets = new Map();
+  pool.forEach((s) => {
+    (s.hashtags || []).forEach((tag) => {
+      if (!buckets.has(tag)) buckets.set(tag, []);
+      buckets.get(tag).push(s);
+    });
+  });
+  return [...buckets.entries()]
+    .filter(([, stories]) => stories.length >= 10)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([tag, stories]) => ({ tag, stories }));
+}
+
+function beginMemoryRadioChannel(pool, channelLabel) {
   recallScope = "songs";
   openRecallSessionShell();
+  showToast("entry-toast", `${channelLabel} 채널로 재생을 시작해요`, 2000);
   beginRecallWalk(pool);
 }
 
