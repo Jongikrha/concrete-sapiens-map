@@ -3190,6 +3190,109 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
+/* 기억산책 연대 선택 화면만 — "Memory Book" 목업(2026-08-22)에 맞춰
+   제목을 세리프로, 리스트를 아이콘 카드로 바꾼다. daily-prompt-label을
+   공유하는 다른 두 화면("내 기억" 최초 선택, 기억 라디오 채널 선택)에는
+   영향 없게 이 전용 클래스로만 스코프한다. */
+#recall-choice-panel .recall-decade-title-label {
+  font-family: var(--font-serif);
+  font-weight: 700;
+}
+
+.recall-decade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.recall-decade-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 14px;
+  border: 1px solid rgba(47, 48, 49, 0.08);
+  border-radius: 16px;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.04);
+  transition: border-color var(--cs-transition-fast) ease, background var(--cs-transition-fast) ease;
+}
+
+.recall-decade-card:hover {
+  border-color: rgba(255, 90, 54, 0.4);
+}
+
+.recall-decade-card-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recall-decade-card-text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-pretendard);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cs-black);
+}
+
+.recall-decade-card-count {
+  font-weight: 400;
+  color: var(--cs-text-muted);
+  font-size: 13.5px;
+}
+
+.recall-decade-card-chevron {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 90, 54, 0.35);
+  color: var(--cs-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* "전체" 카드만 오렌지 톤으로 강조 — 다른 연대 카드와 시각적으로
+   구분해 "전체를 보고 싶으면 여기"가 한눈에 들어오게 한다. */
+.recall-decade-card--all {
+  border-color: rgba(255, 90, 54, 0.3);
+  background: rgba(255, 90, 54, 0.08);
+}
+
+.recall-decade-card--all:hover {
+  border-color: var(--cs-orange);
+}
+
+.recall-decade-card--all .recall-decade-card-icon--all {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+}
+
+.recall-decade-card--all .recall-decade-card-text {
+  color: var(--cs-orange);
+}
+
+.recall-decade-card--all .recall-decade-card-count {
+  color: var(--cs-orange);
+}
+
+.recall-decade-card--all .recall-decade-card-chevron--all {
+  background: var(--cs-orange);
+  border-color: var(--cs-orange);
+  color: var(--cs-paper);
+}
+
 /* 첫 방문 환영 모달만 제목을 훨씬 크고 굵게 — 다른 daily-prompt-header
    재사용 모달(오늘의 질문 등)에는 영향 없게 패널 안에서만 오버라이드한다
    (2026-08-22 디자인 레퍼런스 반영, X 닫기 버튼은 아예 없앴다 — 클릭 시

@@ -146,26 +146,59 @@ function getDecadeBuckets(stories) {
     .map(([decade, decadeStories]) => ({ decade, stories: decadeStories }));
 }
 
+// 연대 카드 아이콘 — time-slider-mode-icon과 같은 feather "calendar"
+// 글리프에, 목업(2026-08-22 "Memory Book" 디자인 레퍼런스)의 바인더
+// 링 강조를 살려 상단 두 점만 오렌지로 채운다.
+const RECALL_DECADE_CALENDAR_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2F3031" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="16" rx="3"/>
+    <path d="M8 3v4M16 3v4M3 10h18"/>
+    <circle cx="8" cy="3" r="1.3" fill="#FF5A36" stroke="none"/>
+    <circle cx="16" cy="3" r="1.3" fill="#FF5A36" stroke="none"/>
+  </svg>
+`;
+const RECALL_DECADE_STAR_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="#FDEDE7" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.6l-5.9 3 1.3-6.6-4.9-4.6 6.6-.8z"/>
+  </svg>
+`;
+const RECALL_DECADE_CHEVRON_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="9 6 15 12 9 18"/>
+  </svg>
+`;
+
 function openRecallDecadeChoice(stories, buckets) {
   const panel = document.getElementById("recall-choice-panel");
   const decadeButtonsHtml = buckets
     .map(
-      ({ decade, stories: decadeStories }) =>
-        `<button class="btn-secondary recall-decade-btn" data-decade="${decade}" style="margin-top:8px;">${decade}년대 · ${decadeStories.length}개</button>`
+      ({ decade, stories: decadeStories }) => `
+        <button type="button" class="recall-decade-card" data-decade="${decade}">
+          <span class="recall-decade-card-icon">${RECALL_DECADE_CALENDAR_ICON_SVG}</span>
+          <span class="recall-decade-card-text">${decade}년대 <span class="recall-decade-card-count">· ${decadeStories.length}개</span></span>
+          <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+        </button>
+      `
     )
     .join("");
   panel.innerHTML = `
     <div class="daily-prompt-header">
-      <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>기억산책</span>
+      <span class="daily-prompt-label recall-decade-title-label"><span class="daily-prompt-dot"></span>Memory Book</span>
       <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
     </div>
     <p class="daily-prompt-hint">어느 시절의 기억을 걷고 싶으세요?</p>
     <div class="daily-prompt-divider"></div>
-    ${decadeButtonsHtml}
-    <button class="btn-secondary" id="recall-decade-all-btn" style="margin-top:8px;">전체 · ${stories.length}개</button>
+    <div class="recall-decade-list">
+      ${decadeButtonsHtml}
+      <button type="button" class="recall-decade-card recall-decade-card--all" id="recall-decade-all-btn">
+        <span class="recall-decade-card-icon recall-decade-card-icon--all">${RECALL_DECADE_STAR_ICON_SVG}</span>
+        <span class="recall-decade-card-text">전체 <span class="recall-decade-card-count">· ${stories.length}개</span></span>
+        <span class="recall-decade-card-chevron recall-decade-card-chevron--all">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+      </button>
+    </div>
   `;
   panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
-  panel.querySelectorAll(".recall-decade-btn").forEach((btn) => {
+  panel.querySelectorAll(".recall-decade-card[data-decade]").forEach((btn) => {
     btn.onclick = () => {
       const decade = Number(btn.dataset.decade);
       const bucket = buckets.find((b) => b.decade === decade);
