@@ -183,7 +183,7 @@ function openRecallDecadeChoice(stories, buckets) {
     .join("");
   panel.innerHTML = `
     <div class="daily-prompt-header">
-      <span class="daily-prompt-label recall-decade-title-label"><span class="daily-prompt-dot"></span>Memory Book</span>
+      <span class="daily-prompt-label recall-decade-title-label"><span class="daily-prompt-dot"></span>기억산책</span>
       <button class="daily-prompt-close" id="recall-choice-close" aria-label="닫기">✕</button>
     </div>
     <p class="daily-prompt-hint">어느 시절의 기억을 걷고 싶으세요?</p>

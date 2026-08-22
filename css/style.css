@@ -3190,13 +3190,14 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
-/* 기억산책 연대 선택 화면만 — "Memory Book" 목업(2026-08-22)에 맞춰
-   제목을 세리프로, 리스트를 아이콘 카드로 바꾼다. daily-prompt-label을
-   공유하는 다른 두 화면("내 기억" 최초 선택, 기억 라디오 채널 선택)에는
-   영향 없게 이 전용 클래스로만 스코프한다. */
+/* 기억산책 연대 선택 화면만 — "Memory Book" 목업(2026-08-22)의 카드
+   리스트는 그대로 가져오되 제목은 "기억산책" + 마루부리 레귤러로
+   교체(2026-08-22). daily-prompt-label을 공유하는 다른 두 화면("내 기억"
+   최초 선택, 기억 라디오 채널 선택)에는 영향 없게 이 전용 클래스로만
+   스코프한다. */
 #recall-choice-panel .recall-decade-title-label {
-  font-family: var(--font-serif);
-  font-weight: 700;
+  font-family: var(--font-maruburi);
+  font-weight: 400;
 }
 
 .recall-decade-list {
