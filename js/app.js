@@ -46,7 +46,7 @@ function maybeShowWelcomeOverlay() {
       <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>콘크리트 사피엔스 프로젝트</span>
     </div>
     <p class="daily-prompt-quote">도시는 건물로 만들어지지만,<br>장소는 기억으로 만들어집니다.</p>
-    <p class="daily-prompt-hint">사람들이 실제 장소에 남긴 기억들이 이 지도 위에 쌓여 있어요. 지도를 돌아다니며 낯선 기억을 발견하고, <strong>당신의 기억도 이 자리에 남겨 보세요.</strong></p>
+    <p class="daily-prompt-hint">사람들이 실제 장소에 남긴 기억들이 이 지도 위에 쌓여 있어요. <br class="welcome-hint-break">지도를 돌아다니며 낯선 기억을 발견하고, <br class="welcome-hint-break"><strong>당신의 기억도 이 자리에 남겨 보세요.</strong></p>
     <div class="daily-prompt-divider"></div>
     <button class="btn-primary" id="welcome-confirm">둘러보기 시작</button>
   `;
