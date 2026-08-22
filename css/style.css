@@ -3242,6 +3242,7 @@ button.story-place-line:hover {
   font-weight: 700;
   font-size: 15px;
   color: var(--cs-black);
+  word-break: keep-all;
 }
 
 .recall-decade-card-count {
@@ -3292,6 +3293,56 @@ button.story-place-line:hover {
   background: var(--cs-orange);
   border-color: var(--cs-orange);
   color: var(--cs-paper);
+}
+
+/* 기억 라디오 채널 선택만 — "전체 취합" 카드는 연대 선택과 똑같이 전체
+   폭으로 두고, 그 아래 연대/주제 카드만 2열 그리드로 배치한다(2026-08-22
+   목업 레퍼런스). 카드 자체는 .recall-decade-card를 그대로 재사용해
+   기억산책과 시각적으로 통일감을 준다. */
+.recall-radio-all-card {
+  margin-top: 18px;
+}
+
+.recall-radio-channel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.recall-radio-channel-grid .recall-decade-card {
+  gap: 6px;
+  padding: 12px 8px;
+}
+
+.recall-radio-channel-grid .recall-decade-card-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.recall-radio-channel-grid .recall-decade-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.recall-radio-channel-grid .recall-decade-card-text {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.recall-radio-channel-grid .recall-decade-card-count {
+  font-size: 11.5px;
+  display: block;
+}
+
+.recall-radio-channel-grid .recall-decade-card-chevron {
+  width: 22px;
+  height: 22px;
+}
+
+.recall-radio-channel-grid .recall-decade-card-chevron svg {
+  width: 13px;
+  height: 13px;
 }
 
 /* 첫 방문 환영 모달만 제목을 훨씬 크고 굵게 — 다른 daily-prompt-header

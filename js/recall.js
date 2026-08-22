@@ -240,7 +240,9 @@ function startMemoryRadio() {
 
 // 라디오 채널 선택 — 전체 랜덤 / 연대별(getDecadeBuckets 재사용) / 주제별
 // (RADIO_THEME_GROUPS로 큐레이션한 4개 묶음 중 곡이 10개 이상인 것만,
-// 텅 빈 채널이 뜨지 않게).
+// 텅 빈 채널이 뜨지 않게). 카드 그리드 디자인은 기억산책 연대 선택
+// (openRecallDecadeChoice)의 .recall-decade-card를 그대로 재사용하되,
+// 여기선 2열 그리드로 배치한다(2026-08-22 목업 레퍼런스).
 function openRadioChannelChoice() {
   const pool = Storage.getVisibleStories().filter((s) => Storage.extractYoutubeVideoId(s.youtubeUrl));
   if (!pool.length) {
@@ -253,14 +255,24 @@ function openRadioChannelChoice() {
 
   const decadeButtonsHtml = decadeBuckets
     .map(
-      ({ decade, stories }) =>
-        `<button class="btn-secondary recall-radio-decade-btn" data-decade="${decade}" style="margin-top:8px;">${decade}년대 · ${stories.length}곡</button>`
+      ({ decade, stories }) => `
+        <button type="button" class="recall-decade-card recall-radio-decade-btn" data-decade="${decade}">
+          <span class="recall-decade-card-icon">${RECALL_DECADE_CALENDAR_ICON_SVG}</span>
+          <span class="recall-decade-card-text">${decade}년대 <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+          <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+        </button>
+      `
     )
     .join("");
   const themeButtonsHtml = themeBuckets
     .map(
-      ({ label, stories }, i) =>
-        `<button class="btn-secondary recall-radio-theme-btn" data-idx="${i}" style="margin-top:8px;">${escapeHtml(label)} · ${stories.length}곡</button>`
+      ({ label, stories }, i) => `
+        <button type="button" class="recall-decade-card recall-radio-theme-btn" data-idx="${i}">
+          <span class="recall-decade-card-icon">${RADIO_THEME_ICONS[label] || RADIO_THEME_ICON_FALLBACK_SVG}</span>
+          <span class="recall-decade-card-text">${escapeHtml(label)} <span class="recall-decade-card-count">· ${stories.length}곡</span></span>
+          <span class="recall-decade-card-chevron">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+        </button>
+      `
     )
     .join("");
 
@@ -272,14 +284,20 @@ function openRadioChannelChoice() {
     </div>
     <p class="daily-prompt-hint">어떤 채널을 들으시겠어요?</p>
     <div class="daily-prompt-divider"></div>
-    <button class="btn-secondary" id="recall-radio-all-btn" style="margin-top:8px;">전체 랜덤 · ${pool.length}곡</button>
-    ${decadeButtonsHtml}
-    ${themeButtonsHtml}
+    <button type="button" class="recall-decade-card recall-decade-card--all recall-radio-all-card" id="recall-radio-all-btn">
+      <span class="recall-decade-card-icon recall-decade-card-icon--all">${RADIO_ALL_EQUALIZER_ICON_SVG}</span>
+      <span class="recall-decade-card-text">전체 취합 <span class="recall-decade-card-count">· ${pool.length}곡</span></span>
+      <span class="recall-decade-card-chevron recall-decade-card-chevron--all">${RECALL_DECADE_CHEVRON_ICON_SVG}</span>
+    </button>
+    <div class="recall-radio-channel-grid">
+      ${decadeButtonsHtml}
+      ${themeButtonsHtml}
+    </div>
   `;
   panel.querySelector("#recall-choice-close").onclick = closeRecallChoice;
   panel.querySelector("#recall-radio-all-btn").onclick = () => {
     closeRecallChoice();
-    beginMemoryRadioChannel(pool, "전체 랜덤");
+    beginMemoryRadioChannel(pool, "전체 취합");
   };
   panel.querySelectorAll(".recall-radio-decade-btn").forEach((btn) => {
     btn.onclick = () => {
@@ -298,6 +316,47 @@ function openRadioChannelChoice() {
   });
   document.getElementById("recall-choice-overlay").classList.remove("hidden");
 }
+
+// "전체 취합" 카드 아이콘 — 오디오 이퀄라이저 막대. 연대 선택의 별
+// 아이콘(RECALL_DECADE_STAR_ICON_SVG)과 같은 자리지만, 라디오는
+// "재생 중"의 느낌이 더 맞아서 다른 글리프를 쓴다.
+const RADIO_ALL_EQUALIZER_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="#FDEDE7" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="9" width="3" height="7" rx="1.3"/>
+    <rect x="8" y="3" width="3" height="18" rx="1.3"/>
+    <rect x="14" y="7" width="3" height="11" rx="1.3"/>
+    <rect x="20" y="1" width="3" height="21" rx="1.3"/>
+  </svg>
+`;
+const RADIO_THEME_HEART_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FF5A36" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.8 7.7c0-2.7-2.2-4.5-4.6-4.5-1.6 0-3.1.9-3.9 2.3-.8-1.4-2.3-2.3-3.9-2.3-2.4 0-4.6 1.8-4.6 4.5C3.8 12.5 12 19 12 19s8.2-6.5 8.2-11.3z"/>
+  </svg>
+`;
+// 가족/친구·청춘 두 채널이 목업에서도 같은 "두 사람" 글리프를 그대로
+// 재사용한다 — 굳이 다른 아이콘을 새로 만들지 않는다.
+const RADIO_THEME_PEOPLE_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="8" r="3" stroke="#2F3031" stroke-width="1.8"/>
+    <path d="M4 19c0-3 2.2-5 5-5s5 2 5 5" stroke="#2F3031" stroke-width="1.8"/>
+    <circle cx="16.5" cy="8" r="2.6" stroke="#FF5A36" stroke-width="1.8"/>
+    <path d="M14.2 13.6c2.2.3 4.1 2 4.6 4.4" stroke="#FF5A36" stroke-width="1.8"/>
+  </svg>
+`;
+const RADIO_THEME_SUITCASE_ICON_SVG = `
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2F3031" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="7" width="18" height="13" rx="2.2"/>
+    <path d="M8.5 7V5.2C8.5 4 9.4 3 10.7 3h2.6c1.3 0 2.2 1 2.2 2.2V7" stroke="#FF5A36"/>
+    <path d="M3 12.5h18"/>
+  </svg>
+`;
+const RADIO_THEME_ICON_FALLBACK_SVG = RADIO_THEME_PEOPLE_ICON_SVG;
+const RADIO_THEME_ICONS = {
+  "첫사랑·그리움": RADIO_THEME_HEART_ICON_SVG,
+  "가족": RADIO_THEME_PEOPLE_ICON_SVG,
+  "친구·청춘": RADIO_THEME_PEOPLE_ICON_SVG,
+  "여행": RADIO_THEME_SUITCASE_ICON_SVG,
+};
 
 // 주제 채널 — 해시태그 하나하나를 그대로 채널로 쓰면 "무엇을 묶었는지"가
 // 안 보이고 비슷한 태그(예: 첫사랑/짝사랑/썸)가 각자 따로 10곡을 못 채워
@@ -321,7 +380,7 @@ function openRadioChannelChoice() {
 const RADIO_THEME_GROUPS = [
   { label: "첫사랑·그리움", tags: ["#첫사랑", "#짝사랑", "#썸", "#고백", "#데이트", "#커플", "#사랑", "#소개팅", "#연애", "#이별", "#추억", "#그리움", "#옛기억", "#과거", "#기억", "#회상", "#후회", "#아쉬움"] },
   { label: "가족", tags: ["#가족", "#엄마", "#아빠", "#아버지", "#어머니", "#부부", "#결혼", "#육아", "#남편", "#할머니", "#할아버지", "#효도", "#부모님"] },
-  { label: "친구·청춘", tags: ["#친구", "#우정", "#대학생", "#스무살", "#고등학생", "#어린시절", "#취준생", "#취업", "#첫직장", "#군대", "#신촌", "#신림동", "#고시촌"] },
+  { label: "친구·청춘", tags: ["#친구", "#우정", "#대학생", "#스무살", "#고등학생", "#어린시절", "#취준생", "#취업", "#첫직장", "#직장생활", "#군대", "#신촌", "#신림동", "#고시촌"] },
   { label: "여행", tags: ["#여행", "#바다", "#부산", "#제주도", "#제주", "#여수", "#강릉", "#해운대", "#광안리", "#안목해변", "#한강", "#대구", "#전주", "#혼자여행", "#강원도"] },
 ];
 
