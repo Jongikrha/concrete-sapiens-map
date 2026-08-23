@@ -173,14 +173,14 @@ body {
    교체(2026-08-23). 원본은 레티나 대비 3배 해상도로 준비해뒀다. */
 .wordmark-logo {
   display: block;
-  height: 16px;
+  height: 22px;
   width: auto;
 }
 
 .wordmark small {
   display: block;
   font-weight: 400;
-  font-size: 9px;
+  font-size: 7px;
   letter-spacing: 0.14em;
   color: var(--cs-orange);
   margin-top: 1px;
