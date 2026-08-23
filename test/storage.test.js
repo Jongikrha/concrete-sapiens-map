@@ -219,6 +219,14 @@ test("getDongLevelAddress는 시/도를 축약하고 지번(번지)을 잘라 �
   assert.equal(Storage.getDongLevelAddress("경기도 성남시 분당구 정자동 178-1"), "경기 성남시 분당구 정자동");
 });
 
+test("getDongLevelAddress는 도로명 주소면 로/길로 끝나는 도로명 토큰까지만 남기고 건물번호를 뗀다", () => {
+  assert.equal(Storage.getDongLevelAddress("서울 강남구 테헤란로 152"), "서울 강남구 테헤란로");
+  assert.equal(Storage.getDongLevelAddress("서울 마포구 양화로6길 10"), "서울 마포구 양화로6길");
+  // 건물번호가 "152,154"처럼 순수 숫자 패턴이 아니어도(예전 구현은 이런
+  // 경우 못 잘라냈다) 도로명 토큰 뒤는 전부 잘린다.
+  assert.equal(Storage.getDongLevelAddress("서울 강남구 테헤란로 152,154"), "서울 강남구 테헤란로");
+});
+
 test("getDongLevelAddress는 산지번(토큰이 둘로 쪼개진 경우)도 둘 다 잘라낸다", () => {
   assert.equal(Storage.getDongLevelAddress("서울 종로구 부암동 산 12-3"), "서울 종로구 부암동");
 });

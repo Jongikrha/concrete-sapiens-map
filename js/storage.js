@@ -678,18 +678,25 @@ const Storage = {
   },
 
   /**
-   * 시/군/구/동(읍·면·리·가) 레벨까지만 남기고 번지수는 뗀다 — 기억
+   * 도로명까지만(도로명 주소면 "로/길"로 끝나는 토큰까지), 도로명이 없는
+   * 지번 주소면 동/읍/면/리/가 레벨까지만 남기고 번지수는 뗀다 — 기억
    * 라디오(js/recall.js openRecallCard)에서 장소 이름을 안 붙인 자유
-   * 핀이면 지번 주소 전체("서울 중구 충무로4가 23-1")가 그대로 노출돼
-   * 너무 구체적으로 보인다는 피드백으로 추가(2026-08-21). 맨 끝에서부터
-   * "산" 또는 숫자(-숫자 포함)로만 된 토큰을 지번으로 보고 잘라낸다 —
-   * "산 123-4"처럼 산지번이 두 토큰으로 쪼개진 경우도 순서대로 둘 다
-   * 떨어진다. 이 축약은 기억 라디오 전용이라 카드/공유 등 다른 화면의
+   * 핀이면 주소 전체("서울 강남구 테헤란로 152", "서울 중구 충무로4가
+   * 23-1")가 그대로 노출돼 너무 구체적으로 보인다는 피드백으로 추가
+   * (2026-08-21 최초 추가, 2026-08-23 도로명 주소까지 명시적으로 자르도록
+   * 보강 — 예전엔 끝 토큰이 순수 번지수 패턴일 때만 잘라내는 간접적인
+   * 방식이라, 번지수 표기가 "152,154"처럼 그 패턴을 안 따르면 안 잘렸다).
+   * 이 축약은 기억 라디오 전용이라 카드/공유 등 다른 화면의
    * getGroupAddressCaption/getGroupTitle은 그대로 abbreviateAddress를 쓴다.
    */
   getDongLevelAddress(address) {
     if (!address) return address;
     const tokens = this.abbreviateAddress(address).split(/\s+/);
+    const roadTokenIdx = tokens.findIndex((t) => /(로|길)$/.test(t));
+    if (roadTokenIdx !== -1) return tokens.slice(0, roadTokenIdx + 1).join(" ");
+    // 도로명 토큰이 없으면 지번 주소 — 맨 끝에서부터 "산" 또는 숫자(-숫자
+    // 포함)로만 된 토큰을 번지로 보고 잘라낸다. "산 123-4"처럼 산지번이
+    // 두 토큰으로 쪼개진 경우도 순서대로 둘 다 떨어진다.
     while (tokens.length > 1 && /^(산|\d+(-\d+)?)$/.test(tokens[tokens.length - 1])) {
       tokens.pop();
     }
