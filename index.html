@@ -140,8 +140,26 @@
       <!-- 많이 등록된 곡 칩 — 해시태그와 같은 줄에 이어 붙이면 화면 폭에 따라
            줄바꿈 위치가 들쭉날쭉해서, 항상 별도의 줄로 분리한다(2026-08-19). -->
       <div class="hashtag-bar" id="song-chips"></div>
-      <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 -->
+      <!-- 활성 필터(해시태그/연도) 집단 기억 숫자 배너 — 곡 필터일 때는
+           바로 아래 미니 플레이어가 대신 뜨므로 안 보여준다(js/filters.js
+           renderFilterBanner, 2026-08-23 — 위 칩의 "곡명 ✕"과 내용이
+           겹쳤다는 피드백). -->
       <div class="filter-banner hidden" id="filter-banner"></div>
+
+      <!-- 유튜브 미니 플레이어 — 기억 카드에서 노래를 재생하면 위 칩/배너
+           바로 아래 이 자리에 뜬다(2026-08-23, 예전엔 지도 하단에 따로
+           떠 있었다). 회상 세션(#app.recall-chrome-hidden) 중에는 이
+           위치(map-overlay-top, z-index:20)에 갇혀 있으면 회상 모달
+           (.recall-session, z-index:110)에 가려 정지/일시정지가 안
+           보이므로, js/recall.js가 세션 진입/종료 시 #app 바로 아래로
+           재배치(re-parent)해 mini-player--floating으로 z-index 120에서
+           모달 위에 뜨게 한다. -->
+      <div class="mini-player hidden" id="mini-player">
+        <div class="mini-player-frame-mount" id="mini-player-frame-mount"></div>
+        <p class="mini-player-title" id="mini-player-title">노래 재생 중</p>
+        <button type="button" class="mini-player-pause" id="mini-player-pause" aria-label="일시정지">⏸</button>
+        <button type="button" class="mini-player-stop" id="mini-player-stop" aria-label="재생 중지">✕</button>
+      </div>
 
       <!-- 시간 슬라이더 (누적 보기) -->
       <div class="time-slider-panel hidden" id="time-slider-panel">
@@ -181,17 +199,6 @@
     <div class="entry-toast" id="entry-toast"></div>
     <!-- 기억 전달하기(공유) 완료 토스트 -->
     <div class="share-toast" id="share-toast"></div>
-
-    <!-- 유튜브 미니 플레이어 — 기억 카드에서 노래를 재생하면 시트를 닫거나
-         지도를 돌아다녀도 여기서 계속 흐른다(2026-08-18). 하단 컨트롤 바로
-         위에 뜨고, CSS 형제 선택자(.bottom-toolbar 규칙)로 떠 있을 때만
-         하단 컨트롤을 밀어올려 겹치지 않게 한다. -->
-    <div class="mini-player hidden" id="mini-player">
-      <div class="mini-player-frame-mount" id="mini-player-frame-mount"></div>
-      <p class="mini-player-title" id="mini-player-title">노래 재생 중</p>
-      <button type="button" class="mini-player-pause" id="mini-player-pause" aria-label="일시정지">⏸</button>
-      <button type="button" class="mini-player-stop" id="mini-player-stop" aria-label="재생 중지">✕</button>
-    </div>
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">

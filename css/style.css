@@ -1181,25 +1181,24 @@ body {
    유튜브 미니 플레이어 — 기억 카드 썸네일을 눌러 재생을 시작하면 뜨는
    상시 바(2026-08-18). 시트를 닫아도(closeSheet는 더 이상 iframe을
    건드리지 않는다) 지도를 돌아다니며 계속 들을 수 있고, ✕로 언제든
-   끌 수 있다. bottom-toolbar 바로 위, 겹치지 않도록 아래
-   ".mini-player:not(.hidden) ~ .bottom-toolbar" 규칙이 툴바를 밀어올린다
-   — 툴바가 좁은 화면에서 2줄로 접혀도(아래 주석) 자기 bottom 기준으로
-   위쪽으로만 자라기 때문에 겹치지 않는다. z-index는 .recall-session
-   (110)보다 높여둔다 — 기억 라디오/기억산책은 이 미니 플레이어로 재생을
-   제어하는 화면인데, 정작 그 모달 밑에 깔려 정지/일시정지 버튼이 안
-   보이던 문제가 있었다(2026-08-20 확인).
+   끌 수 있다.
+   평소엔 #map-overlay-top 안(칩/필터 배너 바로 아래)에 자연스러운 flex
+   흐름으로 놓여 있다(2026-08-23, 예전엔 지도 하단에 별도로 떠 있었는데
+   곡 필터 배너 "~와 함께 남겨진 기억 N개"와 내용이 겹친다는 피드백으로
+   그 자리를 대신하게 됐다). 이 상태에선 부모의 stacking context(z-index
+   20)에 갇혀 있어서, 회상 세션(.recall-session, z-index:110) 중에는
+   그 안에 그대로 있으면 모달에 가려 정지/일시정지가 안 보인다 — 기억
+   라디오/기억산책은 이 미니 플레이어로 재생을 제어하는 화면이라 이 문제가
+   실제로 있었다(2026-08-20 확인). 그래서 js/recall.js가 세션 진입 시
+   #app 바로 아래로 재배치(re-parent)하고 이 .mini-player--floating을
+   붙여 z-index 120으로 다시 최상단에 뜨게 한다 — 세션 종료 시 다시
+   #filter-banner 뒤로 옮기고 클래스를 뗀다.
    ------------------------------------------------------------ */
 .mini-player {
-  position: absolute;
-  bottom: 88px;
-  left: 16px;
-  right: 16px;
-  z-index: 120;
   display: flex;
   align-items: center;
   gap: 10px;
   max-width: 360px;
-  margin: 0 auto;
   background: #fff;
   border: 1px solid var(--cs-gray);
   border-radius: var(--cs-radius-chip);
@@ -1207,15 +1206,16 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-/* 회상 세션(기억산책/기억 라디오, #app.recall-chrome-hidden) 동안은 화면
-   위쪽으로 옮긴다 — 원래 위치(bottom:88px)가 회상 카드 하단의 "다음
-   기억으로" 버튼과 겹쳐 안 보이는 문제가 있었다(2026-08-20 피드백).
-   회상 종료 시 카드가 있던 자리로 돌아가는 게 아니라 클래스만 빠지므로
-   별도 정리 코드가 필요 없다. 상단 ✕(recall-exit-btn, top:18px/40px)
-   보다 아래로 내려서 겹치지 않게 한다. */
-.recall-chrome-hidden .mini-player {
-  bottom: auto;
+/* 회상 세션 중 #app 바로 아래로 재배치됐을 때만 붙는 상태 — 평소
+   map-overlay-top 안 flex 흐름 대신, 화면 위쪽에 떠 있게 한다. 상단
+   ✕(recall-exit-btn, top:18px/40px)보다 아래로 내려서 겹치지 않게 한다. */
+.mini-player--floating {
+  position: absolute;
   top: 70px;
+  left: 16px;
+  right: 16px;
+  z-index: 120;
+  margin: 0 auto;
 }
 
 .mini-player.hidden {
@@ -1329,12 +1329,6 @@ body {
    orange 마커는 상대적으로 여전히 도드라진다. */
 .recall-radio-night #map {
   filter: saturate(0.25) brightness(0.4) contrast(1.15);
-}
-
-/* 미니 플레이어가 떠 있는 동안만 툴바를 그 위로 밀어올린다. 88px(미니
-   플레이어 자신의 bottom) + 실측 최대 높이(~58px) + 8px 여유 = 154px. */
-.mini-player:not(.hidden) ~ .bottom-toolbar {
-  bottom: 154px;
 }
 
 .tool-btn {

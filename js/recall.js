@@ -464,6 +464,13 @@ function openRecallSessionShell() {
 
 function enterRecallImmersiveChrome() {
   document.getElementById("app").classList.add("recall-chrome-hidden");
+  // 평소 미니 플레이어는 #map-overlay-top 안(z-index:20)에 있어서, 그
+  // 자리 그대로면 회상 모달(.recall-session, z-index:110)에 가려 정지/
+  // 일시정지가 안 보인다 — #app 바로 아래로 재배치해 z-index 120으로
+  // 다시 최상단에 뜨게 한다(css/style.css .mini-player--floating).
+  const miniPlayer = document.getElementById("mini-player");
+  document.getElementById("app").appendChild(miniPlayer);
+  miniPlayer.classList.add("mini-player--floating");
 }
 
 function enterRecallNightMode() {
@@ -476,6 +483,11 @@ function exitRecallNightMode() {
 
 function exitRecallImmersiveChrome() {
   document.getElementById("app").classList.remove("recall-chrome-hidden");
+  // enterRecallImmersiveChrome이 재배치했던 미니 플레이어를 원래 자리
+  // (#filter-banner 바로 뒤)로 되돌린다.
+  const miniPlayer = document.getElementById("mini-player");
+  miniPlayer.classList.remove("mini-player--floating");
+  document.getElementById("filter-banner").insertAdjacentElement("afterend", miniPlayer);
 }
 
 // ------------------------------------------------------------

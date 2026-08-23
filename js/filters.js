@@ -390,17 +390,22 @@ function clearFilters() {
 
 function renderFilterBanner() {
   const banner = document.getElementById("filter-banner");
-  let text = "";
 
+  // 곡 필터는 위 칩("🎧 곡명 ✕")이 이미 지우기 역할을 하고, 곡이 재생
+  // 중이면 바로 아래 미니 플레이어가 뜨기 때문에 별도 집계 배너가
+  // 내용이 겹쳤다 — 곡 필터일 때만 이 배너를 숨긴다(2026-08-23 피드백).
+  if (activeSongFilter) {
+    banner.classList.add("hidden");
+    return;
+  }
+
+  let text = "";
   if (activeYearFilter !== null) {
     const count = Storage.getStoriesByYear(activeYearFilter).length;
     text = `${activeYearFilter}년, 대한민국에 남겨진 기억 ${count.toLocaleString()}개`;
   } else if (activeHashtagFilter) {
     const count = Storage.getHashtagCount(activeHashtagFilter);
     text = `대한민국에 남겨진 ${activeHashtagFilter} 기억 ${count.toLocaleString()}개`;
-  } else if (activeSongFilter) {
-    const count = Storage.getSongMemoryCount(activeSongFilter.artist, activeSongFilter.title);
-    text = `🎧 ${buildSongLabel(activeSongFilter)}와 함께 남겨진 기억 ${count.toLocaleString()}개`;
   }
 
   banner.innerHTML = `<span>${escapeHtml(text)}</span><button class="filter-banner-clear" id="filter-banner-clear">지우기 ✕</button>`;
