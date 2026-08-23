@@ -19,6 +19,7 @@ async function initApp() {
   await Storage.init();
   await Auth.init();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
+  logVisitKind();
   initMap();
   bindUIEvents();
   renderHashtagChips();
@@ -30,16 +31,35 @@ async function initApp() {
 
 // 브라우저당 한 번만 보여주는 첫 방문 환영 모달(2026-08-21) — 초대
 // 링크로 들어온 사람이 지도만 덩그러니 보고 "이게 뭐 하는 서비스지?"부터
-// 시작하는 문제. 공유 링크(?story=/?place=)로 들어온 경우는 이미 구체적인
-// 맥락(특정 기억/장소)이 있어 생략한다 — handleInitialEntry가 그 흐름을
-// 담당하므로 여기선 URL 파라미터만 다시 확인한다.
+// 시작하는 문제. 공유 링크(?story=/?place=)로 들어온 경우는 공유받은
+// 카드를 먼저 보여주는 게 맞아서 진입 즉시 띄우진 않되, 그 카드를 스스로
+// 닫는 순간(storySheet.js closeSheetToUnfiltered → maybeShowPendingWelcomeOverlay)
+// 띄운다 — 예전엔 여기서 그냥 건너뛰어서, 공유 링크로 들어온(=가장 유력한
+// 신규 유입 경로인) 사람이 설명을 영영 못 받는 경우가 있었다(2026-08-23).
 const WELCOME_SEEN_KEY = "concrete_sapiens_welcome_seen_v1";
+let pendingWelcomeOnSheetClose = false;
 
 function maybeShowWelcomeOverlay() {
   if (localStorage.getItem(WELCOME_SEEN_KEY)) return;
   const params = new URLSearchParams(window.location.search);
-  if (params.get("story") || params.get("place")) return;
+  if (params.get("story") || params.get("place")) {
+    pendingWelcomeOnSheetClose = true;
+    return;
+  }
+  showWelcomeOverlay();
+}
 
+/** closeSheetToUnfiltered가 카드를 닫을 때마다 호출 — 대기 중인 웰컴이 없으면 즉시 반환. */
+function maybeShowPendingWelcomeOverlay() {
+  if (!pendingWelcomeOnSheetClose) return;
+  pendingWelcomeOnSheetClose = false;
+  if (localStorage.getItem(WELCOME_SEEN_KEY)) return;
+  // 시트가 내려가는 슬라이드 트랜지션(--cs-transition-normal, 280ms)과
+  // 겹쳐 보이지 않게 살짝 늦춘다.
+  setTimeout(showWelcomeOverlay, 300);
+}
+
+function showWelcomeOverlay() {
   const panel = document.getElementById("welcome-panel");
   panel.innerHTML = `
     <div class="daily-prompt-header">
@@ -49,14 +69,54 @@ function maybeShowWelcomeOverlay() {
     <p class="daily-prompt-hint">사람들이 실제 장소에 남긴 기억들이 이 지도 위에 쌓여 있어요. <br class="welcome-hint-break">지도를 돌아다니며 낯선 기억을 발견하고, <br class="welcome-hint-break"><strong>당신의 기억도 이 자리에 남겨 보세요.</strong></p>
     <div class="daily-prompt-divider"></div>
     <button class="btn-primary" id="welcome-confirm">둘러보기 시작</button>
+    <button class="btn-secondary" id="welcome-write-btn">내 위치에 기억 남기기</button>
   `;
   panel.querySelector("#welcome-confirm").onclick = closeWelcomeOverlay;
+  panel.querySelector("#welcome-write-btn").onclick = handleWelcomeWriteClick;
   document.getElementById("welcome-overlay").classList.remove("hidden");
+  Storage.logEvent("welcome_shown");
 }
 
 function closeWelcomeOverlay() {
   localStorage.setItem(WELCOME_SEEN_KEY, "1");
   document.getElementById("welcome-overlay").classList.add("hidden");
+}
+
+/**
+ * 웰컴 모달의 "내 위치에 기억 남기기" — 소비(둘러보기)만 유도하던 걸 보완해
+ * 기여로 바로 이어지는 경로 하나를 덧붙인다(2026-08-23). 위치를 가져오는
+ * 동안엔 모달을 유지하고, 성공했을 때만 닫고 작성폼(startFreePinComposer,
+ * composer.js)으로 넘어간다 — 실패하면 그대로 남아 "둘러보기"로 돌아갈 수 있다.
+ */
+function handleWelcomeWriteClick() {
+  Storage.logEvent("welcome_write_clicked");
+  if (!navigator.geolocation) {
+    alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+    return;
+  }
+  const btn = document.getElementById("welcome-write-btn");
+  if (btn) btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      closeWelcomeOverlay();
+      startFreePinComposer(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      if (btn) btn.disabled = false;
+      alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
+    }
+  );
+}
+
+/** 1회성 방문 로그와 별개로, "재방문"과 "첫 방문"을 로컬스토리지 플래그로만
+ * 가볍게 구분해 AppEvent에 남긴다 — 실제 사용자 식별 없이 재방문율 근사치를
+ * 보려는 목적(2026-08-23, 런칭 전 계측 보강). */
+const VISITED_BEFORE_KEY = "concrete_sapiens_visited_before";
+
+function logVisitKind() {
+  const isReturning = !!localStorage.getItem(VISITED_BEFORE_KEY);
+  Storage.logEvent(isReturning ? "visit_returning" : "visit_first");
+  localStorage.setItem(VISITED_BEFORE_KEY, "1");
 }
 
 function renderTotalCountBanner() {

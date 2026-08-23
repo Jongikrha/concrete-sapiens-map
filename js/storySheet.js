@@ -139,6 +139,7 @@ function openSheet(group, options = {}) {
   renderSheetContent(group);
   sheetOpen = true;
   group.stories.forEach((s) => Storage.incrementViewCount(s.id));
+  Storage.logEvent("story_card_opened");
 }
 
 function closeSheet() {
@@ -244,6 +245,9 @@ function closeSheetToUnfiltered() {
   if (activeHashtagFilter || activeYearFilter !== null || activeSongFilter) {
     clearFilters();
   }
+  // 공유 링크(?story=/?place=)로 들어와 아직 웰컴 모달을 못 본 경우,
+  // 사용자가 이 카드를 스스로 닫는 순간 그걸 띄운다(js/app.js 참고).
+  maybeShowPendingWelcomeOverlay();
 }
 
 function showGoneState(message = "이 기억은 더 이상<br />지도에 남아 있지 않습니다.") {

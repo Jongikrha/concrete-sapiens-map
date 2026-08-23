@@ -795,6 +795,7 @@ async function shareConstellationCard() {
   const stories = recallConstellationStories;
   if (!stories || !stories.length) return;
 
+  Storage.logEvent("share_clicked");
   const btn = document.getElementById("recall-share-btn");
   if (btn) btn.disabled = true;
 

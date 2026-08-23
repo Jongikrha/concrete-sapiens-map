@@ -386,6 +386,7 @@ function buildDailyVisitCounts(pageViews, days = 14) {
 const FUNNEL_PAIRS = [
   { label: "이맘때 기억", openType: "throwback_opened", confirmType: "throwback_confirmed" },
   { label: "작성 폼", openType: "composer_opened", confirmType: "composer_submitted" },
+  { label: "웰컴 모달 → 내 위치에 기억 남기기", openType: "welcome_shown", confirmType: "welcome_write_clicked" },
 ];
 
 function buildFunnelHtml(appEvents) {
@@ -401,6 +402,30 @@ function buildFunnelHtml(appEvents) {
   }).join("");
 }
 
+// 짝(open→confirm)이 없는 단독 카운트 — 재방문율은 특정 유저 식별 없이
+// 로컬스토리지 첫방문 플래그로만 근사한다(js/app.js logVisitKind, 2026-08-23).
+const STANDALONE_EVENT_LABELS = [
+  { type: "story_card_opened", label: "기억 카드 열람" },
+  { type: "share_clicked", label: "나의 기억 지도 공유 클릭" },
+];
+
+function buildEventCountsHtml(appEvents) {
+  const counts = {};
+  appEvents.forEach((e) => {
+    counts[e.type] = (counts[e.type] || 0) + 1;
+  });
+  return STANDALONE_EVENT_LABELS.map(
+    ({ type, label }) => `<div class="top-story-row"><span>${escapeHtml(label)}</span><span>${counts[type] || 0}</span></div>`
+  ).join("");
+}
+
+function computeReturningVisitRate(appEvents) {
+  const first = appEvents.filter((e) => e.type === "visit_first").length;
+  const returning = appEvents.filter((e) => e.type === "visit_returning").length;
+  const total = first + returning;
+  return total > 0 ? Math.round((returning / total) * 100) : 0;
+}
+
 async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
@@ -409,6 +434,8 @@ async function renderVisitsTab() {
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
   const funnelHtml = buildFunnelHtml(appEvents);
+  const eventCountsHtml = buildEventCountsHtml(appEvents);
+  const returningRate = computeReturningVisitRate(appEvents);
 
   const topStories = [...Storage.getAllStories()]
     .filter((s) => (s.viewCount || 0) > 0)
@@ -437,6 +464,7 @@ async function renderVisitsTab() {
       <div class="stat-tile"><div class="num">${pageViews.length}</div><div class="label">전체 방문 수</div></div>
       <div class="stat-tile"><div class="num">${dailyCounts[0].count}</div><div class="label">오늘 방문 수</div></div>
       <div class="stat-tile"><div class="num">${Storage.getAllStories().length}</div><div class="label">전체 기억 수</div></div>
+      <div class="stat-tile"><div class="num">${returningRate}%</div><div class="label">재방문 비율(근사)</div></div>
     </div>
     <div class="admin-section-title">최근 14일 방문 추이</div>
     <div class="daily-visit-chart">${dailyHtml}</div>
@@ -444,6 +472,8 @@ async function renderVisitsTab() {
     ${topHtml}
     <div class="admin-section-title">기능별 전환율</div>
     ${funnelHtml}
+    <div class="admin-section-title">그 외 이벤트</div>
+    ${eventCountsHtml}
   `;
 }
 
