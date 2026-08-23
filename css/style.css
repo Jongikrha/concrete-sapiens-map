@@ -168,6 +168,15 @@ body {
   white-space: nowrap;
 }
 
+/* 기존 텍스트 워드마크와 같은 자리를 차지하도록 높이만 그 줄(14px 볼드
+   텍스트 한 줄) 크기에 맞춘다 — 로고 이미지(assets/wordmark-logo.png)로
+   교체(2026-08-23). 원본은 레티나 대비 3배 해상도로 준비해뒀다. */
+.wordmark-logo {
+  display: block;
+  height: 16px;
+  width: auto;
+}
+
 .wordmark small {
   display: block;
   font-weight: 400;
