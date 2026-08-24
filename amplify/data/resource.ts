@@ -170,6 +170,13 @@ const schema = a.schema({
     .returns(a.boolean())
     .authorization((allow) => [allow.group('Admins')])
     .handler(a.handler.function(adminUsersFn)),
+
+  adminSetUserPassword: a
+    .mutation()
+    .arguments({ username: a.string().required(), password: a.string().required() })
+    .returns(a.boolean())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
 });
 
 export type Schema = ClientSchema<typeof schema>;

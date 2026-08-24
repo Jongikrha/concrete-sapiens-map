@@ -586,6 +586,7 @@ function memberRowHtml(member) {
             <button class="btn-restore" data-action="toggle-admin" data-username="${escapeHtml(member.username)}" data-is-admin="${member.isAdmin}">
               ${member.isAdmin ? "관리자 해제" : "관리자 지정"}
             </button>
+            <button class="btn-restore" data-action="reset-password" data-username="${escapeHtml(member.username)}" data-email="${escapeHtml(member.email)}">비밀번호 재설정</button>
             <button class="btn-delete" data-action="delete-member" data-username="${escapeHtml(member.username)}">계정 삭제</button>
           `}
       </div>
@@ -638,6 +639,22 @@ async function handleMemberAction(action, username, dataset) {
   } else if (action === "delete-member") {
     if (!confirm(`${username} 계정을 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
     await client.mutations.adminDeleteUser({ username });
+  } else if (action === "reset-password") {
+    // 재설정 코드 메일이 스팸으로 분류돼 사용자가 스스로 복구하지 못할 때
+    // 쓰는 수동 창구다(2026-08-24, SES 프로덕션 액세스 반려 상황).
+    const email = dataset.email || username;
+    const password = prompt(
+      `${email} 계정에 설정할 새 비밀번호를 입력하세요(8자 이상).\n` +
+        `여기서 정한 비밀번호를 본인 확인 후 직접 전달해야 합니다.`,
+      ""
+    );
+    if (!password) return;
+    if (password.length < 8) {
+      alert("비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+    await client.mutations.adminSetUserPassword({ username, password });
+    alert(`${email} 비밀번호를 변경했습니다.\n사용자에게 전달하고, 로그인 후 직접 변경하도록 안내해주세요.`);
   }
   members = null; // 다음 렌더에서 강제로 다시 불러오게
   renderMembersTab();

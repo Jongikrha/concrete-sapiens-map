@@ -24,6 +24,7 @@ backend.adminUsersFn.resources.lambda.role?.addToPrincipalPolicy(
       'cognito-idp:AdminDeleteUser',
       'cognito-idp:AdminAddUserToGroup',
       'cognito-idp:AdminRemoveUserFromGroup',
+      'cognito-idp:AdminSetUserPassword',
     ],
     resources: [backend.auth.resources.userPool.userPoolArn],
   })

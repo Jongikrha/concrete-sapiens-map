@@ -7,6 +7,7 @@ import {
   AdminDeleteUserCommand,
   AdminAddUserToGroupCommand,
   AdminRemoveUserFromGroupCommand,
+  AdminSetUserPasswordCommand,
   type UserType,
 } from '@aws-sdk/client-cognito-identity-provider';
 
@@ -71,7 +72,7 @@ function assertNotSelf(callerUsername: string, targetUsername: string) {
 type AdminUsersEvent = {
   fieldName: string;
   identity?: { username?: string };
-  arguments: { username?: string; enabled?: boolean; isAdmin?: boolean };
+  arguments: { username?: string; enabled?: boolean; isAdmin?: boolean; password?: string };
 };
 
 const handler = async (event: AdminUsersEvent) => {
@@ -111,6 +112,33 @@ const handler = async (event: AdminUsersEvent) => {
       const Command = isAdmin ? AdminAddUserToGroupCommand : AdminRemoveUserFromGroupCommand;
       await client.send(
         new Command({ UserPoolId: userPoolId, Username: username, GroupName: ADMINS_GROUP })
+      );
+      return true;
+    }
+
+    // SES 프로덕션 액세스가 반려된 동안의 계정 복구 창구다(2026-08-24).
+    // 이 앱의 계정 복구 수단은 인증된 이메일 하나뿐인데, 재설정 코드 메일이
+    // Cognito 공용 발신자로 나가면서 gmail에서 스팸으로 분류돼 사용자가
+    // 사실상 복구를 못 하는 상황이 생겼다. 사용자가 직접 문의해 오면
+    // 관리자가 임시 비밀번호를 정해 다른 경로로 전달하는 용도다.
+    // permanent: true로 두는 이유 — false면 다음 로그인에서 Cognito가
+    // NEW_PASSWORD_REQUIRED 챌린지를 띄우는데, js/auth.js의 로그인 흐름이
+    // 이 챌린지를 처리하지 않아 오히려 로그인이 막힌다. 바로 쓸 수 있는
+    // 비밀번호로 설정하고, 사용자가 로그인한 뒤 스스로 변경하게 한다.
+    case 'adminSetUserPassword': {
+      const { username, password } = args;
+      if (!username) throw new Error('username이 필요합니다.');
+      if (!password) throw new Error('password가 필요합니다.');
+      // User Pool 정책과 같은 최소 길이. 여기서 먼저 막지 않으면 Cognito가
+      // InvalidPasswordException을 던져 어드민 화면에 영문 에러가 그대로 뜬다.
+      if (password.length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다.');
+      await client.send(
+        new AdminSetUserPasswordCommand({
+          UserPoolId: userPoolId,
+          Username: username,
+          Password: password,
+          Permanent: true,
+        })
       );
       return true;
     }
