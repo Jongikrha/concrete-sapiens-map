@@ -344,7 +344,15 @@ function renderAllTab() {
   const keyword = document.getElementById("all-search-input")?.value.trim() || "";
   let stories = applyDeviceFilter(Storage.getAllStories());
   if (keyword) {
-    stories = stories.filter((s) => s.content.includes(keyword));
+    // 이전엔 본문(content)만 봐서 "가수/곡명"으로 검색하면 곡 정보가 본문에
+    // 그대로 안 적혀 있는 한 못 찾았다 — musicArtist/musicTitle도 같이
+    // 본다(2026-08-24, "노래 검색이 안 된다" 피드백). 대소문자 구분 없이.
+    const needle = keyword.toLowerCase();
+    stories = stories.filter((s) =>
+      s.content.toLowerCase().includes(needle) ||
+      (s.musicArtist || "").toLowerCase().includes(needle) ||
+      (s.musicTitle || "").toLowerCase().includes(needle)
+    );
   }
   stories = [...stories].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -354,7 +362,7 @@ function renderAllTab() {
 
   document.getElementById("admin-content").innerHTML = `
     <div class="admin-section-title">전체 콘텐츠 (${stories.length}건)</div>
-    <div class="search-row"><input type="text" id="all-search-input" placeholder="내용 검색" value="${escapeHtml(keyword)}" /></div>
+    <div class="search-row"><input type="text" id="all-search-input" placeholder="내용/가수/곡명 검색" value="${escapeHtml(keyword)}" /></div>
     ${html}
   `;
   document.getElementById("all-search-input").addEventListener("input", () => renderAllTab());
