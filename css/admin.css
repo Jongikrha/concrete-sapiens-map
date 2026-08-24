@@ -210,6 +210,40 @@ body {
   cursor: pointer;
 }
 
+/* 어드민이 곡 아티스트/제목만 고칠 때 쓰는 인라인 패널 — 유튜브 자동 추출이
+   틀렸을 때를 대비한 용도라 그 두 필드만 노출한다(2026-08-24). */
+.admin-music-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+}
+
+.admin-music-input {
+  border: 1px solid var(--cs-gray);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.admin-music-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.admin-music-edit-actions button {
+  border: none;
+  border-radius: var(--cs-radius-card);
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .btn-secondary {
   background: none;
   border: 1px solid var(--cs-map-gray);

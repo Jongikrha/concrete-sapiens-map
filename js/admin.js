@@ -274,12 +274,49 @@ function storyCardHtml(story, { showRestore }) {
       <div class="admin-card-actions">
         ${showRestore ? `<button class="btn-restore" data-action="restore" data-id="${story.id}">복구</button>` : `<button class="btn-restore" data-action="hide" data-id="${story.id}">숨기기</button>`}
         <button class="btn-delete" data-action="delete" data-id="${story.id}">완전 삭제</button>
+        ${story.youtubeUrl ? `<button class="btn-restore" data-action="toggle-music-edit" data-id="${story.id}">🎧 곡 정보 수정</button>` : ""}
+      </div>
+      ${story.youtubeUrl ? musicEditPanelHtml(story) : ""}
+    </div>
+  `;
+}
+
+// 유튜브 링크에서 자동 추출한 아티스트/곡명이 틀리게 들어오는 경우를 대비해,
+// 다른 내용은 건드리지 않고 이 두 필드만 고칠 수 있게 한다(2026-08-24) —
+// 본문/장소/작성자 표시 등은 작성자 본인만 고칠 수 있는 영역이라 어드민은
+// 손대지 않는다.
+function musicEditPanelHtml(story) {
+  return `
+    <div class="admin-music-edit hidden" id="music-edit-${story.id}">
+      <input type="text" class="admin-music-input" id="music-artist-${story.id}" placeholder="아티스트" value="${escapeHtml(story.musicArtist || "")}" />
+      <input type="text" class="admin-music-input" id="music-title-${story.id}" placeholder="곡 제목" value="${escapeHtml(story.musicTitle || "")}" />
+      <div class="admin-music-edit-actions">
+        <button class="btn-primary" data-action="save-music" data-id="${story.id}">저장</button>
+        <button class="btn-restore" data-action="toggle-music-edit" data-id="${story.id}">취소</button>
       </div>
     </div>
   `;
 }
 
 async function handleCardAction(action, storyId) {
+  // toggle-music-edit는 패널 보이기/감추기일 뿐 서버 반영이 없어, 아래
+  // renderActiveTab() 재렌더링을 안 거치고 여기서 바로 끝낸다 — 재렌더링을
+  // 타면 스크롤 위치도 흔들리고 방금 입력 중이던 값도 날아간다.
+  if (action === "toggle-music-edit") {
+    document.getElementById(`music-edit-${storyId}`)?.classList.toggle("hidden");
+    return;
+  }
+  if (action === "save-music") {
+    const artistInput = document.getElementById(`music-artist-${storyId}`);
+    const titleInput = document.getElementById(`music-title-${storyId}`);
+    const musicArtist = artistInput.value.trim() || null;
+    const musicTitle = titleInput.value.trim() || null;
+    Storage.updateStory(storyId, { musicArtist, musicTitle }, {
+      onFail: () => alert("곡 정보가 저장되지 않았어요. 잠시 후 다시 시도해주세요."),
+    });
+    renderActiveTab();
+    return;
+  }
   if (action === "restore") {
     await Storage.restoreStory(storyId);
   } else if (action === "hide") {
