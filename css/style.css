@@ -1532,6 +1532,16 @@ body {
   inset: 0;
   z-index: 90;
   background: transparent;
+  transition: background var(--cs-transition-normal) ease;
+}
+
+/* 예전엔 데스크톱(768px+)에서만 어둡게 했는데, 모바일에서 기억 카드를
+   열어도 지도/해시태그·곡 칩이 그대로 밝게 남아 카드와 시선이 분산된다는
+   피드백(2026-08-24) — 모바일도 같은 톤으로 어둡게 맞춘다. 이 배경이 상단
+   오버레이(.map-overlay-top, z-index:20)/하단 툴바보다 위(z-index:90)에
+   덮이므로 칩도 함께 옅어져 보인다, 별도로 숨기는 로직 불필요. */
+.sheet-backdrop:not(.hidden) {
+  background: rgba(47, 48, 49, 0.35);
 }
 
 .sheet-backdrop.hidden {
@@ -3606,10 +3616,14 @@ button.story-place-line:hover {
   }
   /* 화면 폭이 다양한 모바일에서 특정 기기에 맞추기보다, 항상 화면
      폭의 80%로 — 좌우에 여백을 둬서 꽉 차 보이지 않게 한다
-     (2026-08-13). */
+     (2026-08-13). 화면 맨 아래 딱 붙어 있으면 답답해 보인다는 피드백
+     (2026-08-24)으로 살짝 띄우고, 뜬 만큼 아래쪽 모서리도 둥글게
+     맞춘다(기존엔 위쪽만 둥글고 아래는 화면 끝에 붙어 각져 있었다). */
   .bottom-sheet {
     left: 10%;
     right: 10%;
+    bottom: 14px;
+    border-radius: var(--cs-radius-sheet);
   }
 }
 
@@ -3617,10 +3631,6 @@ button.story-place-line:hover {
    데스크톱: Bottom Sheet를 화면 중앙의 작은 카드로 표시
    ------------------------------------------------------------ */
 @media (min-width: 768px) {
-  .sheet-backdrop:not(.hidden) {
-    background: rgba(47, 48, 49, 0.35);
-  }
-
   .bottom-sheet {
     left: 50%;
     right: auto;
