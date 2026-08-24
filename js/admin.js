@@ -365,7 +365,18 @@ function renderAllTab() {
     <div class="search-row"><input type="text" id="all-search-input" placeholder="내용/가수/곡명 검색" value="${escapeHtml(keyword)}" /></div>
     ${html}
   `;
-  document.getElementById("all-search-input").addEventListener("input", () => renderAllTab());
+  // renderAllTab이 admin-content 전체를 innerHTML로 새로 그려서, 매 키
+  // 입력마다 이 input 자체도 통째로 새 DOM 노드로 교체된다 — 그러면 입력
+  // 포커스가 body로 빠져버려 다음 글자부터 안 써지는 것처럼 보인다
+  // (2026-08-24, "검색에 글이 안 써진다" 피드백). 재렌더링 직후 새 input을
+  // 다시 포커스하고 커서 위치까지 복원한다.
+  document.getElementById("all-search-input").addEventListener("input", (e) => {
+    const cursorPos = e.target.selectionStart;
+    renderAllTab();
+    const input = document.getElementById("all-search-input");
+    input.focus();
+    input.setSelectionRange(cursorPos, cursorPos);
+  });
 }
 
 function renderWordsTab() {
