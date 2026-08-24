@@ -829,6 +829,26 @@
               "isRequired": true
             }
           }
+        },
+        "adminSetUserPassword": {
+          "name": "adminSetUserPassword",
+          "isArray": false,
+          "type": "Boolean",
+          "isRequired": false,
+          "arguments": {
+            "username": {
+              "name": "username",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "password": {
+              "name": "password",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
         }
       }
     }
