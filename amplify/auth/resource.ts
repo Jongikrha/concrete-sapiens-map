@@ -15,15 +15,15 @@ export const auth = defineAuth({
     preSignUp: preSignUpFn,
   },
   groups: ['Admins'],
-  senders: {
-    email: {
-      // SES에는 concretesapiens.com 도메인 단위로만 검증해뒀다(no-reply 주소라
-      // 수신함이 없어 이메일 주소 단위 검증은 애초에 불가능). 설치된
-      // aws-cdk-lib(2.244.0)엔 도메인 단위 옵션(sesVerifiedDomain)이 없어
-      // SourceArn을 이메일 주소 identity ARN으로만 생성하므로, 실제 SourceArn
-      // 덮어쓰기는 backend.ts의 CDK escape hatch에서 처리한다.
-      fromEmail: 'no-reply@concretesapiens.com',
-      fromName: '콘크리트 사피엔스 지도',
-    },
-  },
+  // senders.email(SES 경유 발송)을 일부러 지정하지 않는다 — Cognito 기본
+  // 발송(COGNITO_DEFAULT)을 쓴다는 뜻이다. no-reply@concretesapiens.com으로
+  // 보내려면 SES 프로덕션 액세스가 필요한데 2회 반려됐고(2026-08-24 확인),
+  // 샌드박스에서는 검증된 도메인 밖 주소로 메일이 나가지 않아 gmail/naver
+  // 사용자가 비밀번호 재설정 코드를 못 받는다. 계정 복구 수단이 이메일
+  // 하나뿐이라 복구 경로가 아예 막히므로, 브랜딩(발신자가
+  // no-reply@verificationemail.com으로 표시됨)을 포기하고 발송 가능성을
+  // 택했다. Cognito 기본 발송은 하루 50통 제한이 있지만 지금은 비밀번호
+  // 재설정에만 쓰므로 충분하다(가입 인증 코드는 preSignUp 트리거로 없앰).
+  // SES 프로덕션 액세스가 승인되면 이 블록과 backend.ts의 SourceArn
+  // 오버라이드를 함께 되살린다.
 });

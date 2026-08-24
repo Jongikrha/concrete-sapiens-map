@@ -1,5 +1,4 @@
 import { defineBackend } from '@aws-amplify/backend';
-import { Aws } from 'aws-cdk-lib';
 import { BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { auth } from './auth/resource';
@@ -68,17 +67,6 @@ for (const tableName of ['Story', 'BannedWord', 'PageView']) {
 // 발견). Schema를 업데이트 요청에서 아예 빼면 CloudFormation이 스키마를 건드리지
 // 않으므로 이미 저장된 속성값에는 영향 없이 다른 UserPool 속성 변경이 정상 배포된다.
 backend.auth.resources.cfnResources.cfnUserPool.addPropertyDeletionOverride('Schema');
-
-// SES에는 이메일 주소(no-reply@concretesapiens.com) 단위가 아니라 도메인
-// 단위로만 검증해뒀다. 그런데 설치된 aws-cdk-lib(2.244.0)의 senders.email은
-// SourceArn을 이메일 주소 identity ARN으로만 생성해서 "Email address is not
-// verified" 에러가 난다 — CDK가 도메인 identity ARN을 못 만드는 알려진 제약
-// (https://github.com/aws/aws-cdk/issues/18825, 2026-08-11 확인). Cognito
-// API 자체는 도메인 identity ARN도 받아주므로 SourceArn만 직접 덮어쓴다.
-backend.auth.resources.cfnResources.cfnUserPool.addPropertyOverride(
-  'EmailConfiguration.SourceArn',
-  `arn:${Aws.PARTITION}:ses:${Aws.REGION}:${Aws.ACCOUNT_ID}:identity/concretesapiens.com`,
-);
 
 // defineAuth()는 비밀번호 정책을 직접 설정하는 옵션이 없어 Amplify Gen2
 // 기본값(8자+대소문자+숫자+특수문자 전부 필수)이 그대로 적용돼 있었다.
