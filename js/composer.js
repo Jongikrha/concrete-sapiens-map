@@ -37,11 +37,34 @@ function startFreePinComposer(lat, lng, prefillContent) {
     const nameInput = document.getElementById("input-place-name");
     if (nameInput && !nameInput.value.trim()) {
       const prefillName = buildingName || (address && Storage.abbreviateAddress(address));
-      if (prefillName) nameInput.value = prefillName;
+      if (prefillName) {
+        nameInput.value = trimToNonSpaceLimit(prefillName, CONFIG.MAX_PLACE_NAME_LENGTH);
+        const countEl = document.getElementById("place-name-char-count-num");
+        if (countEl) countEl.textContent = nonSpaceLength(nameInput.value);
+      }
     }
     if (pendingPin) pendingPin.address = address || null;
     updateComposerScrollbarBounds();
   });
+}
+
+// 공백을 제외한 글자 수 기준으로 문자열을 자른다 — WHERE(장소 이름) 필드에서
+// 사용. 공백은 그대로 두고, 공백이 아닌 문자만 세어 한도를 넘기면 거기서 끊는다.
+function trimToNonSpaceLimit(str, limit) {
+  let nonSpaceCount = 0;
+  let result = "";
+  for (const ch of str) {
+    if (!/\s/.test(ch)) {
+      nonSpaceCount++;
+      if (nonSpaceCount > limit) break;
+    }
+    result += ch;
+  }
+  return result;
+}
+
+function nonSpaceLength(str) {
+  return str.replace(/\s/g, "").length;
 }
 
 function buildYearOptions(selectedYear) {
@@ -120,6 +143,7 @@ function openComposer(pin) {
       <span class="input-icon">${pin.isFreePin ? "✏️" : "🔍"}</span>
       <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(nameValue)}" maxlength="40" />
     </div>
+    <div class="char-count"><span id="place-name-char-count-num">${nonSpaceLength(nameValue)}</span> / ${CONFIG.MAX_PLACE_NAME_LENGTH} (공백 제외)</div>
     ${nameHint}
     <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
   `;
@@ -209,6 +233,27 @@ function openComposer(pin) {
   panel.querySelector("#input-content").addEventListener("input", (e) => {
     document.getElementById("char-count-num").textContent = e.target.value.length;
   });
+
+  // WHERE(장소 이름) 공백 제외 글자 수 제한 — 한글 입력 중(조합 중)에
+  // value를 건드리면 IME 조합이 깨지므로, 조합이 끝난 뒤에만 자른다.
+  {
+    const placeNameInput = panel.querySelector("#input-place-name");
+    let isComposingPlaceName = false;
+    const enforcePlaceNameLimit = (e) => {
+      const trimmed = trimToNonSpaceLimit(e.target.value, CONFIG.MAX_PLACE_NAME_LENGTH);
+      if (trimmed !== e.target.value) e.target.value = trimmed;
+      document.getElementById("place-name-char-count-num").textContent = nonSpaceLength(trimmed);
+    };
+    placeNameInput.addEventListener("compositionstart", () => { isComposingPlaceName = true; });
+    placeNameInput.addEventListener("compositionend", (e) => {
+      isComposingPlaceName = false;
+      enforcePlaceNameLimit(e);
+    });
+    placeNameInput.addEventListener("input", (e) => {
+      if (isComposingPlaceName) return;
+      enforcePlaceNameLimit(e);
+    });
+  }
 
   // 유튜브 URL을 붙이면 oEmbed로 원본 제목을 가져와 아티스트/곡명을 추정해
   // 미리 채워준다 — 제목 형식이 제각각이라 100% 정확하진 않아서 사용자가
@@ -405,6 +450,11 @@ function openComposer(pin) {
 
     if (pendingPin.isFreePin && !enteredName) {
       alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 우리의 따뜻한 신혼집");
+      nameInput.focus();
+      return;
+    }
+    if (enteredName && nonSpaceLength(enteredName) > CONFIG.MAX_PLACE_NAME_LENGTH) {
+      alert(`장소 이름은 공백 제외 ${CONFIG.MAX_PLACE_NAME_LENGTH}글자까지 적을 수 있어요.`);
       nameInput.focus();
       return;
     }
