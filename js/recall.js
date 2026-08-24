@@ -621,11 +621,36 @@ function shuffleArray(arr) {
   return a;
 }
 
+// 기억 라디오(scope="songs")에서 최근 올라온 곡일수록 더 자주(하지만
+// 항상은 아니게) 먼저 나오길 원해서(2026-08-24) 추가한 가중치 — 최근
+// RECENCY_BOOST_DAYS 안에 올라온 기억일수록 1에 가깝게, 그보다 오래되면
+// 1로 평평해진다(페널티 없음, 그냥 보너스가 없어질 뿐).
+const RECENCY_BOOST_DAYS = 14;
+const RECENCY_BOOST_MAX = 3; // 방금 올라온 곡은 최대 3배 가중치
+function recencyWeight(story) {
+  const ageDays = (Date.now() - new Date(story.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+  if (!(ageDays >= 0) || ageDays >= RECENCY_BOOST_DAYS) return 1;
+  const freshness = 1 - ageDays / RECENCY_BOOST_DAYS; // 1(방금)~0(경계)
+  return 1 + freshness * (RECENCY_BOOST_MAX - 1);
+}
+
+// 가중 랜덤 셔플(Efraimidis-Spirakis 방식) — 무작위성은 그대로 두되,
+// 가중치가 높은 항목이 평균적으로 더 앞쪽에 나오도록 편향만 준다.
+// weight()가 1을 넘으면 key = U^(1/weight)이 1에 더 가깝게 몰린다.
+function weightedShuffle(arr, weightFn) {
+  return arr
+    .map((item) => ({ item, key: Math.random() ** (1 / weightFn(item)) }))
+    .sort((a, b) => a.key - b.key)
+    .map(({ item }) => item);
+}
+
 // 큐는 뒤에서 pop()으로 꺼내 쓰므로 배열의 "마지막 항목"이 다음에 나올
-// 기억이다. 재셔플 직후 방금 봤던 기억이 바로 다시 나오지 않게, 그
-// 경우에만 마지막 두 항목을 바꿔준다.
+// 기억이다 — weightedShuffle은 key 오름차순 정렬이라 가중치 높은
+// 항목이 배열 끝쪽에 몰리게 되고, pop()이 그걸 먼저 꺼낸다. 재셔플
+// 직후 방금 봤던 기억이 바로 다시 나오지 않게, 그 경우에만 마지막 두
+// 항목을 바꿔준다.
 function buildRecallQueue(pool, avoidId) {
-  const shuffled = shuffleArray(pool);
+  const shuffled = recallScope === "songs" ? weightedShuffle(pool, recencyWeight) : shuffleArray(pool);
   const lastIdx = shuffled.length - 1;
   if (avoidId && lastIdx > 0 && shuffled[lastIdx].id === avoidId) {
     [shuffled[lastIdx], shuffled[lastIdx - 1]] = [shuffled[lastIdx - 1], shuffled[lastIdx]];
