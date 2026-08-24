@@ -1539,13 +1539,24 @@ body {
    열어도 지도/해시태그·곡 칩이 그대로 밝게 남아 카드와 시선이 분산된다는
    피드백(2026-08-24) — 모바일도 같은 톤으로 어둡게 맞춘다. 이 배경이 상단
    오버레이(.map-overlay-top, z-index:20)/하단 툴바보다 위(z-index:90)에
-   덮이므로 칩도 함께 옅어져 보인다, 별도로 숨기는 로직 불필요. */
+   덮이므로 칩도 함께 옅어져 보인다, 별도로 숨기는 로직 불필요. "더 어둡게,
+   완전 밤처럼" 피드백(2026-08-24)으로 알파를 한 번 더 올렸다.*/
 .sheet-backdrop:not(.hidden) {
-  background: rgba(47, 48, 49, 0.35);
+  background: rgba(20, 20, 22, 0.6);
 }
 
 .sheet-backdrop.hidden {
   display: none;
+}
+
+/* 기억 카드(또는 해시태그/곡 목록 등 같은 bottom-sheet를 쓰는 다른 목록)가
+   열려 있는 동안 지도 자체도 기억 라디오 야간 모드(.recall-radio-night
+   #map, 위 참고)와 같은 톤으로 어둡게 — "완전 밤처럼" 피드백(2026-08-24).
+   DOM에서 #map이 #sheet-backdrop보다 앞서 있어 형제 선택자로는 못 잡고,
+   공통 조상(#app)에 :has()로 건다(현재 타깃 브라우저에서 안전하게 지원됨). */
+#app:has(#sheet-backdrop:not(.hidden)) #map {
+  filter: saturate(0.25) brightness(0.4) contrast(1.15);
+  transition: filter var(--cs-transition-normal) ease;
 }
 
 .bottom-sheet {
@@ -3624,6 +3635,10 @@ button.story-place-line:hover {
     right: 10%;
     bottom: 14px;
     border-radius: var(--cs-radius-sheet);
+    /* 어차피 카드가 열리면 해시태그/곡 칩은 배경과 함께 어두워져 안 보이니,
+       그 자리까지 카드를 끌어올려도 된다는 피드백(2026-08-24) — 기존
+       65vh에서 검색창 바로 아래까지 카드가 올라오도록 키운다. */
+    max-height: 80vh;
   }
 }
 
