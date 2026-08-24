@@ -566,6 +566,33 @@ body {
 }
 
 /* ------------------------------------------------------------
+   전체 등록된 기억 수 + "오늘의 기억/미션" 칩 한 줄 묶음(모바일 전용,
+   2026-08-24) — total-count-banner/today-mission-chips가 이제
+   map-overlay-top의 직계 자식이 아니라 .map-overlay-top > * 규칙의
+   pointer-events:auto가 안 먹는다. 여기서 다시 켜준다.
+   ------------------------------------------------------------ */
+.today-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  pointer-events: none;
+}
+
+.today-row > * {
+  pointer-events: auto;
+}
+
+/* .hashtag-bar의 width:100%를 여기서만 되돌린다 — today-row 안에서는
+   total-count-banner와 한 줄을 나눠 써야 해서, 폭 100%로 두면 항상
+   혼자 다음 줄로 밀려나 버린다(위 목적과 정반대). */
+#today-mission-chips {
+  width: auto;
+}
+
+/* ------------------------------------------------------------
    해시태그 칩
    ------------------------------------------------------------ */
 .hashtag-bar {
@@ -575,15 +602,6 @@ body {
   row-gap: 4px;
   flex-wrap: wrap;
   pointer-events: none;
-}
-
-/* flex-wrap 줄바꿈 강제용 빈 요소(js/filters.js renderHashtagChips 참고) —
-   flex-basis:100%는 남은 폭과 무관하게 그 뒤 항목을 항상 다음 줄로
-   보낸다. */
-.hashtag-bar-break {
-  flex-basis: 100%;
-  width: 0;
-  height: 0;
 }
 
 .chip {

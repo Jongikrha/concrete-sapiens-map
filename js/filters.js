@@ -66,6 +66,9 @@ function getEligibleThrowbackStory() {
 // 노출 개수(CONFIG.TOP_HASHTAG_LIMIT/TOP_SONG_LIMIT)와 별개로 좁은 화면만
 // 3개로 줄이고, 나머지는 기존처럼 "더보기" 칩으로 빠진다.
 const MOBILE_CHIP_LIMIT = 3;
+// 곡 칩은 모바일에서 더 적극적으로 줄인다 — 미니 플레이어까지 함께 뜨면
+// 지도 보이는 영역이 너무 좁아진다는 피드백(2026-08-24).
+const MOBILE_SONG_CHIP_LIMIT = 1;
 function isMobileViewport() {
   return window.matchMedia("(max-width: 600px)").matches;
 }
@@ -76,8 +79,10 @@ function isMobileViewport() {
 function renderHashtagChips() {
   const wrap = document.getElementById("hashtag-chips");
   const songWrap = document.getElementById("song-chips");
+  const todayWrap = document.getElementById("today-mission-chips");
   wrap.innerHTML = "";
   songWrap.innerHTML = "";
+  todayWrap.innerHTML = "";
 
   if (activeYearFilter !== null || activeHashtagFilter || activeSongFilter) {
     const label = activeYearFilter !== null
@@ -104,7 +109,6 @@ function renderHashtagChips() {
   todayChip.className = "chip chip--today";
   todayChip.textContent = "오늘의 기억";
   todayChip.onclick = openTodayMemoriesModal;
-  wrap.appendChild(todayChip);
 
   // "오늘의 기억" 바로 옆에 같은 칩 크기로 — 예전엔 별도 배너였는데
   // (2026-08-11 추가, 2026-08-12 제거), 해시태그 칩과 같은 자리/크기로
@@ -116,17 +120,18 @@ function renderHashtagChips() {
   // 기준(getEligibleThrowbackStory)을 다시 거쳐서 라벨과 항상 일치한다.
   promptChip.textContent = getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션";
   promptChip.onclick = openTodayMission;
-  wrap.appendChild(promptChip);
 
-  // 모바일은 "오늘의 기억/미션" 다음 줄에 해시태그가 오길 원해서
-  // (2026-08-20), flex-wrap이 폭에 따라 제멋대로 줄바꿈하지 않도록
-  // flex-basis:100%짜리 빈 요소로 강제로 줄을 바꾼다. 데스크톱은 기존
-  // 그대로 폭에 맞춰 자연스럽게 흐른다.
+  // 모바일은 "오늘의 기억/미션" 칩을 해시태그 줄에서 빼서 전체 기억 수
+  // 배너 옆(today-mission-chips, index.html의 .today-row)으로 옮긴다 —
+  // 미니 플레이어까지 겹치면 지도 보이는 영역이 너무 좁아진다는 피드백
+  // (2026-08-24)으로 한 줄을 아낀다. 데스크톱은 기존처럼 해시태그 줄에
+  // 그대로 이어 붙인다.
   if (isMobileViewport()) {
-    const lineBreak = document.createElement("span");
-    lineBreak.className = "hashtag-bar-break";
-    lineBreak.setAttribute("aria-hidden", "true");
-    wrap.appendChild(lineBreak);
+    todayWrap.appendChild(todayChip);
+    todayWrap.appendChild(promptChip);
+  } else {
+    wrap.appendChild(todayChip);
+    wrap.appendChild(promptChip);
   }
 
   const allTags = Storage.getAllHashtagsWithCounts();
@@ -152,7 +157,7 @@ function renderHashtagChips() {
   // 기능 이전 기억이 많음) 조용히 아무것도 안 보여준다, 해시태그처럼 빈
   // 칩까지 노출할 이유는 없다(2026-08-19).
   const allSongs = Storage.getAllSongsWithCounts();
-  const songLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_SONG_LIMIT;
+  const songLimit = isMobileViewport() ? MOBILE_SONG_CHIP_LIMIT : CONFIG.TOP_SONG_LIMIT;
   const topSongs = allSongs.slice(0, songLimit);
   topSongs.forEach(({ artist, title }) => {
     const chip = document.createElement("button");

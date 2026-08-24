@@ -133,8 +133,15 @@
         </div>
       </div>
 
-      <!-- 전체 등록된 기억 수 — 워드마크 바로 아래, 숫자만 코랄 오렌지로 강조 -->
-      <div class="total-count-banner hidden" id="total-count-banner"></div>
+      <!-- 전체 등록된 기억 수 + "오늘의 기억/미션" 칩 — 모바일에서 미니
+           플레이어까지 겹쳐 뜨면 지도 보이는 영역이 너무 좁아진다는 피드백
+           (2026-08-24)으로 한 줄에 묶는다(모바일 전용, js/filters.js
+           renderHashtagChips 참고 — 데스크톱은 기존처럼 해시태그 줄에
+           그대로 붙는다). -->
+      <div class="today-row" id="today-row">
+        <div class="total-count-banner hidden" id="total-count-banner"></div>
+        <div class="hashtag-bar" id="today-mission-chips"></div>
+      </div>
       <!-- 해시태그 칩 (많이 쓰인 순 상위 5개 + 더보기) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
       <!-- 많이 등록된 곡 칩 — 해시태그와 같은 줄에 이어 붙이면 화면 폭에 따라
