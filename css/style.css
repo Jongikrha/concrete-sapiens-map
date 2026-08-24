@@ -1347,15 +1347,26 @@ body {
   pointer-events: none;
 }
 
-/* 기억 라디오(어딘가의 기억, scope="songs") 재생 중엔 지도를 밤처럼
-   어둡게(2026-08-19) — 기억산책(내 기억)에는 안 준다. 개인적인 산책과
+/* 기억 라디오(어딘가의 기억, scope="songs") 재생 중엔 지도를 그대로
+   어둡게 두는 대신 아예 다른 화면(별이 쏟아지는 밤하늘 사진)으로
+   덮는다(2026-08-24) — 기억산책(내 기억)에는 안 준다. 개인적인 산책과
    배경에 틀어놓는 라디오의 분위기를 다르게 두려는 의도(js/recall.js
-   enterRecallNightMode/exitRecallNightMode 참고). #map 위에 별도 dim
-   레이어를 덮으면 마커까지 통째로 흐려지는 문제가 있었던 전례가 있어
-   (위 #map 주석 참고), 같은 filter 기법을 밤 톤으로 더 강하게 준다 —
-   orange 마커는 상대적으로 여전히 도드라진다. */
+   enterRecallNightMode/exitRecallNightMode 참고). 지도는 그 뒤에서
+   계속 어둡게 필터만 걸어두고(이미지 로딩 실패 시 폴백), 사진은 지도와
+   하단 툴바/상단 오버레이(전부 z-index 20 이하, 회상 크롬 숨김으로
+   opacity:0)보다 위, 회상 카드(.recall-session, z-index:110)보다는
+   아래에 깐다. */
 .recall-radio-night #map {
   filter: saturate(0.25) brightness(0.4) contrast(1.15);
+}
+
+.recall-radio-night::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: url("../assets/memory-radio-night-sky.jpg") center/cover no-repeat;
+  pointer-events: none;
 }
 
 .tool-btn {
