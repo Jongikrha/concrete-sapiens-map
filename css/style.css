@@ -1587,8 +1587,14 @@ body {
   z-index: 91;
   background: var(--cs-paper);
   border-radius: var(--cs-radius-sheet) var(--cs-radius-sheet) 0 0;
+  /* #app 상단 주석과 같은 이유(iOS의 100vh는 자체 툴바가 접힌 최대
+     크기 기준이라, 실제 보이는 화면보다 커진다) — vh를 폴백으로 두고
+     dvh를 우선한다(2026-08-24, iPhone Chrome에서 카드가 화면을 거의
+     다 덮는다는 피드백으로 확인). */
   max-height: 65vh;
+  max-height: 65dvh;
   min-height: 40vh;
+  min-height: 40dvh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
@@ -3658,8 +3664,13 @@ button.story-place-line:hover {
     /* 어차피 카드가 열리면 해시태그/곡 칩은 아예 지워지니, 그 위 줄
        (총 기억 수 배너/오늘의 기억·미션 칩, .today-row)의 중간까지
        카드를 끌어올려도 된다는 피드백(2026-08-24) — 65vh → 88vh로 더
-       키운다. */
+       키운다. 이 88은 vh(iOS 툴바가 접힌 최대 크기 기준이라 실제
+       보이는 화면보다 큼) 대신 dvh(실제 보이는 화면 기준) 값이어야
+       의도한 위치에 온다 — vh만 있을 때 아이폰 Chrome에서 카드가 화면
+       거의 전체를 덮는다는 피드백으로 확인(2026-08-24, 위 #app 상단
+       주석과 같은 원인). */
     max-height: 88vh;
+    max-height: 88dvh;
   }
 }
 
@@ -3674,6 +3685,7 @@ button.story-place-line:hover {
     top: 50%;
     width: min(420px, 90vw);
     max-height: 72vh;
+    max-height: 72dvh;
     min-height: 0;
     border-radius: var(--cs-radius-sheet);
     transform: translate(-50%, -50%);
