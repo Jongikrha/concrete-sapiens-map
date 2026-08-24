@@ -23,6 +23,19 @@ const REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 
+// Story의 nullable 문자열 필드들 — updateStory에서 명시적 null을 보내면
+// AppSync가 "Unauthorized on [필드명]"으로 거부한다(Amplify Gen2 알려진 버그:
+// identityPool 규칙과 userPools 그룹 규칙을 함께 쓰는 모델에서, update
+// 뮤테이션에 nullable 필드를 null로 보내는 조합에서만 재현됨 — 값을 아예 안
+// 보내거나 실제 문자열을 보내면 문제없다. 실제 GraphQL 응답으로 재현·확인
+// 했다, 2026-08-24. 이 필드들은 전부 falsy 체크로만 쓰여서 빈 문자열도 null과
+// 동일하게 동작해 안전한 우회책이다 — updateStory가 서버로 나가기 직전에만
+// null → ""로 바꾼다).
+const NULLABLE_STRING_FIELDS = [
+  "placeId", "officialPlaceName", "address", "customName",
+  "youtubeUrl", "musicArtist", "musicTitle", "referenceDate",
+];
+
 // 기억 카드에 주소를 보여줄 때 시/도 풀네임을 축약 — 카카오 역지오코딩이
 // 반환하는 공식 행정구역명(예: "서울특별시")은 카드에선 장황해서 앞부분만
 // 짧게 바꾼다. 개명 이력이 있는 도(강원도→강원특별자치도, 전라북도→
@@ -200,7 +213,13 @@ const Storage = {
     if (!target) return null;
     Object.assign(target, fields);
     if (client) {
-      client.models.Story.update({ id: storyId, ...fields })
+      // 로컬 캐시(target)는 위에서 이미 null 그대로 반영했다 — 서버로 나가는
+      // 값만 NULLABLE_STRING_FIELDS 우회책을 적용한다(위 상수 주석 참고).
+      const wireFields = { ...fields };
+      NULLABLE_STRING_FIELDS.forEach((key) => {
+        if (wireFields[key] === null) wireFields[key] = "";
+      });
+      client.models.Story.update({ id: storyId, ...wireFields })
         .then(({ errors }) => {
           if (!errors) return;
           console.error("스토리 수정 실패(백그라운드)", storyId, errors);
