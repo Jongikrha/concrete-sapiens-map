@@ -649,12 +649,18 @@ body {
 /* 최근 7일 기억 로테이션 칩 — .chip 기본 틀(pill/blur/테두리)은 그대로
    쓰고, 안에서 3.2초마다(TITLE_CARD_AUTO_ADVANCE_MS와 같은 리듬) 문구만
    페이드로 바뀐다(js/filters.js renderMemoryTicker, 2026-08-25). */
+/* 다른 필터 칩과 같은 중립 톤이면 "지금 흐르고 있는 채널"이라는 느낌이
+   안 산다는 피드백(2026-08-25) — spot-banner--nearby("근처의 기억")와
+   같은 틸 틴트를 써서 정체성을 분리한다. 주황은 바로 옆 "기억 아카이브"
+   버튼이 이미 쓰고 있어 겹치면 CTA 우선순위가 흐려지므로 피한다. */
 .fade-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 220px;
   text-align: left;
+  background: rgba(61, 133, 119, 0.1);
+  border-color: var(--cs-teal);
 }
 
 .live-dot {
@@ -671,6 +677,11 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   animation: memoryTickerFade 3200ms ease-in-out;
+}
+
+.fade-chip-text b {
+  color: var(--cs-teal);
+  font-weight: 600;
 }
 
 @keyframes memoryTickerPulse {

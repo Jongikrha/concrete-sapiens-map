@@ -256,7 +256,7 @@ function showMemoryTickerItem() {
     customName: story.customName,
     address: story.address,
   });
-  textEl.textContent = `📍 ${title} · "${truncateForTicker(story.content, 16)}"`;
+  textEl.innerHTML = `<b>📍 ${escapeHtml(title)}</b> · "${escapeHtml(truncateForTicker(story.content, 16))}"`;
 
   // 애니메이션을 강제로 다시 재생시킨다 — 같은 이름의 keyframe이라
   // 클래스/속성을 그대로 두면 두 번째부터는 재생되지 않는다.
