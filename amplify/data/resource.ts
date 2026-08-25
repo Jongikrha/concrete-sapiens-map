@@ -108,6 +108,18 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 방문 통계에서 뺄 기기 ID 목록(어드민 전용, 2026-08-25) — 처음엔
+  // localStorage에만 뒀는데, 어드민이 데스크톱/모바일 등 브라우저를
+  // 바꿔가며 통계를 보면 그때마다 다시 등록해야 해서 백엔드로 옮겼다.
+  // 등록 자체는 여전히 "그 기기의 브라우저로 어드민 접속 → 화면에
+  // 표시된 자기 기기 ID를 제외 버튼으로 추가"하는 셀프서비스 흐름이고,
+  // 저장만 공유되어 어느 브라우저에서 통계를 보든 동일하게 반영된다.
+  AdminExcludedDevice: a
+    .model({
+      deviceId: a.string().required(),
+    })
+    .authorization((allow) => [allow.group('Admins')]),
+
   // 가벼운 퍼널 이벤트 로그 — "이맘때 기억" 노출/클릭, 작성 폼 시작/완료
   // 같은 지표를 세려고 추가(2026-08-21). PageView와 같은 write-only
   // 텔레메트리 패턴 — 게스트도 쓰기만, 관리자만 읽는다. type은 자유

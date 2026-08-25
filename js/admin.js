@@ -482,34 +482,17 @@ function computeReturningVisitRate(appEvents) {
   return total > 0 ? Math.round((returning / total) * 100) : 0;
 }
 
-// 어드민 본인(개발/테스트) 방문을 통계에서 빼기 위한 브라우저 기기 ID
-// 제외 목록 — 서버 저장 없이 이 브라우저의 localStorage에만 둔다(어드민마다
-// 자기 브라우저에서 한 번 등록하면 됨). PageView.deviceId와 짝을 이룬다
-// (2026-08-25, Story.authorDeviceId와 동일한 비식별 브라우저 ID 재사용).
-const EXCLUDED_DEVICES_KEY = "concrete_sapiens_admin_excluded_devices";
-
-function getExcludedDevices() {
-  try {
-    return JSON.parse(localStorage.getItem(EXCLUDED_DEVICES_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function setExcludedDevices(ids) {
-  localStorage.setItem(EXCLUDED_DEVICES_KEY, JSON.stringify(ids));
-}
-
 async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
   const allPageViews = await Storage.listPageViews();
   const appEvents = await Storage.listAppEvents();
   const myDeviceId = Storage.getDeviceId();
-  const excludedDevices = getExcludedDevices();
+  const excludedRecords = await Storage.listExcludedDevices();
+  const excludedDeviceIds = excludedRecords.map((r) => r.deviceId);
   // 방문 수 집계에서만 제외한다 — AppEvent는 deviceId가 없어 못 거르고,
   // 인기 기억 Top10(viewCount)도 별도 카운터라 범위 밖(2026-08-25).
-  const pageViews = allPageViews.filter((pv) => !excludedDevices.includes(pv.deviceId));
+  const pageViews = allPageViews.filter((pv) => !excludedDeviceIds.includes(pv.deviceId));
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
   const funnelHtml = buildFunnelHtml(appEvents);
@@ -537,11 +520,11 @@ async function renderVisitsTab() {
     )
     .join("");
 
-  const excludedChipsHtml = excludedDevices.length
-    ? excludedDevices
+  const excludedChipsHtml = excludedRecords.length
+    ? excludedRecords
         .map(
-          (id) =>
-            `<span class="banned-word-chip" title="${escapeHtml(id)}">${escapeHtml(id.slice(0, 8))}…<button data-exclude-id="${escapeHtml(id)}">✕</button></span>`
+          (r) =>
+            `<span class="banned-word-chip" title="${escapeHtml(r.deviceId)}">${escapeHtml(r.deviceId.slice(0, 8))}…<button data-exclude-record-id="${escapeHtml(r.id)}">✕</button></span>`
         )
         .join("")
     : `<p class="empty-state">제외 중인 기기가 없습니다.</p>`;
@@ -571,19 +554,18 @@ async function renderVisitsTab() {
     ${eventCountsHtml}
   `;
 
-  document.getElementById("excluded-device-form").addEventListener("submit", (e) => {
+  document.getElementById("excluded-device-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const input = document.getElementById("excluded-device-input");
-    const id = input.value.trim();
-    if (!id) return;
-    const current = getExcludedDevices();
-    if (!current.includes(id)) setExcludedDevices([...current, id]);
+    const deviceId = input.value.trim();
+    if (!deviceId || excludedDeviceIds.includes(deviceId)) return;
+    await Storage.addExcludedDevice(deviceId);
     renderVisitsTab();
   });
 
-  document.querySelectorAll("[data-exclude-id]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setExcludedDevices(getExcludedDevices().filter((id) => id !== btn.dataset.excludeId));
+  document.querySelectorAll("[data-exclude-record-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await Storage.removeExcludedDevice(btn.dataset.excludeRecordId);
       renderVisitsTab();
     });
   });

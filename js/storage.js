@@ -401,6 +401,24 @@ const Storage = {
   },
 
   /**
+   * 관리자 전용 — 방문 통계에서 뺄 기기 ID 목록. 브라우저(localStorage)가
+   * 아니라 백엔드에 저장해서, 데스크톱/모바일 등 어느 브라우저로 통계를
+   * 보든 동일하게 반영된다(2026-08-25).
+   */
+  async listExcludedDevices() {
+    return fetchAll("AdminExcludedDevice");
+  },
+
+  async addExcludedDevice(deviceId) {
+    const created = await client.models.AdminExcludedDevice.create({ deviceId });
+    return created.data;
+  },
+
+  async removeExcludedDevice(id) {
+    await client.models.AdminExcludedDevice.delete({ id });
+  },
+
+  /**
    * 로그인한 사용자가 글을 남길 때 storyId ↔ 계정(userId/email) 연결을
    * 기록한다. PageView와 같은 write-only 텔레메트리 — 실패해도 글 작성
    * 자체엔 영향 없으니 fire-and-forget.
