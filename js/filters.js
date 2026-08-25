@@ -77,6 +77,11 @@ function isMobileViewport() {
 // 해시태그 칩 렌더링 ("오늘의 기억"/"오늘의 미션" + 상위 N개 + 더보기)
 // ------------------------------------------------------------
 function renderHashtagChips() {
+  // 최근 7일 로테이션 칩은 해시태그/연도/곡 필터와 무관하게 항상 최신
+  // 상태로 맞춘다 — 아래 필터 활성 시 조기 return과 별개로 맨 위에서 먼저
+  // 처리한다.
+  renderMemoryTicker();
+
   const wrap = document.getElementById("hashtag-chips");
   const songWrap = document.getElementById("song-chips");
   const todayWrap = document.getElementById("today-mission-chips");
@@ -158,6 +163,82 @@ function renderHashtagChips() {
   }
 
   renderMemoryArchiveEntry();
+}
+
+// ------------------------------------------------------------
+// 최근 7일 기억 로테이션 칩 — "왜 써야 하는지"에 확률형 약속 대신 확정적
+// 신호(실제로 사람들이 계속 쓰고 있다)를 주려는 목적(2026-08-25, 전광판
+// 시안 중 B안 — 스크롤 대신 타이틀 카드와 같은 페이드 방식을 골랐다.
+// 흐르는 전광판은 새 줄이 필요해 지도가 가려지고, 무거운 개인사 글에는
+// 계속 움직이는 연출이 산만하다는 판단).
+// ------------------------------------------------------------
+const MEMORY_TICKER_WINDOW_DAYS = 7;
+const MEMORY_TICKER_ROTATE_MS = 3200; // js/app.js TITLE_CARD_AUTO_ADVANCE_MS와 같은 리듬
+let memoryTickerItems = [];
+let memoryTickerIndex = 0;
+let memoryTickerTimer = null;
+
+function getRecentTickerStories() {
+  const cutoff = Date.now() - MEMORY_TICKER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return Storage.getVisibleStories()
+    .filter((s) => new Date(s.createdAt).getTime() >= cutoff)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function renderMemoryTicker() {
+  const el = document.getElementById("memory-ticker");
+  if (!el) return;
+
+  clearInterval(memoryTickerTimer);
+  memoryTickerTimer = null;
+  memoryTickerItems = getRecentTickerStories();
+
+  if (memoryTickerItems.length === 0) {
+    el.classList.add("hidden");
+    return;
+  }
+
+  el.classList.remove("hidden");
+  el.onclick = () => {
+    const story = memoryTickerItems[memoryTickerIndex];
+    if (story) navigateToStoryFromList(story.id);
+  };
+  memoryTickerIndex = 0;
+  showMemoryTickerItem();
+
+  if (memoryTickerItems.length > 1) {
+    memoryTickerTimer = setInterval(() => {
+      memoryTickerIndex = (memoryTickerIndex + 1) % memoryTickerItems.length;
+      showMemoryTickerItem();
+    }, MEMORY_TICKER_ROTATE_MS);
+  }
+}
+
+function showMemoryTickerItem() {
+  const textEl = document.getElementById("memory-ticker-text");
+  const story = memoryTickerItems[memoryTickerIndex];
+  if (!textEl || !story) return;
+
+  const title = Storage.getGroupTitle({
+    placeId: story.placeId,
+    officialPlaceName: story.officialPlaceName,
+    customName: story.customName,
+    address: story.address,
+  });
+  textEl.textContent = `📍 ${title} · "${truncateForTicker(story.content, 16)}"`;
+
+  // 애니메이션을 강제로 다시 재생시킨다 — 같은 이름의 keyframe이라
+  // 클래스/속성을 그대로 두면 두 번째부터는 재생되지 않는다.
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    textEl.style.animation = "none";
+    void textEl.offsetWidth;
+    textEl.style.animation = "";
+  }
+}
+
+function truncateForTicker(text, limit) {
+  const trimmed = text.trim();
+  return trimmed.length > limit ? `${trimmed.slice(0, limit)}…` : trimmed;
 }
 
 /**

@@ -144,6 +144,14 @@
       <div class="today-row" id="today-row">
         <button type="button" class="chip memory-archive-entry hidden" id="memory-archive-entry">기억 아카이브</button>
         <div class="hashtag-bar" id="today-mission-chips"></div>
+        <!-- 최근 7일 기억을 타이틀 카드와 같은 리듬(3.2초)으로 조용히
+             돌려 보여주는 칩 — 새 줄을 쓰지 않고 이 줄 안에서만 자리를
+             차지한다(js/filters.js renderMemoryTicker, 2026-08-25 시안
+             B안 확정). 최근 글이 없으면 hidden 유지. -->
+        <button type="button" class="chip fade-chip hidden" id="memory-ticker">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="fade-chip-text" id="memory-ticker-text"></span>
+        </button>
       </div>
       <!-- 해시태그 칩 (많이 쓰인 순 상위 5개 + 더보기) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
