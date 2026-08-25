@@ -14,7 +14,7 @@ const CONFIG = {
   MAX_CONTENT_LENGTH: 200,
 
   // WHERE(장소 이름) 최대 글자 수 — 공백은 세지 않는다.
-  MAX_PLACE_NAME_LENGTH: 10,
+  MAX_PLACE_NAME_LENGTH: 15,
 
   // 상단 해시태그 바에 노출할 개수 (많이 쓰인 순 상위 N개) — 나머지는
   // 더보기 시트로.
