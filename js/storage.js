@@ -371,7 +371,7 @@ const Storage = {
    */
   logPageView(storyId) {
     if (!client) return;
-    client.models.PageView.create({ storyId: storyId || null })
+    client.models.PageView.create({ storyId: storyId || null, deviceId: this.getDeviceId() })
       .catch((e) => console.error("방문 로그 기록 실패", e));
   },
 

@@ -482,11 +482,34 @@ function computeReturningVisitRate(appEvents) {
   return total > 0 ? Math.round((returning / total) * 100) : 0;
 }
 
+// 어드민 본인(개발/테스트) 방문을 통계에서 빼기 위한 브라우저 기기 ID
+// 제외 목록 — 서버 저장 없이 이 브라우저의 localStorage에만 둔다(어드민마다
+// 자기 브라우저에서 한 번 등록하면 됨). PageView.deviceId와 짝을 이룬다
+// (2026-08-25, Story.authorDeviceId와 동일한 비식별 브라우저 ID 재사용).
+const EXCLUDED_DEVICES_KEY = "concrete_sapiens_admin_excluded_devices";
+
+function getExcludedDevices() {
+  try {
+    return JSON.parse(localStorage.getItem(EXCLUDED_DEVICES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function setExcludedDevices(ids) {
+  localStorage.setItem(EXCLUDED_DEVICES_KEY, JSON.stringify(ids));
+}
+
 async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
-  const pageViews = await Storage.listPageViews();
+  const allPageViews = await Storage.listPageViews();
   const appEvents = await Storage.listAppEvents();
+  const myDeviceId = Storage.getDeviceId();
+  const excludedDevices = getExcludedDevices();
+  // 방문 수 집계에서만 제외한다 — AppEvent는 deviceId가 없어 못 거르고,
+  // 인기 기억 Top10(viewCount)도 별도 카운터라 범위 밖(2026-08-25).
+  const pageViews = allPageViews.filter((pv) => !excludedDevices.includes(pv.deviceId));
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
   const funnelHtml = buildFunnelHtml(appEvents);
@@ -514,7 +537,23 @@ async function renderVisitsTab() {
     )
     .join("");
 
+  const excludedChipsHtml = excludedDevices.length
+    ? excludedDevices
+        .map(
+          (id) =>
+            `<span class="banned-word-chip" title="${escapeHtml(id)}">${escapeHtml(id.slice(0, 8))}…<button data-exclude-id="${escapeHtml(id)}">✕</button></span>`
+        )
+        .join("")
+    : `<p class="empty-state">제외 중인 기기가 없습니다.</p>`;
+
   document.getElementById("admin-content").innerHTML = `
+    <div class="admin-section-title">내 방문 제외</div>
+    <p class="empty-state">이 브라우저 기기 ID: <code>${escapeHtml(myDeviceId)}</code> — 아래에 추가하면 방문 수 집계에서 빠집니다.</p>
+    <form class="banned-word-form" id="excluded-device-form">
+      <input type="text" id="excluded-device-input" placeholder="제외할 기기 ID" value="${escapeHtml(myDeviceId)}" />
+      <button type="submit" class="btn-primary">제외</button>
+    </form>
+    <div>${excludedChipsHtml}</div>
     <div class="admin-section-title">방문 현황</div>
     <div class="stat-row">
       <div class="stat-tile"><div class="num">${pageViews.length}</div><div class="label">전체 방문 수</div></div>
@@ -531,6 +570,23 @@ async function renderVisitsTab() {
     <div class="admin-section-title">그 외 이벤트</div>
     ${eventCountsHtml}
   `;
+
+  document.getElementById("excluded-device-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("excluded-device-input");
+    const id = input.value.trim();
+    if (!id) return;
+    const current = getExcludedDevices();
+    if (!current.includes(id)) setExcludedDevices([...current, id]);
+    renderVisitsTab();
+  });
+
+  document.querySelectorAll("[data-exclude-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setExcludedDevices(getExcludedDevices().filter((id) => id !== btn.dataset.excludeId));
+      renderVisitsTab();
+    });
+  });
 }
 
 /**

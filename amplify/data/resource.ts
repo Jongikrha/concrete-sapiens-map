@@ -96,6 +96,11 @@ const schema = a.schema({
   PageView: a
     .model({
       storyId: a.string(), // ?story=로 특정 기억을 보고 들어온 경우만 채움
+      // 어드민이 자기 자신(개발/테스트) 방문을 통계에서 빼려고 추가
+      // (2026-08-25). Story.authorDeviceId와 동일한 비식별 브라우저 ID —
+      // 진짜 신원 아님, 어드민 집계 필터링 용도로만 예외 허용
+      // ([[feedback_identity_never_device_based]] 참고).
+      deviceId: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
