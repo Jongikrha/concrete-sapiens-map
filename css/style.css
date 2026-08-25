@@ -901,55 +901,83 @@ body {
 }
 
 /* ------------------------------------------------------------
-   하루 1번 뜨는 추천 기억 카드 — 모달이 아니라 지도 위 흐름
-   (map-overlay-top)에 자연스럽게 얹혀서, 지도는 그대로 조작 가능하고
-   ✕로 무시할 수 있다(2026-08-25).
+   하루 1번 뜨는 "타이틀 카드" — 영화 오프닝처럼 화면 전체를 짧게
+   채우는 장면(2026-08-25). map-overlay-top(z-index:20)이나 .overlay
+   (z-index:100)보다 위에 떠야 해서 별도로 더 높은 z-index를 쓴다.
+   전체가 클릭 영역(탭하면 바로 그 장소로 이동)이라 dismiss 버튼이
+   따로 없다 — 잠시 기다리면 자동으로도 넘어간다.
    ------------------------------------------------------------ */
-.featured-story-teaser {
-  position: relative;
-  width: min(92%, 380px);
-  animation: featuredTeaserIn 320ms ease;
-}
-
-.featured-story-teaser .recent-item {
-  margin: 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.featured-teaser-question {
-  margin: 0 0 6px;
-  padding-right: 28px;
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--cs-orange);
-}
-
-.featured-teaser-dismiss {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-  color: #777;
-  font-size: 12px;
-  line-height: 1;
+.title-card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: #14120f;
   cursor: pointer;
-  z-index: 1;
+  opacity: 1;
+  transition: opacity 380ms ease;
 }
 
-@keyframes featuredTeaserIn {
+.title-card-overlay.hidden {
+  display: none;
+}
+
+.title-card-overlay--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.title-card-content {
+  max-width: 480px;
+  text-align: center;
+  animation: titleCardIn 900ms ease;
+}
+
+.title-card-place {
+  margin: 0 0 18px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 243, 239, 0.55);
+}
+
+.title-card-quote {
+  margin: 0;
+  font-family: var(--font-maruburi);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--cs-paper);
+}
+
+.title-card-hint {
+  margin: 36px 0 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: rgba(244, 243, 239, 0.45);
+  opacity: 0;
+  animation: titleCardHintIn 500ms ease 1600ms forwards;
+}
+
+@keyframes titleCardIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes titleCardHintIn {
+  to {
+    opacity: 1;
   }
 }
 

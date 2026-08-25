@@ -133,13 +133,6 @@
         </div>
       </div>
 
-      <!-- 하루 1번, 반응 많은 기억 하나를 지도 위에 살짝 띄운다(모달
-           아님 — 지도는 그대로 조작 가능하고 ✕로 무시할 수 있다). 웰컴
-           모달과 달리 매일 다시 뜨되 화면을 막지 않는다(js/app.js
-           maybeShowFeaturedStoryTeaser, 2026-08-25 — "근처 기억 토스트"
-           반복 노출 피로 전례 때문에 이 형태로 설계). -->
-      <div class="featured-story-teaser hidden" id="featured-story-teaser"></div>
-
       <!-- 전체 등록된 기억 수 + "오늘의 기억/미션" 칩 — 모바일에서 미니
            플레이어까지 겹쳐 뜨면 지도 보이는 영역이 너무 좁아진다는 피드백
            (2026-08-24)으로 한 줄에 묶는다(모바일 전용, js/filters.js
@@ -278,6 +271,14 @@
          맥락이 있어 안 띄운다. -->
     <div class="overlay hidden" id="welcome-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="welcome-panel"></div></div>
+    </div>
+
+    <!-- 하루 1번, 영화 오프닝 타이틀처럼 화면 전체를 짧게 채우는 장면
+         (js/app.js maybeShowTitleCard, 2026-08-25) — 로고/버튼 없이 실제
+         기억 한 줄만 보여주고, 탭하거나 잠시 기다리면 그 장소로 카메라가
+         이동하며 카드가 열린다. 웰컴 모달을 이미 본 사람에게만 뜬다. -->
+    <div class="title-card-overlay hidden" id="title-card-overlay">
+      <div class="title-card-content" id="title-card-content"></div>
     </div>
 
     <!-- 기능 안내 투어(검색창 옆 "?" 버튼, js/helpTour.js, 2026-08-21) —
