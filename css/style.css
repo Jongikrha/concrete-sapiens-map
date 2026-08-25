@@ -576,6 +576,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   column-gap: 10px;
   row-gap: 4px;
   pointer-events: none;
@@ -598,6 +599,7 @@ body {
 .hashtag-bar {
   width: 100%;
   display: flex;
+  justify-content: flex-start;
   column-gap: 6px;
   row-gap: 4px;
   flex-wrap: wrap;
