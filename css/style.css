@@ -651,8 +651,9 @@ body {
    페이드로 바뀐다(js/filters.js renderMemoryTicker, 2026-08-25). */
 /* 다른 필터 칩과 같은 중립 톤이면 "지금 흐르고 있는 채널"이라는 느낌이
    안 산다는 피드백(2026-08-25) — spot-banner--nearby("근처의 기억")와
-   같은 틸 틴트를 써서 정체성을 분리한다. 주황은 바로 옆 "기억 아카이브"
-   버튼이 이미 쓰고 있어 겹치면 CTA 우선순위가 흐려지므로 피한다. */
+   같은 틸 틴트를 배경/테두리에 써서 정체성을 분리한다. 안의 점·장소명은
+   반대로 주황(생동감 액센트) — 여러 차례 조정 끝에(2026-08-25) 칩
+   컨테이너는 틸, "지금 활성" 신호(점/글자)는 주황으로 역할을 나눴다. */
 .fade-chip {
   display: inline-flex;
   align-items: center;
@@ -663,9 +664,6 @@ body {
   border-color: var(--cs-teal);
 }
 
-/* 점(live)과 📍(장소) 둘 다 마커라 겹쳐 보인다는 피드백(2026-08-25) —
-   장소 이모지는 빼고(아래 js), 점은 "지금 켜져 있다"는 신호로 주황(생동감
-   있는 액센트)을 쓴다. 칩 배경/테두리는 틸을 유지해 채널 정체성은 그대로. */
 .live-dot {
   flex-shrink: 0;
   width: 6px;
@@ -683,7 +681,7 @@ body {
 }
 
 .fade-chip-text b {
-  color: var(--cs-teal);
+  color: var(--cs-orange);
   font-weight: 600;
 }
 
