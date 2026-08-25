@@ -240,6 +240,9 @@ function renderMemoryArchiveEntry() {
     el.classList.add("hidden");
     return;
   }
+  // 모바일에서 기억 티커까지 한 줄에 넣으려고 라벨을 줄인다(2026-08-25) —
+  // js/filters.js의 "오늘의 미션"/"이맘때 기억" 칩도 같은 이유로 같이 줄임.
+  el.textContent = isMobileViewport() ? "아카이브" : "기억 아카이브";
   el.classList.remove("hidden");
 }
 

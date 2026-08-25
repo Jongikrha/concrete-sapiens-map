@@ -113,7 +113,11 @@ function renderHashtagChips() {
   // "이맘때 예전 기억"이 있으면 평소 로테이션 라벨 대신 이걸 먼저 보여준다
   // — 클릭했을 때 열리는 내용(openTodayMission)도 이 판단과 똑같은
   // 기준(getEligibleThrowbackStory)을 다시 거쳐서 라벨과 항상 일치한다.
-  promptChip.textContent = getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션";
+  // 모바일에서는 기억 아카이브 칩 + 이 칩 + 기억 티커가 한 줄에 다 들어가게
+  // 라벨을 줄인다(2026-08-25, js/app.js renderMemoryArchiveEntry도 동일).
+  promptChip.textContent = isMobileViewport()
+    ? (getEligibleThrowbackStory() ? "이맘때" : "미션")
+    : (getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션");
   promptChip.onclick = openTodayMission;
 
   // "기억 아카이브" 버튼 옆(today-mission-chips, index.html의 .today-row)에
