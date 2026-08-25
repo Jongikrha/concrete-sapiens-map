@@ -177,12 +177,27 @@ const MEMORY_TICKER_ROTATE_MS = 3200; // js/app.js TITLE_CARD_AUTO_ADVANCE_MS와
 let memoryTickerItems = [];
 let memoryTickerIndex = 0;
 let memoryTickerTimer = null;
+// 처음엔 최근 7일로 시작하고, 그 안의 기억을 한 바퀴 다 보여주면(=한 번
+// 순환) 7일씩 창을 넓혀 더 오래된 기억도 섞는다 — "최근 것부터, 다
+// 보여줬으면 예전 것도"라는 요청(2026-08-25). 새로 렌더될 때(새 글 작성,
+// 필터 변경 등)는 다시 7일로 리셋해 항상 최신을 우선 보여준다.
+let memoryTickerWindowDays = MEMORY_TICKER_WINDOW_DAYS;
 
-function getRecentTickerStories() {
-  const cutoff = Date.now() - MEMORY_TICKER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  return Storage.getVisibleStories()
-    .filter((s) => new Date(s.createdAt).getTime() >= cutoff)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+function getRecentTickerStories(windowDays) {
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  return Storage.getVisibleStories().filter((s) => new Date(s.createdAt).getTime() >= cutoff);
+}
+
+// Fisher-Yates — 최신순으로 두면 항상 같은 한두 개만 자주 보여서, 노출
+// 순서를 매 렌더마다 섞는다(2026-08-25, "이왕이면 순서보다 랜덤"이라는
+// 피드백). 어떤 글이 최근 7일 안인지(필터링) 자체는 순서와 무관하다.
+function shuffleTickerItems(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 function renderMemoryTicker() {
@@ -191,7 +206,8 @@ function renderMemoryTicker() {
 
   clearInterval(memoryTickerTimer);
   memoryTickerTimer = null;
-  memoryTickerItems = getRecentTickerStories();
+  memoryTickerWindowDays = MEMORY_TICKER_WINDOW_DAYS;
+  memoryTickerItems = shuffleTickerItems(getRecentTickerStories(memoryTickerWindowDays));
 
   if (memoryTickerItems.length === 0) {
     el.classList.add("hidden");
@@ -206,12 +222,27 @@ function renderMemoryTicker() {
   memoryTickerIndex = 0;
   showMemoryTickerItem();
 
-  if (memoryTickerItems.length > 1) {
-    memoryTickerTimer = setInterval(() => {
-      memoryTickerIndex = (memoryTickerIndex + 1) % memoryTickerItems.length;
-      showMemoryTickerItem();
-    }, MEMORY_TICKER_ROTATE_MS);
+  // 하나뿐이어도 타이머는 계속 둔다 — 매 틱마다 "한 바퀴 다 돌았다"로
+  // 치고 더 오래된 기억이 있는지 확인해야, 글이 하나뿐인 동네에서도
+  // 시간이 지나면 다른 기억으로 넓혀갈 수 있다.
+  memoryTickerTimer = setInterval(advanceMemoryTicker, MEMORY_TICKER_ROTATE_MS);
+}
+
+function advanceMemoryTicker() {
+  if (memoryTickerIndex + 1 >= memoryTickerItems.length) {
+    growMemoryTickerPool();
   }
+  memoryTickerIndex = (memoryTickerIndex + 1) % memoryTickerItems.length;
+  showMemoryTickerItem();
+}
+
+// 창을 다 썼는데 더 보여줄 기억이 남아있으면(전체 방문 가능한 기억보다
+// 적으면) 7일씩 넓혀서 다시 섞는다. 이미 전부 보여주고 있으면 그대로 둔다.
+function growMemoryTickerPool() {
+  const totalVisible = Storage.getVisibleStories().length;
+  if (memoryTickerItems.length >= totalVisible) return;
+  memoryTickerWindowDays += MEMORY_TICKER_WINDOW_DAYS;
+  memoryTickerItems = shuffleTickerItems(getRecentTickerStories(memoryTickerWindowDays));
 }
 
 function showMemoryTickerItem() {
