@@ -663,12 +663,15 @@ body {
   border-color: var(--cs-teal);
 }
 
+/* 점(live)과 📍(장소) 둘 다 마커라 겹쳐 보인다는 피드백(2026-08-25) —
+   장소 이모지는 빼고(아래 js), 점은 "지금 켜져 있다"는 신호로 주황(생동감
+   있는 액센트)을 쓴다. 칩 배경/테두리는 틸을 유지해 채널 정체성은 그대로. */
 .live-dot {
   flex-shrink: 0;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--cs-teal);
+  background: var(--cs-orange);
   animation: memoryTickerPulse 2.6s ease-in-out infinite;
 }
 

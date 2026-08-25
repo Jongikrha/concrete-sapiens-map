@@ -256,7 +256,10 @@ function showMemoryTickerItem() {
     customName: story.customName,
     address: story.address,
   });
-  textEl.innerHTML = `<b>📍 ${escapeHtml(title)}</b> · "${escapeHtml(truncateForTicker(story.content, 16))}"`;
+  // 장소 핀(📍)은 옆의 live-dot과 마커가 두 개로 겹쳐 보인다는 피드백
+  // (2026-08-25) — 대신 작성 폼 헤더(composer.js)와 같은 🚩를 써서 "여기
+  // 기억이 남겨졌다"는 의미로 통일했다.
+  textEl.innerHTML = `<b>🚩 ${escapeHtml(title)}</b> · "${escapeHtml(truncateForTicker(story.content, 16))}"`;
 
   // 애니메이션을 강제로 다시 재생시킨다 — 같은 이름의 keyframe이라
   // 클래스/속성을 그대로 두면 두 번째부터는 재생되지 않는다.
