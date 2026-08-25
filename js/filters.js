@@ -111,16 +111,10 @@ function renderHashtagChips() {
   promptChip.textContent = getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션";
   promptChip.onclick = openTodayMission;
 
-  // 모바일은 이 칩을 해시태그 줄에서 빼서 "기억 아카이브" 버튼 옆
-  // (today-mission-chips, index.html의 .today-row)으로 옮긴다 — 미니
-  // 플레이어까지 겹치면 지도 보이는 영역이 너무 좁아진다는 피드백
-  // (2026-08-24)으로 한 줄을 아낀다. 데스크톱은 기존처럼 해시태그 줄에
-  // 그대로 이어 붙인다.
-  if (isMobileViewport()) {
-    todayWrap.appendChild(promptChip);
-  } else {
-    wrap.appendChild(promptChip);
-  }
+  // "기억 아카이브" 버튼 옆(today-mission-chips, index.html의 .today-row)에
+  // 붙인다 — 모바일/데스크톱 모두 같은 자리(2026-08-25, 예전엔 모바일만
+  // 여기로 옮기고 데스크톱은 해시태그 줄에 있었는데 요청으로 통일).
+  todayWrap.appendChild(promptChip);
 
   const allTags = Storage.getAllHashtagsWithCounts();
   const tagLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_HASHTAG_LIMIT;
