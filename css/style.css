@@ -650,18 +650,19 @@ body {
    쓰고, 안에서 3.2초마다(TITLE_CARD_AUTO_ADVANCE_MS와 같은 리듬) 문구만
    페이드로 바뀐다(js/filters.js renderMemoryTicker, 2026-08-25). */
 /* 다른 필터 칩과 같은 중립 톤이면 "지금 흐르고 있는 채널"이라는 느낌이
-   안 산다는 피드백(2026-08-25) — spot-banner--nearby("근처의 기억")와
-   같은 틸 틴트를 배경/테두리에 써서 정체성을 분리한다. 안의 점·장소명은
-   반대로 주황(생동감 액센트) — 여러 차례 조정 끝에(2026-08-25) 칩
-   컨테이너는 틸, "지금 활성" 신호(점/글자)는 주황으로 역할을 나눴다. */
+   안 산다는 피드백(2026-08-25) — 틸+주황 조합은 보색이라 탁하게 부딪힌다는
+   피드백으로, spot-banner--song과 같은 --cs-memory-core(테라코타) 틴트로
+   바꿨다. 지도 위 "기억의 빛" 점과 같은 색이라 "이 기억에 불이 켜졌다"는
+   은유가 자연스럽게 이어진다 — 안의 점·장소명은 그대로 비비드 주황
+   (생동감 액센트)이라 배경과 같은 계열이면서도 더 밝게 도드라진다. */
 .fade-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 220px;
   text-align: left;
-  background: rgba(61, 133, 119, 0.1);
-  border-color: var(--cs-teal);
+  background: rgba(201, 87, 61, 0.1);
+  border-color: var(--cs-memory-core);
 }
 
 .live-dot {
