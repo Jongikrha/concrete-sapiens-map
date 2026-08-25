@@ -138,6 +138,26 @@ function openComposer(pin) {
     ? `<div class="field-hint">장소 이름을 기본으로 채워뒀어요. 다른 사람이 알아보기 쉽도록 자유롭게 고쳐 써보세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
     : "";
 
+  // "빈 곳에 혼자 쓴다"는 느낌을 줄이려는 소셜 프루프 — 정확히 같은
+  // 장소(placeId 또는 좌표)에 이미 기억이 있으면 그 개수를, 없으면 도보
+  // 거리(storySheet.js NEARBY_STORIES_RADIUS_METERS와 동일한 반경)의
+  // 기억 개수를 보여준다. 수정 모드는 자기 자신이 이미 그 장소의
+  // 기억이라 카운트가 왜곡되므로 건너뛴다(2026-08-25).
+  const placeProofHtml = editing ? "" : (() => {
+    // getStoriesAtSamePlace는 story.id로 자기 자신을 제외하는데, pin은
+    // 아직 저장 전이라 id가 없다 — 제외할 대상이 없으므로 그대로 써도
+    // "이 장소의 기존 기억 전부"가 정확히 나온다.
+    const sameSpotCount = Storage.getStoriesAtSamePlace(pin).length;
+    if (sameSpotCount > 0) {
+      return `<div class="field-hint field-hint--proof">이미 이 장소에 남겨진 기억이 ${sameSpotCount}개 있어요.</div>`;
+    }
+    const nearbyCount = Storage.getStoriesNear(pin.lat, pin.lng, NEARBY_STORIES_RADIUS_METERS).length;
+    if (nearbyCount > 0) {
+      return `<div class="field-hint field-hint--proof">이 근처엔 이미 ${nearbyCount}개의 기억이 남아있어요.</div>`;
+    }
+    return `<div class="field-hint field-hint--proof">이 장소의 첫 기억이 되어보세요.</div>`;
+  })();
+
   const whereHtml = `
     <div class="input-with-icon">
       <span class="input-icon">${pin.isFreePin ? "✏️" : "🔍"}</span>
@@ -146,6 +166,7 @@ function openComposer(pin) {
     <div class="char-count"><span id="place-name-char-count-num">${nonSpaceLength(nameValue)}</span> / ${CONFIG.MAX_PLACE_NAME_LENGTH} (공백 제외)</div>
     ${nameHint}
     <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
+    ${placeProofHtml}
   `;
 
   let dateMode = editing ? editing.dateMode : "past";
@@ -222,6 +243,7 @@ function openComposer(pin) {
     </div>
     <input type="text" id="input-author" class="input-field ${authorMode !== "custom" ? "hidden" : ""}" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" value="${escapeHtml(initialAuthorName)}" />
     <div class="field-hint">당신의 이름은 지도에 공개되지 않아요.</div>
+    ${editing ? "" : `<div class="field-hint field-hint--proof">누군가 이 기억에 공감(♡)하면, 알림으로 알려드릴게요.</div>`}
 
     <button class="btn-primary" id="btn-submit">${editing ? "수정 완료" : "기억 남기기"}</button>
   `;
@@ -557,7 +579,10 @@ function openComposer(pin) {
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
-    if (group) openSheet(group);
+    // 방금 남긴 기억에만 "이렇게 다시 만나질 수 있어요" 배너를 보여준다
+    // (js/storySheet.js renderStoryItem) — 수정 모드는 이미 알고 쓰는
+    // 재확인일 뿐이라 새로 설득할 필요가 없어 제외한다.
+    if (group) openSheet(group, editing ? {} : { justPostedStoryId: story.id });
   };
 
   document.getElementById("composer-overlay").classList.remove("hidden");

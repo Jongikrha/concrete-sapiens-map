@@ -23,6 +23,11 @@ let sheetReturnTo = null;
 // 목록에서 클릭한 그 기억을 카드 안에서 스크롤+하이라이트로 짚어주기
 // 위한 1회성 상태 — 렌더 후 바로 소비하고 비운다.
 let sheetHighlightStoryId = null;
+// 방금 작성 폼에서 막 남긴 기억의 id(js/composer.js에서 openSheet 호출
+// 시 넘겨줌) — sheetHighlightStoryId와 달리 정렬 토글 등으로 시트가
+// 재렌더돼도 배너가 계속 보여야 해서 렌더 시점에 소비하지 않고, 시트를
+// 완전히 닫을 때(closeSheet)만 비운다.
+let sheetJustPostedStoryId = null;
 
 // 지금 미니 플레이어(#mini-player)에서 재생 중인 유튜브 video ID —
 // 카드 썸네일의 재생/정지 아이콘을 그리는 기준이기도 하다(renderYoutubeEmbed).
@@ -127,6 +132,7 @@ function openSheet(group, options = {}) {
   currentSort = "latest";
   sheetReturnTo = options.returnTo || null;
   sheetHighlightStoryId = options.highlightStoryId || null;
+  sheetJustPostedStoryId = options.justPostedStoryId || null;
   // scrollIntoView를 걸려면 시트가 먼저 화면에 붙어(display 전환) 레이아웃을
   // 가진 상태여야 한다 — renderSheetContent(내부에서 스크롤 처리)보다
   // hidden 해제가 먼저 와야 한다.
@@ -146,6 +152,7 @@ function closeSheet() {
   document.getElementById("sheet-backdrop").classList.add("hidden");
   document.getElementById("bottom-sheet").classList.add("hidden");
   sheetOpen = false;
+  sheetJustPostedStoryId = null;
   // 유튜브 재생은 시트 안이 아니라 미니 플레이어(#mini-player)에서 이뤄져서
   // (아래 playMiniPlayerVideo 참고) 시트를 닫아도 끊기지 않는다 — 지도를
   // 돌아다니면서 계속 들을 수 있게 한 게 의도다(2026-08-18). 끄고 싶으면
@@ -801,6 +808,9 @@ function renderStoryItem(story, options = {}) {
         </div>
       </div>
       ${story.customName ? `<p class="story-custom-name">${escapeHtml(authorNameWithHonorific)}이 이곳을 '${escapeHtml(story.customName)}'이라고 부릅니다</p>` : ""}
+      ${story.id === sheetJustPostedStoryId
+        ? `<p class="story-just-posted-caption">방금 남긴 기억이에요 — ${story.dateMode === "past" ? "이 근처를 지나가거나 같은 해를 고른" : "이 근처를 지나가는"} 누군가에게 나타날 수 있어요</p>`
+        : ""}
       ${tagsHtml ? `<div class="story-tags">${tagsHtml}</div>` : ""}
       ${overlapCount > 0 ? `<p class="story-overlap-caption">같은 해의 기억이 이곳에 ${overlapCount}개 더 있어요</p>` : ""}
 

@@ -1846,6 +1846,31 @@ body {
   color: var(--cs-orange);
 }
 
+/* 방금 남긴 기억을 시트를 여는 순간 바로 보여줄 때만 뜨는 배너 —
+   "왜 썼는지"에 대한 확답을 제출 직후 카드 안에서 바로 준다
+   (js/composer.js justPostedStoryId → js/storySheet.js, 2026-08-25).
+   overlap-caption과 같은 형태를 쓰되, 안내가 아니라 방금 한 행동에 대한
+   보상이라는 걸 드러내려 배경/글자 모두 주황 톤으로 강조한다. */
+.story-just-posted-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-pretendard);
+  font-size: 12.5px;
+  color: var(--cs-orange);
+  font-weight: 600;
+  margin: 0 0 16px;
+  background: rgba(255, 90, 54, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.story-just-posted-caption::before {
+  content: "✓";
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
 .story-spot-name {
   font-family: var(--font-maruburi);
   font-size: 18px;
@@ -2759,6 +2784,13 @@ button.story-place-line:hover {
   color: var(--cs-text-muted);
   margin-top: 6px;
   line-height: 1.5;
+}
+
+/* 작성 폼 소셜 프루프("이미 N개 있어요")/약속 문구 — 그냥 안내가 아니라
+   "왜 써야 하는지"를 뒷받침하는 문장이라 눈에 띄게 강조한다. */
+.field-hint--proof {
+  color: var(--cs-orange);
+  font-weight: 600;
 }
 
 .music-meta-preview {
