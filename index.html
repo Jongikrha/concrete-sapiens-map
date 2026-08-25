@@ -133,14 +133,17 @@
         </div>
       </div>
 
-      <!-- 전체 등록된 기억 수 + "오늘의 기억/미션" 칩 — 모바일에서 미니
+      <!-- "기억 아카이브" 진입점 + "오늘의 미션" 칩 — 모바일에서 미니
            플레이어까지 겹쳐 뜨면 지도 보이는 영역이 너무 좁아진다는 피드백
            (2026-08-24)으로 한 줄에 묶는다(모바일 전용, js/filters.js
            renderHashtagChips 참고 — 데스크톱은 기존처럼 해시태그 줄에
-           그대로 붙는다). -->
+           그대로 붙는다). "지금까지 쌓인 기억"/"오늘의 기억" 두 진입점을
+           "기억 아카이브" 하나로 합쳤다(2026-08-25, js/app.js
+           renderMemoryArchiveEntry/openRecentMemoriesModal 참고 — 정렬
+           3종 토글은 그대로 유지). -->
       <div class="today-row" id="today-row">
         <div class="hashtag-bar" id="today-mission-chips"></div>
-        <div class="total-count-banner hidden" id="total-count-banner"></div>
+        <button type="button" class="chip memory-archive-entry hidden" id="memory-archive-entry">기억 아카이브</button>
       </div>
       <!-- 해시태그 칩 (많이 쓰인 순 상위 5개 + 더보기) -->
       <div class="hashtag-bar" id="hashtag-chips"></div>
@@ -246,14 +249,9 @@
       <div class="composer-card"><div class="composer-card-inner" id="composer-panel"></div></div>
     </div>
 
-    <!-- 최근 기억 목록 (총 이야기 수 배너 클릭 시) -->
+    <!-- 기억 아카이브 (전체 기억 목록, "기억 아카이브" 버튼 클릭 시) -->
     <div class="overlay hidden" id="recent-overlay">
       <div class="composer-card"><div class="composer-card-inner" id="recent-panel"></div></div>
-    </div>
-
-    <!-- 오늘의 기억 목록 (해시태그 칩 줄의 "오늘의 기억" 칩 클릭 시) -->
-    <div class="overlay hidden" id="today-overlay">
-      <div class="composer-card"><div class="composer-card-inner" id="today-panel"></div></div>
     </div>
 
     <!-- 시간여행 기간 목록 ("이 기간으로 보기" 버튼 클릭 시) -->

@@ -24,7 +24,7 @@ function clearSearchArea() {
   searchAreaCenter = null;
   searchAreaPlace = null;
   renderMarkers();
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
 }
 
 function buildSearchAreaQuote(placeName, stories) {
@@ -145,7 +145,7 @@ function openSearchAreaModal({ lat, lng, placeName, placeId, address }) {
   searchAreaCenter = { lat, lng };
   searchAreaPlace = { lat, lng, placeName, placeId, address };
   renderMarkers();
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
   renderSearchAreaModal();
   document.getElementById("search-area-overlay").classList.remove("hidden");
   document.getElementById("search-area-panel").scrollTop = 0;

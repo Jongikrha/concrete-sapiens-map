@@ -566,8 +566,8 @@ body {
 }
 
 /* ------------------------------------------------------------
-   전체 등록된 기억 수 + "오늘의 기억/미션" 칩 한 줄 묶음(모바일 전용,
-   2026-08-24) — total-count-banner/today-mission-chips가 이제
+   "기억 아카이브" 버튼 + "오늘의 미션" 칩 한 줄 묶음(모바일 전용,
+   2026-08-24) — memory-archive-entry/today-mission-chips가 이제
    map-overlay-top의 직계 자식이 아니라 .map-overlay-top > * 규칙의
    pointer-events:auto가 안 먹는다. 여기서 다시 켜준다.
    ------------------------------------------------------------ */
@@ -586,7 +586,7 @@ body {
 }
 
 /* .hashtag-bar의 width:100%를 여기서만 되돌린다 — today-row 안에서는
-   total-count-banner와 한 줄을 나눠 써야 해서, 폭 100%로 두면 항상
+   memory-archive-entry와 한 줄을 나눠 써야 해서, 폭 100%로 두면 항상
    혼자 다음 줄로 밀려나 버린다(위 목적과 정반대). */
 #today-mission-chips {
   width: auto;
@@ -625,13 +625,6 @@ body {
   background: var(--cs-black);
   color: var(--cs-orange);
   border-color: var(--cs-black);
-}
-
-.chip--today {
-  background: var(--cs-orange);
-  color: var(--cs-paper);
-  border-color: var(--cs-orange);
-  font-weight: 500;
 }
 
 /* "오늘의 기억"과 같은 칩 크기, 색만 다르게(2026-08-14) — 처음엔
@@ -868,37 +861,8 @@ body {
   }
 }
 
-/* ------------------------------------------------------------
-   전체 등록된 기억 수 ("오늘의 기억" 칩 아래, 검정 텍스트)
-   ------------------------------------------------------------ */
-.total-count-banner {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.total-count-banner:hover {
-  opacity: 0.75;
-}
-
-.total-count-num {
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 18px;
-  color: #FF5A3C;
-}
-
-.total-count-suffix {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 12.5px;
-  color: #555555;
-}
+/* "기억 아카이브" 버튼 — .chip 기본 스타일 그대로 쓴다(조용한 진입점으로
+   낮춘 자리라 별도 강조 스타일을 두지 않는다, 2026-08-25). */
 
 /* ------------------------------------------------------------
    하루 1번 뜨는 "타이틀 카드" — 영화 오프닝처럼 화면 전체를 짧게

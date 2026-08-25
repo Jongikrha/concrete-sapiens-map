@@ -101,18 +101,8 @@ function renderHashtagChips() {
 
   document.getElementById("filter-banner").classList.add("hidden");
 
-  // 오늘 등록된 기억이 없어도 칩 자체는 계속 보여준다 — 눌렀을 때
-  // 모달 안에서 "오늘 등록된 기억이 아직 없습니다"로 안내한다(비어
-  // 있다고 칩까지 사라지면 기능이 없어진 것처럼 보인다는 피드백,
-  // 2026-08-14).
-  const todayChip = document.createElement("button");
-  todayChip.className = "chip chip--today";
-  todayChip.textContent = "오늘의 기억";
-  todayChip.onclick = openTodayMemoriesModal;
-
-  // "오늘의 기억" 바로 옆에 같은 칩 크기로 — 예전엔 별도 배너였는데
-  // (2026-08-11 추가, 2026-08-12 제거), 해시태그 칩과 같은 자리/크기로
-  // 색만 다르게 다시 살렸다(2026-08-14).
+  // "오늘의 미션"/"이맘때 기억" 칩 — "오늘의 기억" 칩은 "기억 아카이브"로
+  // 흡수되어 제거했다(2026-08-25, js/app.js openRecentMemoriesModal 참고).
   const promptChip = document.createElement("button");
   promptChip.className = "chip chip--prompt";
   // "이맘때 예전 기억"이 있으면 평소 로테이션 라벨 대신 이걸 먼저 보여준다
@@ -121,16 +111,14 @@ function renderHashtagChips() {
   promptChip.textContent = getEligibleThrowbackStory() ? "이맘때 기억" : "오늘의 미션";
   promptChip.onclick = openTodayMission;
 
-  // 모바일은 "오늘의 기억/미션" 칩을 해시태그 줄에서 빼서 전체 기억 수
-  // 배너 옆(today-mission-chips, index.html의 .today-row)으로 옮긴다 —
-  // 미니 플레이어까지 겹치면 지도 보이는 영역이 너무 좁아진다는 피드백
+  // 모바일은 이 칩을 해시태그 줄에서 빼서 "기억 아카이브" 버튼 옆
+  // (today-mission-chips, index.html의 .today-row)으로 옮긴다 — 미니
+  // 플레이어까지 겹치면 지도 보이는 영역이 너무 좁아진다는 피드백
   // (2026-08-24)으로 한 줄을 아낀다. 데스크톱은 기존처럼 해시태그 줄에
   // 그대로 이어 붙인다.
   if (isMobileViewport()) {
-    todayWrap.appendChild(todayChip);
     todayWrap.appendChild(promptChip);
   } else {
-    wrap.appendChild(todayChip);
     wrap.appendChild(promptChip);
   }
 
@@ -175,7 +163,7 @@ function renderHashtagChips() {
     songWrap.appendChild(moreSongChip);
   }
 
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
 }
 
 /**
@@ -445,7 +433,7 @@ function toggleSlider() {
 
   document.getElementById("time-slider-panel").classList.remove("hidden");
   renderMarkers();
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
 }
 
 // 트랙 위 현재 값 — 썸 위치를 따라다니는 숫자 하나만 보여준다(2026-08-22
@@ -468,7 +456,7 @@ function closeSlider() {
   sliderActive = false;
   sliderYear = null;
   document.getElementById("time-slider-panel").classList.add("hidden");
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
 }
 
 function setSliderMode(mode) {
@@ -556,7 +544,7 @@ async function startMyMemoryMode() {
   setTimeout(() => {
     if (!myMemoryModeActive) return; // 애니메이션 도중 다시 꺼졌으면 무시
     renderMarkers();
-    renderTotalCountBanner();
+    renderMemoryArchiveEntry();
   }, ZOOM_OUT_DURATION);
 }
 
@@ -564,7 +552,7 @@ function closeMyMemoryMode() {
   if (!myMemoryModeActive) return;
   myMemoryModeActive = false;
   document.getElementById("btn-my-memory").classList.remove("tool-btn--active");
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
 }
 
 function getSliderPeriodTitle() {

@@ -24,7 +24,7 @@ async function initApp() {
   bindUIEvents();
   renderHashtagChips();
   renderMarkers();
-  renderTotalCountBanner();
+  renderMemoryArchiveEntry();
   handleInitialEntry();
   maybeShowWelcomeOverlay();
   maybeShowTitleCard();
@@ -207,8 +207,13 @@ function dismissTitleCard(storyId) {
   navigateToStoryFromList(storyId);
 }
 
-function renderTotalCountBanner() {
-  const el = document.getElementById("total-count-banner");
+// 예전엔 "N개의 기억이 쌓였습니다"라는 숫자 배너였다 — 첫인상을 끄는
+// 훅으로는 숫자가 약하다는 판단으로(2026-08-25) 조용한 진입점으로
+// 낮췄다. "지금까지 쌓인 기억"/"오늘의 기억" 두 목록도 사실 같은 목록을
+// 다른 필터로 보는 것뿐이라 "기억 아카이브" 하나로 합쳤다(오늘의 기억
+// 칩은 제거, js/filters.js renderHashtagChips 참고).
+function renderMemoryArchiveEntry() {
+  const el = document.getElementById("memory-archive-entry");
   if (!el) return;
 
   // searchAreaActive는 마커를 걸러내지 않고 반짝임 효과만 주는 상태라
@@ -224,12 +229,10 @@ function renderTotalCountBanner() {
     return;
   }
 
-  const count = Storage.getVisibleStories().length;
-  if (count === 0) {
+  if (Storage.getVisibleStories().length === 0) {
     el.classList.add("hidden");
     return;
   }
-  el.innerHTML = `<span class="total-count-num">${count.toLocaleString()}</span><span class="total-count-suffix">개의 기억이 쌓였습니다</span>`;
   el.classList.remove("hidden");
 }
 
@@ -309,17 +312,16 @@ function buildSortedListHtml(stories, sortMode, renderItemFn, { cap } = {}) {
   return html;
 }
 
-// 디폴트를 역시간여행순(현재→과거)으로 — "지금까지 쌓인 기억"이 오늘의
-// 기억(실시간 피드)과 대비되는 "전체 역사를 훑어보는" 화면이라는
-// 정체성에 맞춘다. 아득한 과거부터 던지기보다 최근 과거부터 보여주고
-// 스크롤하며 더 옛날로 들어가는 편이 첫인상이 자연스럽다(2026-08-14).
+// 디폴트를 역시간여행순(현재→과거)으로 — "기억 아카이브"가 "전체 역사를
+// 훑어보는" 화면이라는 정체성에 맞춘다. 아득한 과거부터 던지기보다 최근
+// 과거부터 보여주고 스크롤하며 더 옛날로 들어가는 편이 첫인상이
+// 자연스럽다(2026-08-14).
 //
 // 처음엔 50개만 보여주고 "더 불러오기"로 50개씩 더 연다(2026-08-20 —
 // 예전엔 50개로 캡만 걸고 더 볼 방법이 없었는데, "전체 역사를 훑어보는"
 // 화면 취지상 캡만 있고 탈출구가 없는 게 오히려 어색하다는 피드백).
-// 오늘의 기억(todayVisibleCount)과 같은 패턴 — 정렬을 바꾸면 새 목록을
-// 보는 셈이라 50으로 리셋하고, 카드 상세로 들어갔다 뒤로가기로 돌아올
-// 때만 그 시점의 visibleCount를 이어받는다.
+// 정렬을 바꾸면 새 목록을 보는 셈이라 50으로 리셋하고, 카드 상세로
+// 들어갔다 뒤로가기로 돌아올 때만 그 시점의 visibleCount를 이어받는다.
 let recentSort = "timetravel-reverse";
 let recentVisibleCount = 50;
 const RECENT_LOAD_MORE_STEP = 50;
@@ -341,7 +343,7 @@ function openRecentMemoriesModal(opts = {}) {
 
   panel.innerHTML = `
     <div class="recent-header">
-      <h2 class="composer-title" style="margin:0;">지금까지 쌓인 기억</h2>
+      <h2 class="composer-title" style="margin:0;">기억 아카이브</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
     ${stories.length > 1 ? SORT_TOGGLE_HTML(recentSort) : ""}
@@ -368,7 +370,7 @@ function openRecentMemoriesModal(opts = {}) {
     item.onclick = () => {
       const scrollTop = panel.scrollTop;
       closeRecentMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, visibleCount: recentVisibleCount, label: "지금까지 쌓인 기억" });
+      navigateToStoryFromList(item.dataset.id, { kind: "recent", scrollTop, visibleCount: recentVisibleCount, label: "기억 아카이브" });
     };
   });
 
@@ -381,69 +383,6 @@ function openRecentMemoriesModal(opts = {}) {
 
 function closeRecentMemoriesModal() {
   document.getElementById("recent-overlay").classList.add("hidden");
-}
-
-// 오늘의 기억은 "지금까지 쌓인 기억"과 달리 정렬 토글을 두지 않는다 —
-// 하루 안에서는 시간여행순/역시간여행순의 기준(연도·월)이 대부분 동률이라
-// (dateMode:"now"면 다 올해) 실질적으로 순서가 안 바뀌는 죽은 옵션이
-// 되기 때문. 초 단위까지 갈리는 등록 순서(latest)만 남겨 "지금 뭐가
-// 올라오고 있나"에 집중한다(2026-08-14).
-//
-// 처음엔 5개만 보여주고 "더 불러오기"로 10개씩 더 연다(2026-08-20 디자인
-// 레퍼런스 반영). todayVisibleCount는 opts.visibleCount로 넘기지 않으면
-// 매번 5로 리셋된다 — 칩을 다시 눌러 새로 여는 경우가 이에 해당한다.
-// 카드 상세로 들어갔다 뒤로가기(goBackFromSheet)로 돌아올 때만 그 시점의
-// visibleCount를 이어받아, 더 불러온 상태가 스크롤 위치처럼 유지된다.
-let todayVisibleCount = 5;
-const TODAY_LOAD_MORE_STEP = 10;
-
-function openTodayMemoriesModal(opts = {}) {
-  const panel = document.getElementById("today-panel");
-  const stories = Storage.getTodayStories();
-  todayVisibleCount = opts.visibleCount || 5;
-
-  const listHtml = stories.length
-    ? buildSortedListHtml(stories, "latest", renderRecentListItem, { cap: todayVisibleCount })
-    : `<p class="recent-empty">오늘 등록된 기억이 아직 없습니다.</p>`;
-  const hasMore = stories.length > todayVisibleCount;
-
-  panel.innerHTML = `
-    <div class="recent-header">
-      <div>
-        <h2 class="composer-title" style="margin:0 0 4px;">오늘의 기억</h2>
-        <p class="composer-subtitle" style="margin:0;">오늘 쌓인 기억들을 만나보세요</p>
-      </div>
-      <button class="recent-close" id="today-close" aria-label="닫기">✕</button>
-    </div>
-    ${listHtml}
-    ${hasMore ? `<button class="recent-load-more" id="today-load-more" type="button">더 불러오기 <span class="recent-load-more-chevron" aria-hidden="true">⌄</span></button>` : ""}
-  `;
-
-  panel.querySelector("#today-close").onclick = closeTodayMemoriesModal;
-
-  const loadMoreBtn = panel.querySelector("#today-load-more");
-  if (loadMoreBtn) {
-    loadMoreBtn.onclick = () => {
-      const scrollTop = panel.scrollTop;
-      openTodayMemoriesModal({ visibleCount: todayVisibleCount + TODAY_LOAD_MORE_STEP });
-      panel.scrollTop = scrollTop;
-    };
-  }
-
-  panel.querySelectorAll(".recent-item[data-id]").forEach((item) => {
-    item.onclick = () => {
-      const scrollTop = panel.scrollTop;
-      closeTodayMemoriesModal();
-      navigateToStoryFromList(item.dataset.id, { kind: "today", scrollTop, visibleCount: todayVisibleCount, label: "오늘의 기억" });
-    };
-  });
-
-  document.getElementById("today-overlay").classList.remove("hidden");
-  panel.scrollTop = opts.scrollTop || 0;
-}
-
-function closeTodayMemoriesModal() {
-  document.getElementById("today-overlay").classList.add("hidden");
 }
 
 // ------------------------------------------------------------
@@ -472,8 +411,6 @@ function goBackFromSheet() {
   if (!returnTo) return;
   if (returnTo.kind === "recent") {
     openRecentMemoriesModal({ scrollTop: returnTo.scrollTop, visibleCount: returnTo.visibleCount });
-  } else if (returnTo.kind === "today") {
-    openTodayMemoriesModal({ scrollTop: returnTo.scrollTop, visibleCount: returnTo.visibleCount });
   } else if (returnTo.kind === "mymemory") {
     openMyMemoryList(returnTo.listKind, { scrollTop: returnTo.scrollTop });
   } else if (returnTo.kind === "searchNearby") {
@@ -637,9 +574,8 @@ function bindUIEvents() {
   document.getElementById("mini-player-pause").onclick = toggleMiniPlayerPause;
   document.getElementById("mini-player-stop").onclick = stopMiniPlayer;
   bindOverlayClickToClose("composer-overlay", closeComposer);
-  document.getElementById("total-count-banner").onclick = () => openRecentMemoriesModal();
+  document.getElementById("memory-archive-entry").onclick = () => openRecentMemoriesModal();
   bindOverlayClickToClose("recent-overlay", closeRecentMemoriesModal);
-  bindOverlayClickToClose("today-overlay", closeTodayMemoriesModal);
   bindOverlayClickToClose("slider-period-overlay", closeSliderPeriodModal);
   bindOverlayClickToClose("daily-prompt-overlay", closeTodayMission);
   bindOverlayClickToClose("welcome-overlay", closeWelcomeOverlay);
@@ -681,7 +617,6 @@ function bindUIEvents() {
       else if (!document.getElementById("changepw-overlay").classList.contains("hidden")) closeChangePasswordPanel();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
       else if (!document.getElementById("recent-overlay").classList.contains("hidden")) closeRecentMemoriesModal();
-      else if (!document.getElementById("today-overlay").classList.contains("hidden")) closeTodayMemoriesModal();
       else if (!document.getElementById("slider-period-overlay").classList.contains("hidden")) closeSliderPeriodModal();
       else if (!document.getElementById("daily-prompt-overlay").classList.contains("hidden")) closeTodayMission();
       else if (!document.getElementById("account-menu").classList.contains("hidden")) closeAccountMenu();
