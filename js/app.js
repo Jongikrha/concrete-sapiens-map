@@ -142,8 +142,11 @@ function todayDateKey() {
 // ♡("떠올랐어요") 반응이 많은 상위 30개 중 랜덤으로 골라 "잘 쓰인" 글이
 // 뽑힐 확률을 높인다(완전 무작위는 내용이 부실한 글이 뽑힐 위험) — 웰컴
 // 모달과 타이틀 카드가 공유하는 선정 로직.
+// 노래가 있는 기억만 후보로 삼는다 — 타이틀 카드에 아티스트·곡명을
+// 같이 보여주기로 하면서(2026-08-25), 노래 없는 글이 뽑히면 그 줄이
+// 통째로 비어 어색해지는 문제를 원천적으로 막는다.
 function pickFeaturedStory() {
-  const stories = Storage.getVisibleStories();
+  const stories = Storage.getVisibleStories().filter((s) => s.musicTitle);
   if (stories.length === 0) return null;
   const pool = [...stories].sort((a, b) => (b.reactionCount || 0) - (a.reactionCount || 0)).slice(0, 30);
   return pool[Math.floor(Math.random() * pool.length)];
@@ -171,10 +174,14 @@ function showTitleCard(story) {
     address: story.address,
   });
   const year = Storage.getStoryYear(story);
+  const musicLabel = story.musicTitle
+    ? buildSongLabel({ artist: story.musicArtist, title: story.musicTitle })
+    : "";
 
   content.innerHTML = `
     <p class="title-card-place">${escapeHtml(title)}${year !== null ? ` · ${year}` : ""}</p>
     <p class="title-card-quote">"${escapeHtml(story.content)}"</p>
+    ${musicLabel ? `<p class="title-card-music">🎧 ${escapeHtml(musicLabel)}</p>` : ""}
     <p class="title-card-hint">탭하여 이 장소로</p>
   `;
 
