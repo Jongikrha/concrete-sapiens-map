@@ -879,7 +879,11 @@ body {
   align-items: center;
   justify-content: center;
   padding: 32px;
-  background: #14120f;
+  /* 어두운 배경 사진 위에 스크림을 한 겹 깔아, 사진의 밝은 구름
+     부분에서도 흰 글자 대비가 항상 확보되게 한다(2026-08-25). */
+  background:
+    linear-gradient(rgba(8, 10, 14, 0.55), rgba(8, 10, 14, 0.55)),
+    url("../assets/title-card-bg.jpg") center / cover no-repeat;
   cursor: pointer;
   opacity: 1;
   transition: opacity 380ms ease;
@@ -901,13 +905,13 @@ body {
 }
 
 .title-card-place {
-  margin: 0 0 18px;
+  margin: 0 0 26px;
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(244, 243, 239, 0.55);
+  color: rgba(244, 243, 239, 0.6);
 }
 
 .title-card-quote {
@@ -915,15 +919,16 @@ body {
   font-family: var(--font-maruburi);
   font-size: 24px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
   color: var(--cs-paper);
 }
 
 .title-card-hint {
-  margin: 36px 0 0;
+  margin: 48px 0 0;
   font-family: var(--font-sans);
   font-size: 12px;
-  color: rgba(244, 243, 239, 0.45);
+  color: rgba(244, 243, 239, 0.5);
   opacity: 0;
   animation: titleCardHintIn 500ms ease 1600ms forwards;
 }
