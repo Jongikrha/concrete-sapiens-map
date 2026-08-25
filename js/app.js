@@ -27,6 +27,7 @@ async function initApp() {
   renderTotalCountBanner();
   handleInitialEntry();
   maybeShowWelcomeOverlay();
+  maybeShowFeaturedStoryTeaser();
 }
 
 // 브라우저당 한 번만 보여주는 첫 방문 환영 모달(2026-08-21) — 초대
@@ -117,6 +118,72 @@ function logVisitKind() {
   const isReturning = !!localStorage.getItem(VISITED_BEFORE_KEY);
   Storage.logEvent(isReturning ? "visit_returning" : "visit_first");
   localStorage.setItem(VISITED_BEFORE_KEY, "1");
+}
+
+// 웰컴 모달은 브라우저당 한 번만 떠서, 그 이후 방문에는 "혹하게" 만들
+// 장치가 없었다. 그렇다고 매번 화면을 막는 모달을 또 띄우면 "근처 기억
+// 발견 토스트"를 반복 노출 피로 때문에 하루 만에 없앤 전례
+// (project_nearby_discovery_toast_removed 메모리 참고)를 반복하게 된다 —
+// 그래서 하루 1번, 지도를 막지 않고 무시 가능한 카드로 대신한다
+// (2026-08-25). 웰컴 모달을 이미 본 사람에게만 보여준다 — 진짜 첫 방문
+// 당일엔 웰컴 모달 하나로 충분하니 그날은 겹치지 않게 건너뛴다.
+const FEATURED_TEASER_LAST_SHOWN_KEY = "concrete_sapiens_featured_teaser_last_shown";
+
+function todayDateKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ♡("떠올랐어요") 반응이 많은 상위 30개 중 랜덤으로 골라 "잘 쓰인" 글이
+// 뽑힐 확률을 높인다(완전 무작위는 내용이 부실한 글이 뽑힐 위험) — 웰컴
+// 모달과 이 카드가 공유하는 선정 로직.
+function pickFeaturedStory() {
+  const stories = Storage.getVisibleStories();
+  if (stories.length === 0) return null;
+  const pool = [...stories].sort((a, b) => (b.reactionCount || 0) - (a.reactionCount || 0)).slice(0, 30);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function maybeShowFeaturedStoryTeaser() {
+  if (!localStorage.getItem(WELCOME_SEEN_KEY)) return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("story") || params.get("place")) return; // 그날은 공유받은 카드가 우선
+  if (localStorage.getItem(FEATURED_TEASER_LAST_SHOWN_KEY) === todayDateKey()) return;
+  const story = pickFeaturedStory();
+  if (!story) return;
+  showFeaturedStoryTeaser(story);
+}
+
+function showFeaturedStoryTeaser(story) {
+  const el = document.getElementById("featured-story-teaser");
+  if (!el) return;
+  el.innerHTML = `
+    <button type="button" class="featured-teaser-dismiss" aria-label="닫기">✕</button>
+    <p class="featured-teaser-question">당신도 이런 장소, 이런 기억 있나요?</p>
+    ${renderRecentListItem(story, { reactionCount: story.reactionCount || 0 })}
+  `;
+  el.querySelector(".featured-teaser-dismiss").onclick = (e) => {
+    e.stopPropagation();
+    dismissFeaturedStoryTeaser();
+  };
+  const item = el.querySelector(".recent-item[data-id]");
+  if (item) {
+    item.onclick = () => {
+      const storyId = item.dataset.id;
+      dismissFeaturedStoryTeaser();
+      navigateToStoryFromList(storyId);
+    };
+  }
+  el.classList.remove("hidden");
+  // 열어보든 닫든 "오늘은 봤다"로 친다 — 다시 열어봐도 새로고침마다 또
+  // 뜨진 않는다.
+  localStorage.setItem(FEATURED_TEASER_LAST_SHOWN_KEY, todayDateKey());
+  Storage.logEvent("featured_teaser_shown");
+}
+
+function dismissFeaturedStoryTeaser() {
+  const el = document.getElementById("featured-story-teaser");
+  if (el) el.classList.add("hidden");
 }
 
 function renderTotalCountBanner() {

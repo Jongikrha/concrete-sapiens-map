@@ -901,6 +901,59 @@ body {
 }
 
 /* ------------------------------------------------------------
+   하루 1번 뜨는 추천 기억 카드 — 모달이 아니라 지도 위 흐름
+   (map-overlay-top)에 자연스럽게 얹혀서, 지도는 그대로 조작 가능하고
+   ✕로 무시할 수 있다(2026-08-25).
+   ------------------------------------------------------------ */
+.featured-story-teaser {
+  position: relative;
+  width: min(92%, 380px);
+  animation: featuredTeaserIn 320ms ease;
+}
+
+.featured-story-teaser .recent-item {
+  margin: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.featured-teaser-question {
+  margin: 0 0 6px;
+  padding-right: 28px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--cs-orange);
+}
+
+.featured-teaser-dismiss {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  color: #777;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+
+@keyframes featuredTeaserIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ------------------------------------------------------------
    시간 슬라이더 (누적 보기) — 2026-08-22 디자인 레퍼런스 반영으로
    축소. 모바일에서 이전 크기가 하단 툴바(기억 라디오 버튼)와 겹치는
    문제가 있어 부제 텍스트/여러 연도 눈금 줄을 걷어내고 여백도 줄였다.
