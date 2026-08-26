@@ -2722,19 +2722,6 @@ button.story-place-line:hover {
   margin: 0 0 4px;
 }
 
-/* TAGS/MUSIC — 3단계 진행 바에는 안 잡히는 "덤" 스텝이라 숫자 카운터 대신
-   이 배지로만 표시한다. */
-.wizard-bonus-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--cs-orange);
-  background: rgba(255, 90, 54, 0.1);
-  border-radius: 999px;
-  padding: 4px 10px;
-  margin-bottom: 10px;
-}
-
 .input-with-icon {
   position: relative;
 }

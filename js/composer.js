@@ -809,7 +809,7 @@ function openComposerWizard(pin) {
 
   function renderTagsStepHtml() {
     return `
-      <p class="field-desc">태그를 남겨두면 이 기억을 나중에 더 쉽게 다시 찾을 수 있어요. 본문과 어울리는 태그는 미리 넣어뒀어요 — 지우거나 더 추가해도 좋아요.</p>
+      <p class="field-desc">지우거나 추가해도 좋아요.</p>
       <div class="tag-input-row" id="tag-input-row"></div>
       <div class="field-hint">예) 첫사랑 짝사랑 — # 없이 단어만 적어도 자동으로 붙어요.</div>
     `;
@@ -915,8 +915,8 @@ function openComposerWizard(pin) {
     { eyebrow: "WHERE", title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
     { eyebrow: "WHEN", title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
     { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
-    { title: "태그를 남겨보면 어때요?", badge: "이런 것도 남겨보면 좋아요", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
-    { title: "노래도 함께 남겨볼까요?", badge: "이런 것도 남겨보면 좋아요", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
+    { title: "태그를 남겨보면 어때요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
+    { title: "노래도 함께 남겨볼까요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
   ];
 
   function renderComposerHeader() {
@@ -965,7 +965,7 @@ function openComposerWizard(pin) {
     const showBack = step === 1 || step === 2;
 
     const progressHtml = isBonusStep
-      ? `<div class="wizard-bonus-badge">${escapeHtml(def.badge)}</div>`
+      ? ""
       : `
         <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / MAIN_STEP_TOTAL) * 100}%"></div></div>
         <div class="wizard-step-eyebrow">
