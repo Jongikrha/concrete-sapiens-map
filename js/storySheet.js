@@ -412,7 +412,11 @@ function renderSheetContent(group) {
   if (sheetHighlightStoryId) {
     const target = content.querySelector(`.story-item[data-story-id="${sheetHighlightStoryId}"]`);
     if (target) {
-      target.scrollIntoView({ block: "center", behavior: "smooth" });
+      // "center"는 카드가 길면 맨 위 연도(.story-year)가 화면 밖으로
+      // 밀려 올라가버려서, 스크롤이 이상하게 내려가 있는 것처럼 보였다
+      // (2026-08-26 — 전광판(memory ticker) 클릭 진입 시 확인). "start"로
+      // 카드 맨 위(연도)부터 보이게 한다.
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
     }
     sheetHighlightStoryId = null;
   }
