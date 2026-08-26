@@ -2644,6 +2644,65 @@ button.story-place-line:hover {
   line-height: 1.5;
 }
 
+/* ------------------------------------------------------------
+   기억 남기기 단계별 마법사(2026-08-26) — 진행 바/스텝 안내/앞뒤 버튼.
+   .composer-card/.composer-header 등 기존 작성 폼 클래스는 그대로 공유.
+   ------------------------------------------------------------ */
+.wizard-progress {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--cs-map-gray);
+  margin: 18px 0 12px;
+  overflow: hidden;
+}
+
+.wizard-progress-fill {
+  height: 100%;
+  background: var(--cs-orange);
+  border-radius: 999px;
+  transition: width var(--cs-transition-normal) ease;
+}
+
+.wizard-step-eyebrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.wizard-step-count {
+  font-size: 11px;
+  color: var(--cs-gray);
+  font-weight: 500;
+}
+
+.wizard-step-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+
+.wizard-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.wizard-nav .btn-secondary {
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+}
+
+.wizard-nav .btn-primary {
+  flex: 1;
+  margin-top: 0;
+}
+
 .input-with-icon {
   position: relative;
 }
