@@ -160,6 +160,11 @@ function openComposer(pin) {
   // 왜곡된다).
   if (!editing) Storage.logEvent("composer_opened");
 
+  // 마법사 스텝마다 카드 높이가 들쭉날쭉하지 않게, 마법사를 그리는
+  // 동안에만 최소 높이를 준다(css/style.css #composer-panel.composer-panel--wizard).
+  // 수정 폼은 이미 6개 섹션이라 항상 이보다 커서 영향 없음.
+  panel.classList.toggle("composer-panel--wizard", !editing);
+
   if (editing) {
     renderEditComposerForm(pin, editing);
   } else {
@@ -935,12 +940,14 @@ function openComposerWizard(pin) {
     if (showingCompletionScreen) {
       panel.innerHTML = `
         ${renderComposerHeader()}
-        <div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>
-        <div class="wizard-done">
-          <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
-          <h3 class="wizard-step-title">잘했어요~! 💕</h3>
-          <p class="field-desc"><span class="wizard-done-highlight">당신의 기억</span>이 지도에 쌓였어요.</p>
-          <p class="field-desc">태그나 그때 들었던 노래를 더 남기면 이 기억을 나중에 더 쉽게 다시 만날 수 있어요.</p>
+        <div class="wizard-step-body">
+          <div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>
+          <div class="wizard-done">
+            <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
+            <h3 class="wizard-step-title">잘했어요~! 💕</h3>
+            <p class="field-desc"><span class="wizard-done-highlight">당신의 기억</span>이 지도에 쌓였어요.</p>
+            <p class="field-desc">태그나 그때 들었던 노래를 더 남기면 이 기억을 나중에 더 쉽게 다시 만날 수 있어요.</p>
+          </div>
         </div>
         <div class="wizard-nav">
           <button type="button" class="btn-primary" id="wizard-next-btn">다음 ›</button>
@@ -974,11 +981,13 @@ function openComposerWizard(pin) {
     panel.innerHTML = `
       ${renderComposerHeader()}
 
-      ${progressHtml}
-      <h3 class="wizard-step-title">${def.title}</h3>
-      ${def.lede ? `<p class="field-desc">${escapeHtml(def.lede)}</p>` : ""}
+      <div class="wizard-step-body">
+        ${progressHtml}
+        <h3 class="wizard-step-title">${def.title}</h3>
+        ${def.lede ? `<p class="field-desc">${escapeHtml(def.lede)}</p>` : ""}
 
-      ${def.render()}
+        ${def.render()}
+      </div>
 
       <div class="wizard-nav">
         ${showBack ? `<button type="button" class="btn-secondary" id="wizard-back-btn">이전</button>` : ""}
@@ -1055,14 +1064,20 @@ function openComposerWizard(pin) {
       Storage.addMyStoryId(postedStory.id);
     }
 
-    clearSearchPin();
-    renderMarkers();
-    renderHashtagChips();
-    renderSearchAreaModal();
-    map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
-
     showingCompletionScreen = true;
     renderWizardStep();
+
+    // 지도 마커/해시태그 바 새로 그리기는 스토리 개수가 많으면 눈에 띄게
+    // 오래 걸릴 수 있다 — 완료 화면 렌더링 뒤로 미뤄서, "MEMORY 화면이
+    // 잠깐 남아있다가 완료 화면으로 바뀌는" 지연 없이 버튼을 누르자마자
+    // 바로 완료 화면이 보이게 한다(2026-08-26).
+    setTimeout(() => {
+      clearSearchPin();
+      renderMarkers();
+      renderHashtagChips();
+      renderSearchAreaModal();
+      map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
+    }, 0);
   }
 
   function finishWizard() {
