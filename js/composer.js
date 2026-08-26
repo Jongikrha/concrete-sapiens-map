@@ -909,7 +909,7 @@ function openComposerWizard(pin) {
   // 이 카운트에 안 잡히는 "덤" 취급(아래 렌더 참고).
   const MAIN_STEP_TOTAL = 3;
   const STEPS = [
-    { title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
+    { title: "어디에 기억을 남길까요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
     { title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
     { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
     { title: "태그를 남겨보면 어때요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
