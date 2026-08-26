@@ -942,7 +942,6 @@ function openComposerWizard(pin) {
       panel.innerHTML = `
         ${renderComposerHeader()}
         <div class="wizard-step-body">
-          <div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>
           <div class="wizard-done">
             <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
             <h3 class="wizard-step-title">잘했어요~! 💕</h3>
