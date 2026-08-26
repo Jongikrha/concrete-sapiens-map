@@ -664,7 +664,7 @@ function openComposerWizard(pin) {
       ? "이 장소를 뭐라고 부르시나요?"
       : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
     const nameHint = pin.isFreePin
-      ? `<div class="field-hint">장소 이름을 기본으로 채워뒀어요. 다른 사람이 알아보기 쉽도록 자유롭게 고쳐 써보세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
+      ? `<div class="field-hint">자유롭게 고쳐 써보세요. 예) 이젠 없어진 추억의 공간, 우리의 따뜻한 신혼집</div>`
       : "";
     return `
       <div class="input-with-icon">
@@ -912,7 +912,7 @@ function openComposerWizard(pin) {
   // 이 카운트에 안 잡히는 "덤" 취급(아래 렌더 참고).
   const MAIN_STEP_TOTAL = 3;
   const STEPS = [
-    { eyebrow: "WHERE", title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
+    { title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
     { eyebrow: "WHEN", title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
     { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
     { title: "태그를 남겨보면 어때요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
@@ -969,7 +969,7 @@ function openComposerWizard(pin) {
       : `
         <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / MAIN_STEP_TOTAL) * 100}%"></div></div>
         <div class="wizard-step-eyebrow">
-          <span class="field-label-text">${def.eyebrow}</span>
+          <span class="field-label-text">${def.eyebrow || ""}</span>
           <span class="wizard-step-count">${step + 1} / ${MAIN_STEP_TOTAL}</span>
         </div>
       `;
