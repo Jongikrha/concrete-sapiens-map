@@ -107,8 +107,11 @@ function makeDotImage(tier, selected, isToday) {
   const glow2 = selected ? glow2Sizes[tier] + 7 : glow2Sizes[tier];
 
   const coreOpacity = selected ? 1 : isToday ? 1 : 0.9;
-  const glow1Opacity = selected ? 0.4 : isToday ? 0.34 : 0.24;
-  const glow2Opacity = selected ? 0.16 : isToday ? 0.13 : 0.08;
+  // 지도를 어둡게 하면서(2026-08-26) 별이 더 잘 보이면 좋겠다는 요청 —
+  // 크기는 그대로 두고 광훈 불투명도만 살짝 올려서 더 또렷하게 빛나
+  // 보이게 한다.
+  const glow1Opacity = selected ? 0.46 : isToday ? 0.39 : 0.28;
+  const glow2Opacity = selected ? 0.19 : isToday ? 0.15 : 0.1;
 
   const canvas = glow2 + 6;
   const c = canvas / 2;
@@ -138,7 +141,7 @@ function makeDotImage(tier, selected, isToday) {
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
     ${rays}
-    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
@@ -163,7 +166,7 @@ function makeClusterBackground() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="0.12"/>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="0.3"/>
-    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
   </svg>`;
 
   return { canvas, url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg) };
