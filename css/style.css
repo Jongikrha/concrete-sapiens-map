@@ -2732,7 +2732,7 @@ button.story-place-line:hover {
   display: block;
   width: 100%;
   max-width: 200px;
-  margin: 0 auto 12px;
+  margin: 0 auto 24px;
 }
 
 .wizard-done .wizard-step-title {

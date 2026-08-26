@@ -946,7 +946,7 @@ function openComposerWizard(pin) {
           <div class="wizard-done">
             <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
             <h3 class="wizard-step-title">잘했어요~! 💕</h3>
-            <p class="field-desc"><b>태그</b>나 그때 들었던 <b>음악</b>을 더 남기면 다른 사람들이 <b>이 기억에 공감</b>할 수 있어요.</p>
+            <p class="field-desc"><b>태그</b>나 그때 들었던 <b>음악</b>을 더 남기면<br>다른 사람들이 <b>이 기억에 공감</b>할 수 있어요.</p>
           </div>
         </div>
         <div class="wizard-nav">
