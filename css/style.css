@@ -2743,11 +2743,6 @@ button.story-place-line:hover {
   margin: 0 0 4px;
 }
 
-.wizard-done-highlight {
-  color: var(--cs-orange);
-  font-weight: 600;
-}
-
 .input-with-icon {
   position: relative;
 }

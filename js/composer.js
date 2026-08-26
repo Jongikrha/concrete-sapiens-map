@@ -670,7 +670,7 @@ function openComposerWizard(pin) {
       ? "이 장소를 뭐라고 부르시나요?"
       : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
     const nameHint = pin.isFreePin
-      ? `<div class="field-hint">자유롭게 고쳐 써보세요. 예) 이젠 없어진 추억의 공간, 우리의 따뜻한 신혼집</div>`
+      ? `<div class="field-hint">(자유롭게 바꿔도 괜찮아요. 예) 옛날 우리집, 서울역 대합실 등)</div>`
       : "";
     return `
       <div class="input-with-icon">
@@ -686,7 +686,6 @@ function openComposerWizard(pin) {
         <button type="button" class="mode-btn ${state.authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">👤 이름 또는 닉네임</button>
       </div>
       <input type="text" id="input-author" class="input-field ${state.authorMode !== "custom" ? "hidden" : ""}" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" value="${escapeHtml(state.authorName)}" />
-      <div class="field-hint">당신의 이름은 지도에 공개되지 않아요.</div>
     `;
   }
 
@@ -740,6 +739,7 @@ function openComposerWizard(pin) {
         <select id="input-year">${buildYearOptions(state.year)}</select>
         <select id="input-month">${buildMonthOptionsWizard(state.month)}</select>
       </div>
+      <div class="field-hint ${state.dateMode !== "past" ? "hidden" : ""}" id="when-year-hint">(정확한 시기를 모르시면 <b>연도만 선택</b>해주셔도 됩니다)</div>
     `;
   }
 
@@ -751,13 +751,15 @@ function openComposerWizard(pin) {
         panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
         btn.classList.add("mode-btn--active");
         document.getElementById("year-month-row").classList.toggle("hidden", state.dateMode !== "past");
+        document.getElementById("when-year-hint").classList.toggle("hidden", state.dateMode !== "past");
       };
     });
   }
 
   function renderMemoryStepHtml() {
     return `
-      <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="당신의 기억을 자유롭게 작성해주세요.">${escapeHtml(state.content)}</textarea>
+      <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="첫사랑, 추억, 직장생활, 없어진 곳에 대한 그리움 등
+당신의 기억을 자유롭게 작성해주세요.">${escapeHtml(state.content)}</textarea>
       <div class="char-count"><span id="char-count-num">${state.content.length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
     `;
   }
@@ -811,9 +813,8 @@ function openComposerWizard(pin) {
 
   function renderTagsStepHtml() {
     return `
-      <p class="field-desc">지우거나 추가해도 좋아요.</p>
       <div class="tag-input-row" id="tag-input-row"></div>
-      <div class="field-hint">예) 첫사랑 짝사랑 — # 없이 단어만 적어도 자동으로 붙어요.</div>
+      <div class="field-hint">(해시태그를 <b>지우거나</b> 새로운 태그를 <b>추가해도</b> 좋아요)</div>
     `;
   }
 
@@ -824,7 +825,7 @@ function openComposerWizard(pin) {
   function renderMusicStepHtml() {
     return `
       <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml(state.youtubeUrl)}" />
-      <div class="field-hint" id="youtube-url-hint">유튜브에서 공유하기 버튼을 누른 후 붙여넣어 주세요!</div>
+      <div class="field-hint" id="youtube-url-hint">(유튜브에서 <b>공유하기 버튼을 누른 후</b> 붙여넣어 주세요)</div>
       <div class="music-meta-preview ${Storage.extractYoutubeVideoId(state.youtubeUrl) ? "" : "hidden"}" id="music-meta-preview">
         <p class="field-hint">이 노래가 맞나요? 다르면 고쳐주세요.</p>
         <div class="music-meta-row">
@@ -870,9 +871,9 @@ function openComposerWizard(pin) {
       state.youtubeUrl = e.target.value.trim();
       const hint = document.getElementById("youtube-url-hint");
       const videoId = Storage.extractYoutubeVideoId(state.youtubeUrl);
-      hint.textContent = state.youtubeUrl && !videoId
+      hint.innerHTML = state.youtubeUrl && !videoId
         ? "유튜브 링크 형식을 확인해주세요."
-        : "유튜브에서 공유하기 버튼을 누른 후 붙여넣어 주세요!";
+        : "(유튜브에서 <b>공유하기 버튼을 누른 후</b> 붙여넣어 주세요)";
       updateMusicMetaVisibility(videoId);
 
       if (videoId === lastFetchedVideoId) return;
@@ -915,10 +916,10 @@ function openComposerWizard(pin) {
   const MAIN_STEP_TOTAL = 3;
   const STEPS = [
     { title: "어디에 기억을 남길까요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
-    { title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
-    { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
-    { title: "태그를 남겨보면 어때요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
-    { title: "노래도 함께 남겨볼까요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
+    { title: "언제 기억인가요?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
+    { title: "어떤 기억이 있었나요?", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "다음" },
+    { title: "태그를 남겨볼까요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
+    { title: "노래도 함께 남겨볼까요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "다음" },
   ];
 
   function renderComposerHeader() {
@@ -945,8 +946,7 @@ function openComposerWizard(pin) {
           <div class="wizard-done">
             <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
             <h3 class="wizard-step-title">잘했어요~! 💕</h3>
-            <p class="field-desc"><span class="wizard-done-highlight">당신의 기억</span>이 지도에 쌓였어요.</p>
-            <p class="field-desc">태그나 그때 들었던 노래를 더 남기면 이 기억을 나중에 더 쉽게 다시 만날 수 있어요.</p>
+            <p class="field-desc"><b>태그</b>나 그때 들었던 <b>음악</b>을 더 남기면 다른 사람들이 <b>이 기억에 공감</b>할 수 있어요.</p>
           </div>
         </div>
         <div class="wizard-nav">
@@ -984,7 +984,6 @@ function openComposerWizard(pin) {
       <div class="wizard-step-body">
         ${progressHtml}
         <h3 class="wizard-step-title">${def.title}</h3>
-        ${def.lede ? `<p class="field-desc">${escapeHtml(def.lede)}</p>` : ""}
 
         ${def.render()}
       </div>
