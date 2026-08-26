@@ -953,13 +953,13 @@ function openComposerWizard(pin) {
         ${renderComposerHeader()}
         <div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>
         <div class="wizard-done">
-          <div class="wizard-done-emoji">🎉</div>
-          <h3 class="wizard-step-title">잘했어요~!</h3>
-          <p class="field-desc">당신의 기억이 지도에 쌓였어요.</p>
+          <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
+          <h3 class="wizard-step-title">잘했어요~! 💕</h3>
+          <p class="field-desc"><span class="wizard-done-highlight">당신의 기억</span>이 지도에 쌓였어요.</p>
           <p class="field-desc">태그나 그때 들었던 노래를 더 남기면 이 기억을 나중에 더 쉽게 다시 만날 수 있어요.</p>
         </div>
         <div class="wizard-nav">
-          <button type="button" class="btn-primary" id="wizard-next-btn">다음</button>
+          <button type="button" class="btn-primary" id="wizard-next-btn">다음 ›</button>
         </div>
       `;
       panel.scrollTop = 0;

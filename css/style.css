@@ -2709,9 +2709,11 @@ button.story-place-line:hover {
   padding: 12px 0 4px;
 }
 
-.wizard-done-emoji {
-  font-size: 34px;
-  margin-bottom: 10px;
+.wizard-done-illustration {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  margin: 0 auto 12px;
 }
 
 .wizard-done .wizard-step-title {
@@ -2720,6 +2722,11 @@ button.story-place-line:hover {
 
 .wizard-done .field-desc {
   margin: 0 0 4px;
+}
+
+.wizard-done-highlight {
+  color: var(--cs-orange);
+  font-weight: 600;
 }
 
 .input-with-icon {
