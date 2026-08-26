@@ -660,21 +660,6 @@ function openComposerWizard(pin) {
     }
   }
 
-  // WHERE(장소명) 소셜 프루프 — 정확히 같은 장소에 이미 기억이 있으면 그
-  // 개수를, 없으면 도보 거리(storySheet.js NEARBY_STORIES_RADIUS_METERS와
-  // 동일한 반경)의 기억 개수를 보여준다.
-  function buildPlaceProofHtml() {
-    const sameSpotCount = Storage.getStoriesAtSamePlace(pin).length;
-    if (sameSpotCount > 0) {
-      return `<div class="field-hint field-hint--proof">이미 이 장소에 남겨진 기억이 ${sameSpotCount}개 있어요.</div>`;
-    }
-    const nearbyCount = Storage.getStoriesNear(pin.lat, pin.lng, NEARBY_STORIES_RADIUS_METERS).length;
-    if (nearbyCount > 0) {
-      return `<div class="field-hint field-hint--proof">이 근처엔 이미 ${nearbyCount}개의 기억이 남아있어요.</div>`;
-    }
-    return `<div class="field-hint field-hint--proof">이 장소의 첫 기억이 되어보세요.</div>`;
-  }
-
   function renderWhereNameStepHtml() {
     const namePlaceholder = pin.isFreePin
       ? "이 장소를 뭐라고 부르시나요?"
@@ -690,7 +675,6 @@ function openComposerWizard(pin) {
       </div>
       ${nameHint}
       <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
-      ${buildPlaceProofHtml()}
 
       <div class="author-mode-toggle" style="margin-top:20px;">
         <button type="button" class="mode-btn ${state.authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">🐱 익명으로 남기기</button>
