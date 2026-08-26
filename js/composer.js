@@ -950,11 +950,19 @@ function openComposerWizard(pin) {
           </div>
         </div>
         <div class="wizard-nav">
+          <button type="button" class="btn-secondary" id="wizard-back-btn">이전</button>
           <button type="button" class="btn-primary" id="wizard-next-btn">다음 ›</button>
         </div>
       `;
       panel.scrollTop = 0;
       document.getElementById("btn-composer-close").onclick = closeComposer;
+      // 게시된 내용을 고치고 싶으면 MEMORY 스텝으로 — 다시 "다음"을
+      // 누르면 새로 만들지 않고 업데이트한다(updatePublishedStory 참고).
+      document.getElementById("wizard-back-btn").onclick = () => {
+        showingCompletionScreen = false;
+        step = 2;
+        renderWizardStep();
+      };
       document.getElementById("wizard-next-btn").onclick = () => {
         showingCompletionScreen = false;
         step = 3;
@@ -968,8 +976,11 @@ function openComposerWizard(pin) {
     const isBonusStep = step >= 3;
     const showBack = step === 1 || step === 2;
 
+    // TAGS/MUSIC은 WHERE~MEMORY 3단계 카운트에 안 잡히는 "덤"이라 숫자는
+    // 없지만, 진행 바 자체는 계속 다 채워진 채로 보여준다(2026-08-26) —
+    // "이미 3단계를 마쳤다"는 느낌을 전 화면에서 일관되게 유지.
     const progressHtml = isBonusStep
-      ? ""
+      ? `<div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>`
       : `
         <div class="wizard-step-eyebrow">
           <span class="field-label-text">${def.eyebrow || ""}</span>
@@ -1009,7 +1020,7 @@ function openComposerWizard(pin) {
     updateComposerScrollbarBounds();
   }
 
-  function publishStory() {
+  function buildSharedFieldsFromState() {
     const inlineTags = extractHashtags(state.content);
     // 본문에 등장하는 단어가 서비스에 이미 쓰이는 태그와 겹치면 자동으로
     // 칩에 넣어준다 — 사용자가 다음 스텝(TAGS)에서 지우거나 더 추가할 수 있다.
@@ -1021,7 +1032,7 @@ function openComposerWizard(pin) {
       });
     state.tagChips = [...new Set([...inlineTags, ...corpusMatches])].slice(0, MAX_HASHTAGS);
 
-    const sharedFields = {
+    return {
       lat: pin.lat,
       lng: pin.lng,
       placeId: pin.placeId,
@@ -1040,7 +1051,27 @@ function openComposerWizard(pin) {
         ? (state.month ? `${state.year}-${String(state.month).padStart(2, "0")}` : state.year)
         : null,
     };
+  }
 
+  // 지도 마커/해시태그 바 새로 그리기는 스토리 개수가 많으면 눈에 띄게
+  // 오래 걸릴 수 있다 — 완료 화면 렌더링 뒤로 미뤄서, "MEMORY 화면이
+  // 잠깐 남아있다가 완료 화면으로 바뀌는" 지연 없이 버튼을 누르자마자
+  // 바로 완료 화면이 보이게 한다(2026-08-26).
+  function showCompletionScreenAfterPublish() {
+    showingCompletionScreen = true;
+    renderWizardStep();
+
+    setTimeout(() => {
+      clearSearchPin();
+      renderMarkers();
+      renderHashtagChips();
+      renderSearchAreaModal();
+      map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
+    }, 0);
+  }
+
+  function publishStory() {
+    const sharedFields = buildSharedFieldsFromState();
     postedStory = {
       id: crypto.randomUUID(),
       publicId: Storage.generatePublicId(),
@@ -1063,20 +1094,20 @@ function openComposerWizard(pin) {
       Storage.addMyStoryId(postedStory.id);
     }
 
-    showingCompletionScreen = true;
-    renderWizardStep();
+    showCompletionScreenAfterPublish();
+  }
 
-    // 지도 마커/해시태그 바 새로 그리기는 스토리 개수가 많으면 눈에 띄게
-    // 오래 걸릴 수 있다 — 완료 화면 렌더링 뒤로 미뤄서, "MEMORY 화면이
-    // 잠깐 남아있다가 완료 화면으로 바뀌는" 지연 없이 버튼을 누르자마자
-    // 바로 완료 화면이 보이게 한다(2026-08-26).
-    setTimeout(() => {
-      clearSearchPin();
-      renderMarkers();
-      renderHashtagChips();
-      renderSearchAreaModal();
-      map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
-    }, 0);
+  // 완료 화면의 "이전"으로 WHERE/WHEN/MEMORY를 고치러 돌아왔다가 다시
+  // MEMORY의 "다음"을 누른 경우 — 이미 게시된 스토리를 또 만들지 않고
+  // 그대로 업데이트한다. TAGS/MUSIC 스텝엔 "이전"이 없어 이 경로로
+  // 돌아오는 일이 없으므로 hashtags/음악 필드를 덮어써도 안전하다.
+  function updatePublishedStory() {
+    const sharedFields = buildSharedFieldsFromState();
+    Storage.updateStory(postedStory.id, sharedFields, {
+      onFail: () => showToast("entry-toast", "수정 내용이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+    });
+    Object.assign(postedStory, sharedFields);
+    showCompletionScreenAfterPublish();
   }
 
   function finishWizard() {
@@ -1136,7 +1167,11 @@ function openComposerWizard(pin) {
         alert("부적절한 단어가 포함되어 있어 남길 수 없어요. 표현을 조금 바꿔주세요.");
         return;
       }
-      publishStory();
+      if (postedStory) {
+        updatePublishedStory();
+      } else {
+        publishStory();
+      }
       return;
     }
 
