@@ -2652,7 +2652,7 @@ button.story-place-line:hover {
   height: 3px;
   border-radius: 999px;
   background: var(--cs-map-gray);
-  margin: 18px 0 12px;
+  margin: 0 0 8px;
   overflow: hidden;
 }
 
@@ -2667,7 +2667,7 @@ button.story-place-line:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin: 14px 0 6px;
 }
 
 .wizard-step-count {
@@ -2739,6 +2739,22 @@ button.story-place-line:hover {
 .input-with-icon .input-field {
   padding-left: 34px;
   border-radius: 12px;
+}
+
+/* 마법사 WHERE 스텝 — 글자 수를 칸 아래 별도 줄 대신 입력창 안쪽
+   오른쪽에 표시한다(2026-08-26). */
+.input-field--counted {
+  padding-right: 46px;
+}
+
+.wizard-input-count {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--cs-text-muted);
+  pointer-events: none;
 }
 
 .tag-input-row {

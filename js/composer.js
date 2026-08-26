@@ -685,15 +685,14 @@ function openComposerWizard(pin) {
     return `
       <div class="input-with-icon">
         <span class="input-icon">${pin.isFreePin ? "✏️" : "🔍"}</span>
-        <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(state.placeName)}" maxlength="40" />
+        <input type="text" id="input-place-name" class="input-field input-field--counted" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(state.placeName)}" maxlength="40" />
+        <span class="wizard-input-count"><span id="place-name-char-count-num">${nonSpaceLength(state.placeName)}</span>/${CONFIG.MAX_PLACE_NAME_LENGTH}</span>
       </div>
-      <div class="char-count"><span id="place-name-char-count-num">${nonSpaceLength(state.placeName)}</span> / ${CONFIG.MAX_PLACE_NAME_LENGTH} (공백 제외)</div>
       ${nameHint}
       <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
       ${buildPlaceProofHtml()}
 
-      <div class="field-heading" style="margin-top:20px;"><span class="field-label-text">이 기억, 누구 이름으로 남길까요?</span></div>
-      <div class="author-mode-toggle">
+      <div class="author-mode-toggle" style="margin-top:20px;">
         <button type="button" class="mode-btn ${state.authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">🐱 익명으로 남기기</button>
         <button type="button" class="mode-btn ${state.authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">👤 이름 또는 닉네임</button>
       </div>
@@ -981,11 +980,11 @@ function openComposerWizard(pin) {
     const progressHtml = isBonusStep
       ? ""
       : `
-        <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / MAIN_STEP_TOTAL) * 100}%"></div></div>
         <div class="wizard-step-eyebrow">
           <span class="field-label-text">${def.eyebrow || ""}</span>
           <span class="wizard-step-count">${step + 1} / ${MAIN_STEP_TOTAL}</span>
         </div>
+        <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / MAIN_STEP_TOTAL) * 100}%"></div></div>
       `;
 
     panel.innerHTML = `
