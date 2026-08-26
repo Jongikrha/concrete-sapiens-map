@@ -602,6 +602,11 @@ function renderEditComposerForm(pin, editing) {
 function openComposerWizard(pin) {
   let step = 0;
   let postedStory = null;
+  // WHERE~MEMORY 3단계를 마치면 "잘했어요~!" 완료 화면을 한 번 보여주고,
+  // 그 다음에야 TAGS/MUSIC을 잇는다 — 진행 바 상으로도 3단계에서 끝난
+  // 것처럼 느껴지게 하고, TAGS/MUSIC은 이어지는 스텝이 아니라 "이런 것도
+  // 남기면 좋겠다"는 별도 제안으로 보이게 하려는 의도.
+  let showingCompletionScreen = false;
 
   const state = {
     placeName: pin.isFreePin ? (pin.customName || "") : (pin.officialPlaceName || ""),
@@ -804,8 +809,7 @@ function openComposerWizard(pin) {
 
   function renderTagsStepHtml() {
     return `
-      <div class="field-hint field-hint--proof">당신의 기억이 지도에 쌓였어요!</div>
-      <p class="field-desc">띄어쓰기로 구분하여 여러 개 입력할 수 있어요. 본문과 어울리는 태그는 미리 넣어뒀어요 — 지우거나 더 추가해도 좋아요.</p>
+      <p class="field-desc">태그를 남겨두면 이 기억을 나중에 더 쉽게 다시 찾을 수 있어요. 본문과 어울리는 태그는 미리 넣어뒀어요 — 지우거나 더 추가해도 좋아요.</p>
       <div class="tag-input-row" id="tag-input-row"></div>
       <div class="field-hint">예) 첫사랑 짝사랑 — # 없이 단어만 적어도 자동으로 붙어요.</div>
     `;
@@ -904,21 +908,19 @@ function openComposerWizard(pin) {
     updateSongMatchHint();
   }
 
-  const STEP_TOTAL = 5;
+  // 진행 바/스텝 카운터는 WHERE~MEMORY 3단계 기준이다 — TAGS/MUSIC은
+  // 이 카운트에 안 잡히는 "덤" 취급(아래 렌더 참고).
+  const MAIN_STEP_TOTAL = 3;
   const STEPS = [
     { eyebrow: "WHERE", title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
     { eyebrow: "WHEN", title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
     { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
-    { eyebrow: "TAGS · 선택", title: "태그를 한 번 넣어볼까요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
-    { eyebrow: "MUSIC · 선택", title: "노래를 넣는 것은 어때요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
+    { title: "태그를 남겨보면 어때요?", badge: "이런 것도 남겨보면 좋아요", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
+    { title: "노래도 함께 남겨볼까요?", badge: "이런 것도 남겨보면 좋아요", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
   ];
 
-  function renderWizardStep() {
-    const panel = document.getElementById("composer-panel");
-    const def = STEPS[step];
-    const showBack = step === 1 || step === 2;
-
-    panel.innerHTML = `
+  function renderComposerHeader() {
+    return `
       <div class="composer-header">
         <div class="composer-icon-box">🚩</div>
         <div class="composer-header-text">
@@ -927,12 +929,55 @@ function openComposerWizard(pin) {
         </div>
         <button class="composer-close-btn" id="btn-composer-close" aria-label="닫기">✕</button>
       </div>
+    `;
+  }
 
-      <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / STEP_TOTAL) * 100}%"></div></div>
-      <div class="wizard-step-eyebrow">
-        <span class="field-label-text">${def.eyebrow}</span>
-        <span class="wizard-step-count">${step + 1} / ${STEP_TOTAL}</span>
-      </div>
+  function renderWizardStep() {
+    const panel = document.getElementById("composer-panel");
+
+    if (showingCompletionScreen) {
+      panel.innerHTML = `
+        ${renderComposerHeader()}
+        <div class="wizard-progress"><div class="wizard-progress-fill" style="width:100%"></div></div>
+        <div class="wizard-done">
+          <div class="wizard-done-emoji">🎉</div>
+          <h3 class="wizard-step-title">잘했어요~!</h3>
+          <p class="field-desc">당신의 기억이 지도에 쌓였어요.</p>
+          <p class="field-desc">태그나 그때 들었던 노래를 더 남기면 이 기억을 나중에 더 쉽게 다시 만날 수 있어요.</p>
+        </div>
+        <div class="wizard-nav">
+          <button type="button" class="btn-primary" id="wizard-next-btn">다음</button>
+        </div>
+      `;
+      panel.scrollTop = 0;
+      document.getElementById("btn-composer-close").onclick = closeComposer;
+      document.getElementById("wizard-next-btn").onclick = () => {
+        showingCompletionScreen = false;
+        step = 3;
+        renderWizardStep();
+      };
+      updateComposerScrollbarBounds();
+      return;
+    }
+
+    const def = STEPS[step];
+    const isBonusStep = step >= 3;
+    const showBack = step === 1 || step === 2;
+
+    const progressHtml = isBonusStep
+      ? `<div class="wizard-bonus-badge">${escapeHtml(def.badge)}</div>`
+      : `
+        <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / MAIN_STEP_TOTAL) * 100}%"></div></div>
+        <div class="wizard-step-eyebrow">
+          <span class="field-label-text">${def.eyebrow}</span>
+          <span class="wizard-step-count">${step + 1} / ${MAIN_STEP_TOTAL}</span>
+        </div>
+      `;
+
+    panel.innerHTML = `
+      ${renderComposerHeader()}
+
+      ${progressHtml}
       <h3 class="wizard-step-title">${def.title}</h3>
       ${def.lede ? `<p class="field-desc">${escapeHtml(def.lede)}</p>` : ""}
 
@@ -1019,7 +1064,7 @@ function openComposerWizard(pin) {
     renderSearchAreaModal();
     map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
 
-    step = 3;
+    showingCompletionScreen = true;
     renderWizardStep();
   }
 
