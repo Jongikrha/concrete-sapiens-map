@@ -115,7 +115,7 @@ function buildMonthOptions(selectedMonth) {
 // (월이 먼저) 를 쓴다 — 이미 값이 채워진 상태에서 순서를 바꾸면 오히려
 // 낯설어질 수 있어 손대지 않았다.
 function buildMonthOptionsWizard(selectedMonth) {
-  let opts = `<option value="">월</option>`;
+  let opts = `<option value="">월(선택)</option>`;
   SEASON_OPTIONS.forEach(([code, label]) => {
     opts += `<option value="${code}" ${code === selectedMonth ? "selected" : ""}>${label}</option>`;
   });
