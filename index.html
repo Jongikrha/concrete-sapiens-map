@@ -218,6 +218,14 @@
     <!-- 기억 전달하기(공유) 완료 토스트 -->
     <div class="share-toast" id="share-toast"></div>
 
+    <!-- 회상 세션(기억산책/기억 라디오) 종료 시 뜨는 작성 유도 배너
+         (js/recall.js showRecallExitCta, 2026-08-26) -->
+    <div class="recall-exit-cta" id="recall-exit-cta">
+      <span class="recall-exit-cta-text">당신의 기억도 이 지도에 남겨보세요</span>
+      <button type="button" class="recall-exit-cta-write-btn" id="recall-exit-cta-write-btn">기억 남기기</button>
+      <button type="button" class="recall-exit-cta-close-btn" id="recall-exit-cta-close-btn" aria-label="닫기">✕</button>
+    </div>
+
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
       <button class="tool-btn tool-btn--radio" id="btn-random">

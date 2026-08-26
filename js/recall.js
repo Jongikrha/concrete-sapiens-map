@@ -37,6 +37,14 @@
 // 자동으로) 카드가 뜨고 음악이 흐른다. 무한 스크롤/추천 피드는 없다.
 
 let recallSessionOpen = false;
+// 회상 세션(기억산책/기억 라디오)을 나갈 때 "당신의 기억도 남겨보세요" 유도
+// 배너를 한 번 보여준다(2026-08-26) — 남의 기억을 쭉 둘러보고 감정이입된
+// 직후가 "나도 써야지" 마음이 제일 잘 드는 순간이라는 판단. 세션당 한 번만
+// (브라우저 탭을 새로고침하기 전까지) — 같은 방문에서 회상 모드를 여러 번
+// 드나들 때마다 뜨면 예전 "근처 기억 발견 토스트"처럼 반복돼서 거슬린다는
+// 피드백을 다시 부를 수 있어 조심스럽게 캡을 둔다.
+let recallExitCtaShownThisSession = false;
+let recallExitCtaTimer = null;
 let recallScope = null; // "mine"(기억산책) | "songs"(기억 라디오)
 let recallPool = [];
 let recallQueue = []; // pop()으로 뒤에서 하나씩 꺼내 쓰는 셔플 큐
@@ -767,6 +775,39 @@ function endRecallSession() {
   recallDecadeLabel = null;
 
   renderMarkers();
+
+  if (!recallExitCtaShownThisSession) {
+    recallExitCtaShownThisSession = true;
+    showRecallExitCta();
+  }
+}
+
+// 회상 세션을 나가면서 보여주는 "당신의 기억도 남겨보세요" 배너 —
+// 웰컴 모달의 "내 위치에 기억 남기기"(js/app.js handleWelcomeWriteClick)와
+// 같은 방식(현재 위치 → startFreePinComposer)을 그대로 쓴다. 몇 초 뒤
+// 자동으로 사라지거나 ✕로 바로 닫을 수 있다 — 강제로 붙잡지 않는다.
+function showRecallExitCta() {
+  const el = document.getElementById("recall-exit-cta");
+  if (!el) return;
+  clearTimeout(recallExitCtaTimer);
+  el.classList.add("show");
+
+  document.getElementById("recall-exit-cta-write-btn").onclick = () => {
+    hideRecallExitCta();
+    navigator.geolocation.getCurrentPosition(
+      (pos) => startFreePinComposer(pos.coords.latitude, pos.coords.longitude),
+      () => alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.")
+    );
+  };
+  document.getElementById("recall-exit-cta-close-btn").onclick = hideRecallExitCta;
+
+  recallExitCtaTimer = setTimeout(hideRecallExitCta, 6000);
+}
+
+function hideRecallExitCta() {
+  clearTimeout(recallExitCtaTimer);
+  const el = document.getElementById("recall-exit-cta");
+  if (el) el.classList.remove("show");
 }
 
 // 연대를 골랐으면 "나의 1990년대 기억 지도", 안 골랐으면("전체") 기존
