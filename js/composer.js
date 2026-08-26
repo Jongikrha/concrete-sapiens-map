@@ -109,6 +109,22 @@ function buildMonthOptions(selectedMonth) {
   return opts;
 }
 
+// 마법사(openComposerWizard)의 WHEN 스텝 전용 — 봄/여름/가을/겨울을 1~12월
+// 앞에 배치해 "정확한 월을 몰라도 계절만 골라도 된다"는 걸 안내 문구 없이
+// 순서만으로 전달한다. 수정 폼(renderEditComposerForm)은 그대로 buildMonthOptions
+// (월이 먼저) 를 쓴다 — 이미 값이 채워진 상태에서 순서를 바꾸면 오히려
+// 낯설어질 수 있어 손대지 않았다.
+function buildMonthOptionsWizard(selectedMonth) {
+  let opts = `<option value="">월</option>`;
+  SEASON_OPTIONS.forEach(([code, label]) => {
+    opts += `<option value="${code}" ${code === selectedMonth ? "selected" : ""}>${label}</option>`;
+  });
+  for (let m = 1; m <= 12; m++) {
+    opts += `<option value="${m}" ${Number(m) === Number(selectedMonth) ? "selected" : ""}>${m}월</option>`;
+  }
+  return opts;
+}
+
 /**
  * 내가 남긴 기억 수정 — storySheet.js의 "수정하기"에서 진입한다.
  * 기존 story를 pin 모양으로 감싸 openComposer를 그대로 재사용하고,
@@ -734,9 +750,8 @@ function openComposerWizard(pin) {
       </div>
       <div class="year-month-row ${state.dateMode !== "past" ? "hidden" : ""}" id="year-month-row">
         <select id="input-year">${buildYearOptions(state.year)}</select>
-        <select id="input-month">${buildMonthOptions(state.month)}</select>
+        <select id="input-month">${buildMonthOptionsWizard(state.month)}</select>
       </div>
-      <div class="field-hint ${state.dateMode !== "past" ? "hidden" : ""}" id="month-season-hint">월은 선택사항이에요. 정확한 월이 기억나지 않으면 봄/여름/가을/겨울을 고르거나, 아예 비워둬도 돼요.</div>
     `;
   }
 
@@ -748,7 +763,6 @@ function openComposerWizard(pin) {
         panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
         btn.classList.add("mode-btn--active");
         document.getElementById("year-month-row").classList.toggle("hidden", state.dateMode !== "past");
-        document.getElementById("month-season-hint").classList.toggle("hidden", state.dateMode !== "past");
       };
     });
   }
@@ -913,7 +927,7 @@ function openComposerWizard(pin) {
   const MAIN_STEP_TOTAL = 3;
   const STEPS = [
     { title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
-    { eyebrow: "WHEN", title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
+    { title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
     { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
     { title: "태그를 남겨보면 어때요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
     { title: "노래도 함께 남겨볼까요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
