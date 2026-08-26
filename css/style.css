@@ -86,7 +86,10 @@ body {
      서브트리 안에서 상대적인 채도/명도 차이를 유지한 채 낮추는 방식이라
      (모든 걸 하나의 옅은 색으로 뭉개는 게 아니라), 옅은 지도 타일은 더
      흐릿해지면서도 마커의 orange 톤은 상대적으로 또렷하게 남는다. */
-  filter: saturate(0.6) brightness(1.05) contrast(0.95);
+  /* 마커(Memory Light 별 도형)가 잘 안 보인다는 피드백으로 밝기를
+     살짝 낮췄다(2026-08-26, 1.05 → 0.9) — 채도/대비는 그대로 둬서
+     지도 자체 가독성(거리명 등)은 크게 안 건드리는 선에서. */
+  filter: saturate(0.6) brightness(0.9) contrast(0.95);
   transition: filter 0.6s ease;
 }
 
