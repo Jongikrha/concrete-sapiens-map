@@ -2736,7 +2736,7 @@ button.story-place-line:hover {
 /* 3단계(WHERE~MEMORY) 완료 화면 — "잘했어요~!" */
 .wizard-done {
   text-align: center;
-  padding: 12px 0 4px;
+  padding: 32px 0 4px;
 }
 
 .wizard-done-illustration {
