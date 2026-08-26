@@ -27,23 +27,30 @@ function startFreePinComposer(lat, lng, prefillContent) {
   });
 
   reverseGeocode(lat, lng).then(({ address, buildingName }) => {
+    if (pendingPin) pendingPin.address = address || null;
+
+    // 아직 아무것도 안 적은 상태(사용자가 미리 타이핑하지 않은 경우)에만
+    // 채워준다 — 값을 덮어써서 이미 입력한 이름을 지우면 안 되기 때문.
+    // 등록된 건물명(예: "서울역")이 있으면 그걸 우선, 없으면 주소로 채운다.
+    // 마법사는 이 시점에 사용자가 이미 WHERE 스텝을 지나갔을 수도 있어
+    // (openComposerWizard가 pin에 걸어둔) state에 먼저 반영해두고, 지금
+    // 화면에 WHERE 스텝의 DOM이 떠 있을 때만 실제 입력창도 같이 채운다.
+    const wizardState = pendingPin && pendingPin._wizardState;
+    const prefillName = buildingName || (address && Storage.abbreviateAddress(address));
+    if (wizardState && !wizardState.placeName && prefillName) {
+      wizardState.placeName = trimToNonSpaceLimit(prefillName, CONFIG.MAX_PLACE_NAME_LENGTH);
+    }
+
     const addrEl = document.getElementById("composer-address-value");
     if (addrEl) {
       addrEl.textContent = (address && Storage.abbreviateAddress(address)) || "주소를 확인할 수 없습니다";
     }
-    // 아직 아무것도 안 적은 상태(사용자가 미리 타이핑하지 않은 경우)에만
-    // 채워준다 — 값을 덮어써서 이미 입력한 이름을 지우면 안 되기 때문.
-    // 등록된 건물명(예: "서울역")이 있으면 그걸 우선, 없으면 주소로 채운다.
     const nameInput = document.getElementById("input-place-name");
-    if (nameInput && !nameInput.value.trim()) {
-      const prefillName = buildingName || (address && Storage.abbreviateAddress(address));
-      if (prefillName) {
-        nameInput.value = trimToNonSpaceLimit(prefillName, CONFIG.MAX_PLACE_NAME_LENGTH);
-        const countEl = document.getElementById("place-name-char-count-num");
-        if (countEl) countEl.textContent = nonSpaceLength(nameInput.value);
-      }
+    if (nameInput && !nameInput.value.trim() && wizardState && wizardState.placeName) {
+      nameInput.value = wizardState.placeName;
+      const countEl = document.getElementById("place-name-char-count-num");
+      if (countEl) countEl.textContent = nonSpaceLength(nameInput.value);
     }
-    if (pendingPin) pendingPin.address = address || null;
     updateComposerScrollbarBounds();
   });
 }
@@ -121,6 +128,13 @@ function startEditComposer(story) {
   });
 }
 
+/**
+ * 작성 폼 진입점. 수정 모드(editingStory 있음)는 예전 그대로 한 화면
+ * 스크롤 폼을 쓰고, 새로 쓰는 흐름(2026-08-26 도입)은 한 번에 하나씩
+ * 보여주는 단계별 마법사(openComposerWizard)로 분기한다 — 이미 값이
+ * 다 채워진 걸 다시 확인하는 수정 흐름까지 마법사로 바꾸면 클릭 수만
+ * 늘어나서 그대로 뒀다.
+ */
 function openComposer(pin) {
   pendingPin = pin;
   const panel = document.getElementById("composer-panel");
@@ -130,6 +144,19 @@ function openComposer(pin) {
   // 왜곡된다).
   if (!editing) Storage.logEvent("composer_opened");
 
+  if (editing) {
+    renderEditComposerForm(pin, editing);
+  } else {
+    openComposerWizard(pin);
+  }
+
+  document.getElementById("composer-overlay").classList.remove("hidden");
+  panel.scrollTop = 0;
+  updateComposerScrollbarBounds();
+}
+
+function renderEditComposerForm(pin, editing) {
+  const panel = document.getElementById("composer-panel");
   const namePlaceholder = pin.isFreePin
     ? "이 장소를 뭐라고 부르시나요?"
     : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
@@ -540,36 +567,11 @@ function openComposer(pin) {
         : null,
     };
 
-    let story;
-    if (editing) {
-      story = Storage.updateStory(editing.id, sharedFields, {
-        onFail: () => showToast("entry-toast", "수정 내용이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
-      });
-    } else {
-      story = {
-        id: crypto.randomUUID(),
-        publicId: Storage.generatePublicId(),
-        ...sharedFields,
-        createdAt: new Date().toISOString(),
-        reportCount: 0,
-        status: "ACTIVE",
-        reactionCount: 0,
-        shareCount: 0,
-        viewCount: 0,
-        authorDeviceId: Storage.getDeviceId(),
-      };
-      Storage.saveStory(story, {
-        onFail: () => showToast("entry-toast", "기억이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
-      });
-      Storage.logEvent("composer_submitted");
-      const currentUser = Auth.getCurrentUser();
-      if (currentUser) {
-        Storage.recordStoryAuthor(story.id, currentUser.userId, currentUser.email);
-        // "내 글" 캐시(storage.js isMyStory)에 바로 반영 — 서버 재조회를
-        // 기다리지 않아도 방금 쓴 글에 곧바로 수정하기/삭제하기가 뜬다.
-        Storage.addMyStoryId(story.id);
-      }
-    }
+    // 이 폼은 수정 모드 전용이다(새로 쓰는 흐름은 openComposerWizard) —
+    // story 생성 분기 없이 항상 업데이트.
+    const story = Storage.updateStory(editing.id, sharedFields, {
+      onFail: () => showToast("entry-toast", "수정 내용이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+    });
 
     closeComposer();
     clearSearchPin();
@@ -579,15 +581,547 @@ function openComposer(pin) {
     map.setCenter(new kakao.maps.LatLng(story.lat, story.lng));
 
     const group = Storage.getGroupedByPlace().find((g) => g.lat === story.lat && g.lng === story.lng);
-    // 방금 남긴 기억에만 "이렇게 다시 만나질 수 있어요" 배너를 보여준다
-    // (js/storySheet.js renderStoryItem) — 수정 모드는 이미 알고 쓰는
-    // 재확인일 뿐이라 새로 설득할 필요가 없어 제외한다.
-    if (group) openSheet(group, editing ? {} : { justPostedStoryId: story.id });
+    if (group) openSheet(group, {});
   };
+}
 
-  document.getElementById("composer-overlay").classList.remove("hidden");
-  panel.scrollTop = 0;
-  updateComposerScrollbarBounds();
+// ============================================================
+// 기억 남기기 — 단계별 마법사 (2026-08-26 도입)
+// ============================================================
+// WHERE+NAME → WHEN → MEMORY → TAGS(선택) → MUSIC(선택) 5스텝. MEMORY까지만
+// 필수이고, 거기서 버튼을 누르면 그 시점에 실제로 게시된다(Storage.saveStory).
+// TAGS/MUSIC은 "이미 지도에 올라간 기억"에 나중에 덧붙이는 선택 단계로 각자
+// Storage.updateStory로 저장한다 — 그래서 3단계 이후로는 "이전"이 없다
+// (되돌아가 고치려면 별도 재수정 로직이 필요해지기 때문).
+//
+// 스텝마다 panel.innerHTML을 통째로 다시 그리기 때문에(js/helpTour.js와
+// 같은 "스텝 인덱스 + 매번 다시 그리는 렌더 함수" 패턴), 이전 스텝의 DOM은
+// 다음 스텝으로 넘어가면 사라진다. 그래서 필드 값을 살아있는 DOM에서
+// 그때그때 읽는 대신 `state` 객체에 모아두고, 스텝을 그릴 때마다 그 값으로
+// 미리 채운다 — 뒤로 가기/다시 그리기를 해도 입력한 값이 안 사라진다.
+function openComposerWizard(pin) {
+  let step = 0;
+  let postedStory = null;
+
+  const state = {
+    placeName: pin.isFreePin ? (pin.customName || "") : (pin.officialPlaceName || ""),
+    authorMode: "anonymous",
+    authorName: "",
+    dateMode: "past",
+    year: "",
+    month: "",
+    content: pin.prefillContent || "",
+    tagChips: [],
+    youtubeUrl: "",
+    musicArtist: "",
+    musicTitle: "",
+  };
+  // startFreePinComposer의 reverseGeocode 콜백이 지금 몇 번째 스텝이든
+  // 이름 자동 채움을 state에 반영할 수 있도록 pin에 걸어둔다(아래
+  // startFreePinComposer 참고).
+  pin._wizardState = state;
+
+  function captureStep(n) {
+    const panel = document.getElementById("composer-panel");
+    if (n === 0) {
+      const nameInput = panel.querySelector("#input-place-name");
+      if (nameInput) state.placeName = nameInput.value.trim();
+      const authorInput = panel.querySelector("#input-author");
+      if (authorInput) state.authorName = authorInput.value.trim();
+    } else if (n === 1) {
+      const yearInput = panel.querySelector("#input-year");
+      const monthInput = panel.querySelector("#input-month");
+      if (yearInput) state.year = yearInput.value;
+      if (monthInput) state.month = monthInput.value;
+    } else if (n === 2) {
+      const contentInput = panel.querySelector("#input-content");
+      if (contentInput) state.content = contentInput.value.trim();
+    }
+  }
+
+  // WHERE(장소명) 소셜 프루프 — 정확히 같은 장소에 이미 기억이 있으면 그
+  // 개수를, 없으면 도보 거리(storySheet.js NEARBY_STORIES_RADIUS_METERS와
+  // 동일한 반경)의 기억 개수를 보여준다.
+  function buildPlaceProofHtml() {
+    const sameSpotCount = Storage.getStoriesAtSamePlace(pin).length;
+    if (sameSpotCount > 0) {
+      return `<div class="field-hint field-hint--proof">이미 이 장소에 남겨진 기억이 ${sameSpotCount}개 있어요.</div>`;
+    }
+    const nearbyCount = Storage.getStoriesNear(pin.lat, pin.lng, NEARBY_STORIES_RADIUS_METERS).length;
+    if (nearbyCount > 0) {
+      return `<div class="field-hint field-hint--proof">이 근처엔 이미 ${nearbyCount}개의 기억이 남아있어요.</div>`;
+    }
+    return `<div class="field-hint field-hint--proof">이 장소의 첫 기억이 되어보세요.</div>`;
+  }
+
+  function renderWhereNameStepHtml() {
+    const namePlaceholder = pin.isFreePin
+      ? "이 장소를 뭐라고 부르시나요?"
+      : "장소 이름을 확인하거나 고쳐 쓸 수 있어요";
+    const nameHint = pin.isFreePin
+      ? `<div class="field-hint">장소 이름을 기본으로 채워뒀어요. 다른 사람이 알아보기 쉽도록 자유롭게 고쳐 써보세요. 예) 서울역, 우리의 따뜻한 신혼집</div>`
+      : "";
+    return `
+      <div class="input-with-icon">
+        <span class="input-icon">${pin.isFreePin ? "✏️" : "🔍"}</span>
+        <input type="text" id="input-place-name" class="input-field" placeholder="${escapeHtml(namePlaceholder)}" value="${escapeHtml(state.placeName)}" maxlength="40" />
+      </div>
+      <div class="char-count"><span id="place-name-char-count-num">${nonSpaceLength(state.placeName)}</span> / ${CONFIG.MAX_PLACE_NAME_LENGTH} (공백 제외)</div>
+      ${nameHint}
+      <div class="field-address" id="composer-address-value">${escapeHtml((pin.address && Storage.abbreviateAddress(pin.address)) || "주소 확인 중...")}</div>
+      ${buildPlaceProofHtml()}
+
+      <div class="field-heading" style="margin-top:20px;"><span class="field-label-text">이 기억, 누구 이름으로 남길까요?</span></div>
+      <div class="author-mode-toggle">
+        <button type="button" class="mode-btn ${state.authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">🐱 익명으로 남기기</button>
+        <button type="button" class="mode-btn ${state.authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">👤 이름 또는 닉네임</button>
+      </div>
+      <input type="text" id="input-author" class="input-field ${state.authorMode !== "custom" ? "hidden" : ""}" style="margin-top:8px;" placeholder="이 기억을 어떤 이름으로 남길까요?" maxlength="30" value="${escapeHtml(state.authorName)}" />
+      <div class="field-hint">당신의 이름은 지도에 공개되지 않아요.</div>
+    `;
+  }
+
+  function wireWhereNameStep() {
+    const panel = document.getElementById("composer-panel");
+    const nameInput = panel.querySelector("#input-place-name");
+
+    let isComposingPlaceName = false;
+    const enforcePlaceNameLimit = (e) => {
+      const trimmed = trimToNonSpaceLimit(e.target.value, CONFIG.MAX_PLACE_NAME_LENGTH);
+      if (trimmed !== e.target.value) e.target.value = trimmed;
+      document.getElementById("place-name-char-count-num").textContent = nonSpaceLength(trimmed);
+    };
+    nameInput.addEventListener("compositionstart", () => { isComposingPlaceName = true; });
+    nameInput.addEventListener("compositionend", (e) => {
+      isComposingPlaceName = false;
+      enforcePlaceNameLimit(e);
+    });
+    nameInput.addEventListener("input", (e) => {
+      if (isComposingPlaceName) return;
+      enforcePlaceNameLimit(e);
+    });
+
+    // 자유 핀은 이름을 자동 채워두므로, 처음 포커스할 때 전체 선택해
+    // 바로 타이핑으로 덮어쓸 수 있다는 걸 느끼게 한다.
+    if (pin.isFreePin) {
+      nameInput.addEventListener("focus", () => nameInput.select(), { once: true });
+    }
+
+    panel.querySelectorAll(".author-mode-toggle .mode-btn").forEach((btn) => {
+      btn.onclick = () => {
+        state.authorMode = btn.dataset.authorMode;
+        panel.querySelectorAll(".author-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
+        btn.classList.add("mode-btn--active");
+        document.getElementById("input-author").classList.toggle("hidden", state.authorMode !== "custom");
+      };
+    });
+    panel.querySelector("#input-author").addEventListener("input", (e) => {
+      state.authorName = e.target.value;
+    });
+  }
+
+  function renderWhenStepHtml() {
+    return `
+      <div class="date-mode-toggle">
+        <button type="button" class="mode-btn ${state.dateMode === "now" ? "mode-btn--active" : ""}" data-mode="now">지금</button>
+        <button type="button" class="mode-btn ${state.dateMode === "past" ? "mode-btn--active" : ""}" data-mode="past">과거</button>
+        <button type="button" class="mode-btn ${state.dateMode === "unknown" ? "mode-btn--active" : ""}" data-mode="unknown">기억나지 않음</button>
+      </div>
+      <div class="year-month-row ${state.dateMode !== "past" ? "hidden" : ""}" id="year-month-row">
+        <select id="input-year">${buildYearOptions(state.year)}</select>
+        <select id="input-month">${buildMonthOptions(state.month)}</select>
+      </div>
+      <div class="field-hint ${state.dateMode !== "past" ? "hidden" : ""}" id="month-season-hint">월은 선택사항이에요. 정확한 월이 기억나지 않으면 봄/여름/가을/겨울을 고르거나, 아예 비워둬도 돼요.</div>
+    `;
+  }
+
+  function wireWhenStep() {
+    const panel = document.getElementById("composer-panel");
+    panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((btn) => {
+      btn.onclick = () => {
+        state.dateMode = btn.dataset.mode;
+        panel.querySelectorAll(".date-mode-toggle .mode-btn").forEach((b) => b.classList.remove("mode-btn--active"));
+        btn.classList.add("mode-btn--active");
+        document.getElementById("year-month-row").classList.toggle("hidden", state.dateMode !== "past");
+        document.getElementById("month-season-hint").classList.toggle("hidden", state.dateMode !== "past");
+      };
+    });
+  }
+
+  function renderMemoryStepHtml() {
+    return `
+      <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="당신의 기억을 자유롭게 작성해주세요.">${escapeHtml(state.content)}</textarea>
+      <div class="char-count"><span id="char-count-num">${state.content.length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
+    `;
+  }
+
+  function wireMemoryStep() {
+    document.getElementById("input-content").addEventListener("input", (e) => {
+      document.getElementById("char-count-num").textContent = e.target.value.length;
+    });
+  }
+
+  // TAGS 칩 렌더 — js/composer.js 수정 폼의 renderTagChips와 같은 방식이지만
+  // tagChips 배열 대신 공유 state.tagChips를 직접 조작한다.
+  function renderTagsChipsUI() {
+    const row = document.getElementById("tag-input-row");
+    if (!row) return;
+    row.innerHTML = `
+      ${state.tagChips.map((t, i) => `<span class="tag-chip">${escapeHtml(t)}<button type="button" class="tag-chip-remove" data-idx="${i}">✕</button></span>`).join("")}
+      <input type="text" id="tag-entry" class="tag-entry-input" placeholder="${state.tagChips.length ? "" : "태그를 입력하세요"}" />
+    `;
+    row.querySelectorAll(".tag-chip-remove").forEach((btn) => {
+      btn.onclick = () => {
+        state.tagChips.splice(Number(btn.dataset.idx), 1);
+        renderTagsChipsUI();
+      };
+    });
+    const entry = document.getElementById("tag-entry");
+    const commitEntry = ({ refocus } = {}) => {
+      const parts = entry.value.trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return;
+      if (state.tagChips.length >= MAX_HASHTAGS) {
+        alert(`태그는 최대 ${MAX_HASHTAGS}개까지 남길 수 있어요.`);
+        entry.value = "";
+        return;
+      }
+      parts.forEach((p) => {
+        if (state.tagChips.length >= MAX_HASHTAGS) return;
+        const tag = p.startsWith("#") ? p : `#${p}`;
+        if (!state.tagChips.includes(tag)) state.tagChips.push(tag);
+      });
+      renderTagsChipsUI();
+      if (refocus) document.getElementById("tag-entry").focus();
+    };
+    entry.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        commitEntry({ refocus: true });
+      }
+    });
+    entry.addEventListener("blur", () => commitEntry());
+  }
+
+  function renderTagsStepHtml() {
+    return `
+      <div class="field-hint field-hint--proof">당신의 기억이 지도에 쌓였어요!</div>
+      <p class="field-desc">띄어쓰기로 구분하여 여러 개 입력할 수 있어요. 본문과 어울리는 태그는 미리 넣어뒀어요 — 지우거나 더 추가해도 좋아요.</p>
+      <div class="tag-input-row" id="tag-input-row"></div>
+      <div class="field-hint">예) 첫사랑 짝사랑 — # 없이 단어만 적어도 자동으로 붙어요.</div>
+    `;
+  }
+
+  function wireTagsStep() {
+    renderTagsChipsUI();
+  }
+
+  function renderMusicStepHtml() {
+    return `
+      <input type="url" id="input-youtube-url" class="input-field" placeholder="https://youtube.com/watch?v=..." maxlength="300" value="${escapeHtml(state.youtubeUrl)}" />
+      <div class="field-hint" id="youtube-url-hint">유튜브에서 공유하기 버튼을 누른 후 붙여넣어 주세요!</div>
+      <div class="music-meta-preview ${Storage.extractYoutubeVideoId(state.youtubeUrl) ? "" : "hidden"}" id="music-meta-preview">
+        <p class="field-hint">이 노래가 맞나요? 다르면 고쳐주세요.</p>
+        <div class="music-meta-row">
+          <input type="text" id="input-music-artist" class="input-field input-field--sm" placeholder="아티스트" maxlength="60" value="${escapeHtml(state.musicArtist)}" />
+          <input type="text" id="input-music-title" class="input-field input-field--sm" placeholder="곡명" maxlength="80" value="${escapeHtml(state.musicTitle)}" />
+        </div>
+        <button type="button" class="song-match-hint hidden" id="song-match-hint"></button>
+      </div>
+    `;
+  }
+
+  function wireMusicStep() {
+    let lastFetchedVideoId = Storage.extractYoutubeVideoId(state.youtubeUrl);
+
+    function updateMusicMetaVisibility(videoId) {
+      const box = document.getElementById("music-meta-preview");
+      if (box) box.classList.toggle("hidden", !videoId);
+    }
+
+    function updateSongMatchHint() {
+      const hint = document.getElementById("song-match-hint");
+      if (!hint) return;
+      const artistVal = document.getElementById("input-music-artist").value.trim();
+      const titleVal = document.getElementById("input-music-title").value.trim();
+      const match = titleVal ? Storage.suggestSongMatch(artistVal, titleVal) : null;
+      if (!match) {
+        hint.classList.add("hidden");
+        hint.onclick = null;
+        return;
+      }
+      hint.textContent = `혹시 이 곡인가요? ${match.artist ? `${match.artist} · ` : ""}${match.title}`;
+      hint.classList.remove("hidden");
+      hint.onclick = () => {
+        document.getElementById("input-music-artist").value = match.artist || "";
+        document.getElementById("input-music-title").value = match.title;
+        state.musicArtist = match.artist || "";
+        state.musicTitle = match.title;
+        hint.classList.add("hidden");
+      };
+    }
+
+    document.getElementById("input-youtube-url").addEventListener("input", (e) => {
+      state.youtubeUrl = e.target.value.trim();
+      const hint = document.getElementById("youtube-url-hint");
+      const videoId = Storage.extractYoutubeVideoId(state.youtubeUrl);
+      hint.textContent = state.youtubeUrl && !videoId
+        ? "유튜브 링크 형식을 확인해주세요."
+        : "유튜브에서 공유하기 버튼을 누른 후 붙여넣어 주세요!";
+      updateMusicMetaVisibility(videoId);
+
+      if (videoId === lastFetchedVideoId) return;
+      if (!videoId) { lastFetchedVideoId = null; return; }
+
+      document.getElementById("input-music-artist").value = "";
+      document.getElementById("input-music-title").value = "";
+      state.musicArtist = "";
+      state.musicTitle = "";
+      lastFetchedVideoId = videoId;
+
+      Storage.fetchYoutubeOEmbed(videoId).then((oembed) => {
+        if (!oembed || !oembed.title || videoId !== lastFetchedVideoId || pendingPin !== pin) return;
+        if (state.musicArtist.trim() || state.musicTitle.trim()) return;
+        const parsed = Storage.parseYoutubeMusicTitle(oembed.title, oembed.channelName);
+        if (parsed.artist) state.musicArtist = parsed.artist;
+        if (parsed.title) state.musicTitle = parsed.title;
+        if (step !== 4) return;
+        const artistInput = document.getElementById("input-music-artist");
+        const titleInput = document.getElementById("input-music-title");
+        if (!artistInput || !titleInput) return;
+        artistInput.value = state.musicArtist;
+        titleInput.value = state.musicTitle;
+        updateSongMatchHint();
+      });
+    });
+
+    ["input-music-artist", "input-music-title"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", (e) => {
+        if (id === "input-music-artist") state.musicArtist = e.target.value;
+        else state.musicTitle = e.target.value;
+        updateSongMatchHint();
+      });
+    });
+    updateSongMatchHint();
+  }
+
+  const STEP_TOTAL = 5;
+  const STEPS = [
+    { eyebrow: "WHERE", title: "어디였나요?", render: renderWhereNameStepHtml, wire: wireWhereNameStep, navLabel: "다음" },
+    { eyebrow: "WHEN", title: "언제였죠?", render: renderWhenStepHtml, wire: wireWhenStep, navLabel: "다음" },
+    { eyebrow: "MEMORY", title: "어떤 기억이 있었나요?", lede: "첫사랑도 좋고 어린 시절 이야기도 좋고 직장생활 이야기도 좋아요.", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "기억 남기기" },
+    { eyebrow: "TAGS · 선택", title: "태그를 한 번 넣어볼까요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
+    { eyebrow: "MUSIC · 선택", title: "노래를 넣는 것은 어때요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "완료" },
+  ];
+
+  function renderWizardStep() {
+    const panel = document.getElementById("composer-panel");
+    const def = STEPS[step];
+    const showBack = step === 1 || step === 2;
+
+    panel.innerHTML = `
+      <div class="composer-header">
+        <div class="composer-icon-box">🚩</div>
+        <div class="composer-header-text">
+          <h2 class="composer-title">기억 남기기</h2>
+          <p class="composer-subtitle">당신의 기억이 지도에 남아 빛이 됩니다.</p>
+        </div>
+        <button class="composer-close-btn" id="btn-composer-close" aria-label="닫기">✕</button>
+      </div>
+
+      <div class="wizard-progress"><div class="wizard-progress-fill" style="width:${((step + 1) / STEP_TOTAL) * 100}%"></div></div>
+      <div class="wizard-step-eyebrow">
+        <span class="field-label-text">${def.eyebrow}</span>
+        <span class="wizard-step-count">${step + 1} / ${STEP_TOTAL}</span>
+      </div>
+      <h3 class="wizard-step-title">${def.title}</h3>
+      ${def.lede ? `<p class="field-desc">${escapeHtml(def.lede)}</p>` : ""}
+
+      ${def.render()}
+
+      <div class="wizard-nav">
+        ${showBack ? `<button type="button" class="btn-secondary" id="wizard-back-btn">이전</button>` : ""}
+        <button type="button" class="btn-primary" id="wizard-next-btn">${def.navLabel}</button>
+      </div>
+    `;
+    panel.scrollTop = 0;
+
+    document.getElementById("btn-composer-close").onclick = closeComposer;
+    if (showBack) {
+      document.getElementById("wizard-back-btn").onclick = () => {
+        captureStep(step);
+        step -= 1;
+        renderWizardStep();
+      };
+    }
+    document.getElementById("wizard-next-btn").onclick = handleWizardNext;
+
+    def.wire();
+    updateComposerScrollbarBounds();
+  }
+
+  function publishStory() {
+    const inlineTags = extractHashtags(state.content);
+    // 본문에 등장하는 단어가 서비스에 이미 쓰이는 태그와 겹치면 자동으로
+    // 칩에 넣어준다 — 사용자가 다음 스텝(TAGS)에서 지우거나 더 추가할 수 있다.
+    const corpusMatches = Storage.getAllHashtagsWithCounts()
+      .map((t) => t.tag)
+      .filter((tag) => {
+        const bare = tag.startsWith("#") ? tag.slice(1) : tag;
+        return bare && state.content.includes(bare);
+      });
+    state.tagChips = [...new Set([...inlineTags, ...corpusMatches])].slice(0, MAX_HASHTAGS);
+
+    const sharedFields = {
+      lat: pin.lat,
+      lng: pin.lng,
+      placeId: pin.placeId,
+      officialPlaceName: pin.placeId ? (state.placeName || pin.officialPlaceName || null) : null,
+      address: pin.address || null,
+      customName: !pin.placeId && state.placeName ? state.placeName : null,
+      content: state.content,
+      youtubeUrl: null,
+      musicArtist: null,
+      musicTitle: null,
+      hashtags: inlineTags,
+      authorMode: state.authorMode,
+      displayAuthorName: state.authorMode === "custom" ? state.authorName : "익명",
+      dateMode: state.dateMode,
+      referenceDate: state.dateMode === "past"
+        ? (state.month ? `${state.year}-${String(state.month).padStart(2, "0")}` : state.year)
+        : null,
+    };
+
+    postedStory = {
+      id: crypto.randomUUID(),
+      publicId: Storage.generatePublicId(),
+      ...sharedFields,
+      createdAt: new Date().toISOString(),
+      reportCount: 0,
+      status: "ACTIVE",
+      reactionCount: 0,
+      shareCount: 0,
+      viewCount: 0,
+      authorDeviceId: Storage.getDeviceId(),
+    };
+    Storage.saveStory(postedStory, {
+      onFail: () => showToast("entry-toast", "기억이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+    });
+    Storage.logEvent("composer_submitted");
+    const currentUser = Auth.getCurrentUser();
+    if (currentUser) {
+      Storage.recordStoryAuthor(postedStory.id, currentUser.userId, currentUser.email);
+      Storage.addMyStoryId(postedStory.id);
+    }
+
+    clearSearchPin();
+    renderMarkers();
+    renderHashtagChips();
+    renderSearchAreaModal();
+    map.setCenter(new kakao.maps.LatLng(postedStory.lat, postedStory.lng));
+
+    step = 3;
+    renderWizardStep();
+  }
+
+  function finishWizard() {
+    closeComposer();
+    const group = Storage.getGroupedByPlace().find((g) => g.lat === postedStory.lat && g.lng === postedStory.lng);
+    if (group) openSheet(group, { justPostedStoryId: postedStory.id });
+  }
+
+  function handleWizardNext() {
+    if (step === 0) {
+      captureStep(0);
+      const nameInput = document.getElementById("input-place-name");
+      if (pin.isFreePin && !state.placeName) {
+        alert("이 장소를 뭐라고 부르는지 적어주세요. 예) 서울역, 우리의 따뜻한 신혼집");
+        nameInput.focus();
+        return;
+      }
+      if (state.placeName && nonSpaceLength(state.placeName) > CONFIG.MAX_PLACE_NAME_LENGTH) {
+        alert(`장소 이름은 공백 제외 ${CONFIG.MAX_PLACE_NAME_LENGTH}글자까지 적을 수 있어요.`);
+        nameInput.focus();
+        return;
+      }
+      if (state.authorMode === "custom" && !state.authorName) {
+        alert("이름 또는 닉네임을 입력해주세요.");
+        document.getElementById("input-author").focus();
+        return;
+      }
+      step = 1;
+      renderWizardStep();
+      return;
+    }
+
+    if (step === 1) {
+      captureStep(1);
+      if (state.dateMode === "past" && !state.year) {
+        alert("기억의 연도를 선택해주세요.");
+        return;
+      }
+      if (state.dateMode === "unknown") {
+        const confirmed = confirm(
+          "정말 시점을 남기지 않을까요?\n\n연도를 남기면 나중에 \"같은 해의 다른 기억\"이나 시간여행 기능으로 이 기억을 다시 만날 수 있어요."
+        );
+        if (!confirmed) return;
+      }
+      step = 2;
+      renderWizardStep();
+      return;
+    }
+
+    if (step === 2) {
+      captureStep(2);
+      if (!state.content) {
+        alert("기억을 적어주세요.");
+        return;
+      }
+      if (Storage.containsBannedWord(state.content)) {
+        alert("부적절한 단어가 포함되어 있어 남길 수 없어요. 표현을 조금 바꿔주세요.");
+        return;
+      }
+      publishStory();
+      return;
+    }
+
+    if (step === 3) {
+      const pendingEntry = document.getElementById("tag-entry")?.value.trim() || "";
+      if (pendingEntry) {
+        pendingEntry.split(/\s+/).filter(Boolean).forEach((p) => {
+          const tag = p.startsWith("#") ? p : `#${p}`;
+          if (state.tagChips.length < MAX_HASHTAGS && !state.tagChips.includes(tag)) state.tagChips.push(tag);
+        });
+      }
+      Storage.updateStory(postedStory.id, { hashtags: state.tagChips }, {
+        onFail: () => showToast("entry-toast", "태그가 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+      });
+      renderHashtagChips();
+      step = 4;
+      renderWizardStep();
+      return;
+    }
+
+    if (step === 4) {
+      if (state.youtubeUrl && !Storage.extractYoutubeVideoId(state.youtubeUrl)) {
+        alert("유튜브 링크 형식을 확인해주세요. 예) https://youtube.com/watch?v=...");
+        document.getElementById("input-youtube-url").focus();
+        return;
+      }
+      if (state.youtubeUrl) {
+        Storage.updateStory(postedStory.id, {
+          youtubeUrl: state.youtubeUrl,
+          musicArtist: state.musicArtist || null,
+          musicTitle: state.musicTitle || null,
+        }, {
+          onFail: () => showToast("entry-toast", "노래가 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+        });
+        renderHashtagChips();
+      }
+      finishWizard();
+    }
+  }
+
+  renderWizardStep();
 }
 
 // ------------------------------------------------------------
@@ -613,7 +1147,9 @@ function openComposer(pin) {
 function updateComposerScrollbarBounds() {
   const panel = document.getElementById("composer-panel");
   const topRefEl = panel && (panel.querySelector(".composer-subtitle") || panel.querySelector(".composer-title"));
-  const submitBtn = panel && panel.querySelector("#btn-submit");
+  // 수정 폼은 #btn-submit이 마지막 요소, 마법사는 스텝마다 있는
+  // .wizard-nav(이전/다음 버튼 줄)가 마지막 요소라 기준이 다르다.
+  const submitBtn = panel && (panel.querySelector("#btn-submit") || panel.querySelector(".wizard-nav"));
   if (!panel || !topRefEl || !submitBtn) return;
 
   const panelRect = panel.getBoundingClientRect();
