@@ -9,6 +9,12 @@ let pendingPin = null;
 // 합친 최종 개수 둘 다 여기에 걸린다.
 const MAX_HASHTAGS = 7;
 
+// 완료 화면("잘했어요~!") 일러스트는 <img> 태그가 그려지는 시점에야
+// 요청되면 네트워크 fetch 지연 때문에 텍스트만 먼저 보이고 이미지가
+// 뒤늦게 팝인되는 게 보인다(2026-08-27, 영상으로 확인). 스크립트 로드
+// 시점에 미리 받아둬 완료 화면에 도달할 때는 이미 캐시돼 있게 한다.
+new Image().src = "assets/composer/done-illustration.png";
+
 // getDeviceId()는 storage.js(Storage.getDeviceId)로 이동 — 어드민 화면과
 // GNB의 "내가 남긴 기억"이 같은 비식별 상관관계 ID를 공유해서 쓴다.
 
@@ -946,7 +952,7 @@ function openComposerWizard(pin) {
         ${renderComposerHeader()}
         <div class="wizard-step-body">
           <div class="wizard-done">
-            <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
+            <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" width="560" height="250" alt="" />
             <h3 class="wizard-step-title">잘했어요~! 💕</h3>
             <p class="field-desc"><b>태그</b>나 그때 들었던 <b>음악</b>을 더 남기면<br>다른 사람들이 <b>이 기억에 공감</b>할 수 있어요.</p>
           </div>
