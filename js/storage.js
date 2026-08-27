@@ -22,6 +22,14 @@
 const REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
+const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
+
+// "새 글" 지도 표시(2026-08-27)의 기준 시각 — markVisitAndGetUnseenThreshold()가
+// 앱 부팅 시 한 번 채워두고, 세션 내내 이 값을 기준으로 isUnseen()을 판정한다.
+// 방문할 때마다 즉시 갱신하지 않는 이유: 지도를 보는 도중에 기준 시각이
+// 계속 "지금"으로 따라오면 방금 막 켜진 새 점이 다음 렌더에 바로 꺼져버려
+// "새 글" 표시가 사실상 안 보인다.
+let _unseenSinceTimestamp = null;
 
 // Story의 nullable 문자열 필드들 — updateStory에서 명시적 null을 보내면
 // AppSync가 "Unauthorized on [필드명]"으로 거부한다(Amplify Gen2 알려진 버그:
@@ -1086,6 +1094,29 @@ const Storage = {
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
     const t = new Date(dateString).getTime();
     return t >= start && t <= end;
+  },
+
+  /**
+   * 지도 마커의 "새 글" 표시(2026-08-27) — 브라우저(기기) 단위로 직전
+   * 방문 시각을 localStorage에 남겨두고, 그 이후 올라온 기억이 있는
+   * 장소를 "안 본 글이 있다"고 표시한다. 계정 기반이 아니라 기기 기반인
+   * 것은 의도적 — "내 것" 판정 같은 신원 확인이 아니라 순수 UX 신호(안
+   * 읽음 표시)라 기기별로 갈려도 무방하다. 앱 부팅 시 한 번만 호출해
+   * 직전 방문 시각을 기준으로 굳혀두고(isUnseen 참고), 동시에 저장값은
+   * "지금"으로 갱신해 다음 방문의 기준을 준비해둔다. 처음 방문이면(저장된
+   * 값 없음) 아무것도 "새 글"로 표시하지
+   * 않는다 — 그 시점의 지도 전체가 다 "새 글"이 되는 건 의미 없는 신호다.
+   */
+  markVisitAndGetUnseenThreshold() {
+    const prevRaw = localStorage.getItem(LAST_VISIT_KEY);
+    _unseenSinceTimestamp = prevRaw ? Number(prevRaw) : null;
+    localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+    return _unseenSinceTimestamp;
+  },
+
+  isUnseen(dateString) {
+    if (_unseenSinceTimestamp === null) return false;
+    return new Date(dateString).getTime() > _unseenSinceTimestamp;
   },
 
   /**

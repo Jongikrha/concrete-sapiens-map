@@ -19,13 +19,19 @@ let searchPinInfo = null; // openSearchAreaModal에 그대로 넘길 { lat, lng,
 // tier/선택/오늘 여부가 실제로 안 바뀌었으면 기존 이미지를 그대로 재사용한다.
 const dotImageCache = new Map();
 
-function getDotImage(key, tier, selected, isToday) {
+function getDotImage(key, tier, selected, isToday, hasUnseen) {
   const cached = dotImageCache.get(key);
-  if (cached && cached.tier === tier && cached.selected === selected && cached.isToday === isToday) {
+  if (
+    cached &&
+    cached.tier === tier &&
+    cached.selected === selected &&
+    cached.isToday === isToday &&
+    cached.hasUnseen === hasUnseen
+  ) {
     return cached.image;
   }
-  const image = makeDotImage(tier, selected, isToday);
-  dotImageCache.set(key, { tier, selected, isToday, image });
+  const image = makeDotImage(tier, selected, isToday, hasUnseen);
+  dotImageCache.set(key, { tier, selected, isToday, hasUnseen, image });
   return image;
 }
 
@@ -43,6 +49,12 @@ function groupHasTodayStory(group) {
   return group.stories.some((s) => Storage.isToday(s.createdAt));
 }
 
+// 직전 방문 이후 새로 올라온 기억이 있는지(2026-08-27, Storage.isUnseen
+// 참고) — isToday와 별개 신호라 마커에도 별개 배지(NEW_BADGE_COLOR)로 그린다.
+function groupHasUnseenStory(group) {
+  return group.stories.some((s) => Storage.isUnseen(s.createdAt));
+}
+
 // "Memory Light" 컬러 — UI 전반의 --cs-orange(#FF5A36)와는 별개로,
 // 지도 위 점 전용으로 쓰는 더 차분한 톤(2026-08-13, 디자인 가이드
 // POINT DESIGN 기준). 중심부/2차 잔광은 MEMORY_CORE, 1차 광원(중간
@@ -52,6 +64,10 @@ const MEMORY_GLOW = "#E76D4F";
 // 별 도형 전용 — 광훈(MEMORY_CORE/GLOW)보다 한 톤 짙게 잡아서 작은
 // tier에서도 색이 옅어 보이지 않게 한다.
 const STAR_FILL = "#AB4A34";
+// "새 글" 배지 — 계정 메뉴/아바타 알림 점(css .account-notif-dot)과 같은
+// --cs-orange(#FF5A36) 계열로 맞춰서 "새 소식" 신호를 서비스 전반에서
+// 일관되게 읽히게 한다.
+const NEW_BADGE_COLOR = "#FF5A36";
 
 // 중심부를 원이 아니라 4각 별(반짝임) 모양으로 그리기 위한 좌표 계산.
 // outerR(뾰족한 끝)과 innerR(안쪽으로 파인 지점)을 45도 간격으로 번갈아
@@ -97,7 +113,7 @@ function burstRays(cx, cy, innerR, outerR, count, color, opacity) {
  * 작아지길 반복한다(BEHAVIOR, 5~7초 주기 — 선택된 점은 이미 크기로
  * 강조되니 정적으로 둔다).
  */
-function makeDotImage(tier, selected, isToday) {
+function makeDotImage(tier, selected, isToday, hasUnseen) {
   const centerSizes = { 1: 13, 2: 16, 3: 19, 4: 22 };
   const glow1Sizes = { 1: 16, 2: 19, 3: 22, 4: 25 };
   const glow2Sizes = { 1: 26, 2: 30, 3: 34, 4: 38 };
@@ -137,11 +153,26 @@ function makeDotImage(tier, selected, isToday) {
       ? burstRays(c, c, (center / 2) * 1.15, glow2 / 2, 8, MEMORY_GLOW, selected ? 0.5 : 0.32)
       : "";
 
+  // "새 글" 배지 — 별의 북동쪽 꼭짓점 옆에 작은 점을 하나 더 찍는다.
+  // tier로 이미 크기 차등이 있으니 배지 자체는 tier와 무관하게 고정
+  // 크기로 둬서, 가장 큰 tier에서도 파묻히지 않으면서 작은 tier에서도
+  // 별을 가리지 않게 한다.
+  const badge = hasUnseen
+    ? (() => {
+        const r = 3.4;
+        const offset = (center / 2) * 0.92;
+        const bx = c + offset * 0.7071;
+        const by = c - offset * 0.7071;
+        return `<circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r}" fill="${NEW_BADGE_COLOR}" stroke="#FFFFFF" stroke-width="1.4"/>`;
+      })()
+    : "";
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
     ${rays}
     <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
+    ${badge}
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
@@ -373,10 +404,10 @@ function highlightMarkerForStory(story) {
   if (highlightedMarker && highlightedMarker !== entry.marker) {
     const prevEntry = markers.find((m) => m.marker === highlightedMarker);
     if (prevEntry) {
-      highlightedMarker.setImage(getDotImage(prevEntry.group.key, tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group)));
+      highlightedMarker.setImage(getDotImage(prevEntry.group.key, tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group), groupHasUnseenStory(prevEntry.group)));
     }
   }
-  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group)));
+  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group)));
   highlightedMarker = entry.marker;
 }
 
@@ -441,7 +472,7 @@ function renderMarkers() {
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),
-      image: getDotImage(group.key, tier, false, lit),
+      image: getDotImage(group.key, tier, false, lit, groupHasUnseenStory(group)),
     });
     kakao.maps.event.addListener(marker, "click", () => {
       clearSearchPin();
