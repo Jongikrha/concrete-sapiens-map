@@ -18,6 +18,9 @@ async function initApp() {
   initFadeScrollbars();
   await Storage.init();
   await Auth.init();
+  // 마커의 "새 글" 표시(map.js groupHasUnseenStory) 기준을 renderMarkers()
+  // 보다 먼저 굳혀둔다.
+  Storage.markVisitAndGetUnseenThreshold();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   logVisitKind();
   initMap();
