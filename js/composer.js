@@ -811,8 +811,11 @@ function openComposerWizard(pin) {
     entry.addEventListener("blur", () => commitEntry());
   }
 
+  // 방금 쓴 본문이 안 보이면 태그를 추가/삭제할 근거가 없어 어렵다는
+  // 피드백(2026-08-27)으로, 태그 입력 위에 본문을 참고용으로 보여준다.
   function renderTagsStepHtml() {
     return `
+      <div class="wizard-tags-memory-preview">${escapeHtml(state.content)}</div>
       <div class="tag-input-row" id="tag-input-row"></div>
       <div class="field-hint">(해시태그를 <b>지우거나</b> 새로운 태그를 <b>추가해도</b> 좋아요)</div>
     `;

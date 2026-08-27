@@ -2787,6 +2787,20 @@ button.story-place-line:hover {
   margin: 0 0 12px;
 }
 
+.wizard-tags-memory-preview {
+  background: var(--cs-map-gray);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: var(--font-maruburi);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--cs-text-muted);
+  white-space: pre-wrap;
+}
+
 .wizard-nav {
   display: flex;
   gap: 8px;
