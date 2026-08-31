@@ -23,6 +23,7 @@ const REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
+const READ_STORIES_KEY = "concrete_sapiens_read_stories_v1";
 
 // "새 글" 지도 표시(2026-08-27)의 기준 시각 — markVisitAndGetUnseenThreshold()가
 // 앱 부팅 시 한 번 채워두고, 세션 내내 이 값을 기준으로 isUnseen()을 판정한다.
@@ -30,6 +31,21 @@ const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
 // 계속 "지금"으로 따라오면 방금 막 켜진 새 점이 다음 렌더에 바로 꺼져버려
 // "새 글" 표시가 사실상 안 보인다.
 let _unseenSinceTimestamp = null;
+
+// 위 시간 기준과 별개로, 실제로 열어본 기억은 다음 방문을 기다리지 않고
+// 바로 "새 글" 점을 꺼주기 위한 보조 신호(2026-08-31). 기기 단위
+// localStorage — isUnseen과 마찬가지로 신원 확인이 아니라 UX 신호다.
+let _readStoryIdsCache = null;
+function loadReadStoryIds() {
+  if (_readStoryIdsCache) return _readStoryIdsCache;
+  try {
+    const raw = localStorage.getItem(READ_STORIES_KEY);
+    _readStoryIdsCache = new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    _readStoryIdsCache = new Set();
+  }
+  return _readStoryIdsCache;
+}
 
 // Story의 nullable 문자열 필드들 — updateStory에서 명시적 null을 보내면
 // AppSync가 "Unauthorized on [필드명]"으로 거부한다(Amplify Gen2 알려진 버그:
@@ -1114,9 +1130,20 @@ const Storage = {
     return _unseenSinceTimestamp;
   },
 
-  isUnseen(dateString) {
+  isUnseen(story) {
     if (_unseenSinceTimestamp === null) return false;
-    return new Date(dateString).getTime() > _unseenSinceTimestamp;
+    if (new Date(story.createdAt).getTime() <= _unseenSinceTimestamp) return false;
+    return !loadReadStoryIds().has(story.id);
+  },
+
+  /**
+   * 시트를 열어 기억을 실제로 읽었을 때 호출 — 그 기억들의 "새 글" 점을
+   * 다음 방문을 기다리지 않고 바로 꺼준다(isUnseen 참고).
+   */
+  markStoriesRead(storyIds) {
+    const set = loadReadStoryIds();
+    storyIds.forEach((id) => set.add(id));
+    localStorage.setItem(READ_STORIES_KEY, JSON.stringify([...set]));
   },
 
   /**

@@ -52,7 +52,7 @@ function groupHasTodayStory(group) {
 // 직전 방문 이후 새로 올라온 기억이 있는지(2026-08-27, Storage.isUnseen
 // 참고) — isToday와 별개 신호라 마커에도 별개 배지(NEW_BADGE_COLOR)로 그린다.
 function groupHasUnseenStory(group) {
-  return group.stories.some((s) => Storage.isUnseen(s.createdAt));
+  return group.stories.some((s) => Storage.isUnseen(s));
 }
 
 // "Memory Light" 컬러 — UI 전반의 --cs-orange(#FF5A36)와는 별개로,
@@ -409,6 +409,16 @@ function highlightMarkerForStory(story) {
   }
   entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group)));
   highlightedMarker = entry.marker;
+}
+
+// 시트를 열어 기억을 읽고 나면(Storage.markStoriesRead) "새 글" 점이
+// 다음 방문을 기다리지 않고 바로 꺼지도록, 해당 장소 마커의 이미지를
+// 그 자리에서 다시 그린다(2026-08-31). storySheet.js의 openSheet에서 호출.
+function refreshMarkerDotForGroup(group) {
+  const entry = markers.find((m) => m.group.key === group.key);
+  if (!entry) return;
+  const selected = entry.marker === highlightedMarker;
+  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), selected, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group)));
 }
 
 // ------------------------------------------------------------

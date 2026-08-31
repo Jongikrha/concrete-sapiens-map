@@ -559,7 +559,7 @@ test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {
 test("markVisitAndGetUnseenThreshold는 첫 방문(저장된 값 없음)이면 null을 반환하고, isUnseen은 항상 false다", () => {
   const prev = Storage.markVisitAndGetUnseenThreshold();
   assert.equal(prev, null);
-  assert.equal(Storage.isUnseen("2030-01-01T00:00:00.000Z"), false);
+  assert.equal(Storage.isUnseen({ id: "s1", createdAt: "2030-01-01T00:00:00.000Z" }), false);
 });
 
 test("markVisitAndGetUnseenThreshold는 두 번째 호출부터 직전 방문 시각(숫자)을 반환한다", () => {
@@ -574,8 +574,17 @@ test("isUnseen은 직전 방문 시각 이후에 생성된 기억만 true를 반
   Storage.markVisitAndGetUnseenThreshold();
   Storage.markVisitAndGetUnseenThreshold();
   const threshold = Date.now();
-  assert.equal(Storage.isUnseen(new Date(threshold - 5000).toISOString()), false);
-  assert.equal(Storage.isUnseen(new Date(threshold + 5000).toISOString()), true);
+  assert.equal(Storage.isUnseen({ id: "s1", createdAt: new Date(threshold - 5000).toISOString() }), false);
+  assert.equal(Storage.isUnseen({ id: "s2", createdAt: new Date(threshold + 5000).toISOString() }), true);
+});
+
+test("markStoriesRead로 읽음 처리한 기억은, 방문 시각 기준으로는 안 읽음이어도 isUnseen이 false다", () => {
+  Storage.markVisitAndGetUnseenThreshold();
+  Storage.markVisitAndGetUnseenThreshold();
+  const story = { id: "s3", createdAt: new Date(Date.now() + 5000).toISOString() };
+  assert.equal(Storage.isUnseen(story), true);
+  Storage.markStoriesRead([story.id]);
+  assert.equal(Storage.isUnseen(story), false);
 });
 
 test("sortStoriesForDisplay는 latest 모드에서 createdAt 내림차순으로 정렬하고 undated는 비운다", () => {

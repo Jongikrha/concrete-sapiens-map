@@ -145,6 +145,8 @@ function openSheet(group, options = {}) {
   renderSheetContent(group);
   sheetOpen = true;
   group.stories.forEach((s) => Storage.incrementViewCount(s.id));
+  Storage.markStoriesRead(group.stories.map((s) => s.id));
+  refreshMarkerDotForGroup(group);
   Storage.logEvent("story_card_opened");
 }
 
