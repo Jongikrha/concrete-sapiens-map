@@ -76,6 +76,16 @@ const STAR_FILL = "#AB4A34";
 // 일관되게 읽히게 한다.
 const NEW_BADGE_COLOR = "#FF5A36";
 
+// "사진 있음" 배지 이미지(assets/photo-badge.png, 2026-09-01) — 카카오
+// 마커는 data:image/svg+xml URL을 그대로 <img>로 그리는데, 그 안의
+// <image href="...">에 상대경로를 쓰면 base URL이 about:blank로 취급돼
+// 못 읽어온다(잘 알려진 data: URI 제약). window.location.href 기준으로
+// 절대경로를 미리 만들어둬서, 로컬 개발 서버/운영 도메인 어디서 열어도
+// 그 경로 그대로 가리키게 한다. 파일 자체는 마커마다 새로 인라인되는
+// SVG 도형이 아니라 브라우저가 한 번만 받아 캐싱하는 별도 리소스라,
+// 사진 배지가 붙는 마커가 아무리 많아도 각 마커 이미지 용량이 늘지 않는다.
+const PHOTO_BADGE_IMAGE_URL = new URL("assets/photo-badge.png", window.location.href).href;
+
 // 중심부를 원이 아니라 4각 별(반짝임) 모양으로 그리기 위한 좌표 계산.
 // outerR(뾰족한 끝)과 innerR(안쪽으로 파인 지점)을 45도 간격으로 번갈아
 // 찍어서 흔한 "sparkle" 별 실루엣을 만든다 — innerR을 작게 잡을수록
@@ -175,27 +185,17 @@ function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
     : "";
 
   // "사진 있음" 배지 — "새 글" 배지(북동쪽)와 겹치지 않게 반대쪽
-  // 남서쪽에 찍는다. 카메라 실루엣 위로 반짝이는 플래시(별)를 겹쳐서
-  // "사진"이라는 의미를 더 분명하게 했다 — 카메라 톤은 참고 이미지
-  // 그대로(그레이 계열 바디 + 하늘색 렌즈), 플래시만 이 지도의 포인트
-  // 컬러에 맞춰 노란색 대신 빨간색으로 바꿨다(2026-09-01).
-  const CAMERA_BODY = "#948C81";
-  const CAMERA_BODY_DARK = "#6B6560";
-  const CAMERA_LENS = "#BFE0E8";
+  // 남서쪽에 찍는다. 손으로 그린 카메라 도형 대신, 사용자가 골라준
+  // 일러스트(카메라+반짝이는 별 플래시, assets/photo-badge.png)를
+  // 그대로 쓴다(2026-09-01) — 축소된 크기에서도 원본 그림 그대로
+  // 라스터라이즈되니 직접 그린 도형보다 디테일이 살아있다.
   const photoBadge = hasPhoto
     ? (() => {
+        const r = 7;
         const offset = (center / 2) * 0.95;
         const bx = c - offset * 0.7071;
         const by = c + offset * 0.7071;
-        const flash = starPoints(bx, by - 3.2, 3.2, 1.3);
-        return `
-          <circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="4.8" fill="#FFFFFF" stroke="${CAMERA_BODY_DARK}" stroke-width="0.6"/>
-          <path d="${flash}" fill="${NEW_BADGE_COLOR}" stroke="#FFFFFF" stroke-width="0.6" stroke-linejoin="round"/>
-          <rect x="${(bx - 3.5).toFixed(2)}" y="${(by - 1.6).toFixed(2)}" width="7" height="4.6" rx="1.2" fill="${CAMERA_BODY}"/>
-          <rect x="${(bx - 1.4).toFixed(2)}" y="${(by - 2.6).toFixed(2)}" width="2.6" height="1.3" rx="0.3" fill="${CAMERA_BODY_DARK}"/>
-          <circle cx="${bx.toFixed(2)}" cy="${(by + 0.6).toFixed(2)}" r="1.9" fill="${CAMERA_LENS}" stroke="${CAMERA_BODY_DARK}" stroke-width="0.5"/>
-          <circle cx="${(bx - 0.6).toFixed(2)}" cy="${by.toFixed(2)}" r="0.55" fill="#FFFFFF" opacity="0.85"/>
-        `;
+        return `<image href="${PHOTO_BADGE_IMAGE_URL}" x="${(bx - r).toFixed(2)}" y="${(by - r).toFixed(2)}" width="${(r * 2).toFixed(2)}" height="${(r * 2).toFixed(2)}"/>`;
       })()
     : "";
 
