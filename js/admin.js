@@ -259,12 +259,22 @@ function deviceBadgeHtml(story) {
 // 기준으로 캐싱해서 재렌더링마다 다시 요청하지 않는다 — 다만 admin.html은
 // 카카오맵 타이밍 제약이 없어 이 파일 하나로 Amplify import까지 직접 하는
 // 구조라(파일 위쪽 주석 참고) PhotoUpload 전역 대신 getUrl을 여기서 바로 쓴다.
-const _adminPhotoUrlCache = new Map();
+// expiresIn/캐시 TTL은 js/photoUpload.js·storySheet.js와 같은 수치로 맞춘다
+// — 신고 검토 큐를 오래 열어두다 presigned URL이 만료돼 사진이 깨지는 문제가
+// 실제로 있었다(2026-09-01 확인).
+const ADMIN_PHOTO_URL_EXPIRES_SECONDS = 3600;
+const _adminPhotoUrlCache = new Map(); // photoKey -> { promise, expiresAt }
 function resolveAdminPhotoUrl(photoKey) {
-  if (!_adminPhotoUrlCache.has(photoKey)) {
-    _adminPhotoUrlCache.set(photoKey, getUrl({ path: photoKey }).then((r) => r.url.toString()).catch(() => null));
+  const cached = _adminPhotoUrlCache.get(photoKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.promise;
   }
-  return _adminPhotoUrlCache.get(photoKey);
+  const expiresAt = Date.now() + (ADMIN_PHOTO_URL_EXPIRES_SECONDS - 60) * 1000;
+  const promise = getUrl({ path: photoKey, options: { expiresIn: ADMIN_PHOTO_URL_EXPIRES_SECONDS } })
+    .then((r) => r.url.toString())
+    .catch(() => null);
+  _adminPhotoUrlCache.set(photoKey, { promise, expiresAt });
+  return promise;
 }
 
 function hydrateAdminPhotos() {

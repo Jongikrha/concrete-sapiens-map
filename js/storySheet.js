@@ -426,15 +426,22 @@ function renderSheetContent(group) {
 
 // 사진 URL은 presigned라 매번 새로 만들어야 하지만(PhotoUpload.getUrl 참고),
 // 같은 화면 안에서 story-item이 여러 번 다시 그려질 때마다(정렬 전환, 공감
-// 등) 매번 새로 요청하면 낭비가 크다 — 세션 동안 photoKey 기준으로
-// 한 번만 요청하고 재사용한다. presigned URL 만료(기본 15분)보다 오래 열어
-// 두면 이미지가 깨질 수 있지만, 그 정도는 감수할 트레이드오프로 둔다.
-const _photoUrlCache = new Map();
+// 등) 매번 새로 요청하면 낭비가 크다 — photoKey 기준으로 캐싱해 재사용한다.
+// 단, 세션 내내 무기한 재사용하면 presigned URL이 만료된 뒤(기억 아카이브를
+// 오래 열어두고 여러 글을 둘러볼 때) 새로고침 전까지 계속 깨진 이미지로
+// 보이는 문제가 실제로 있었다(2026-09-01 확인). PhotoUpload.URL_EXPIRES_SECONDS
+// 보다 조금 일찍(60초 여유) 캐시를 무효화해서, 오래 켜둔 세션에서도 다음
+// 렌더 때 자동으로 새 URL을 받아오게 한다.
+const _photoUrlCache = new Map(); // photoKey -> { promise, expiresAt }
 function resolveStoryPhotoUrl(photoKey) {
-  if (!_photoUrlCache.has(photoKey)) {
-    _photoUrlCache.set(photoKey, PhotoUpload.getUrl(photoKey).catch(() => null));
+  const cached = _photoUrlCache.get(photoKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.promise;
   }
-  return _photoUrlCache.get(photoKey);
+  const expiresAt = Date.now() + (PhotoUpload.URL_EXPIRES_SECONDS - 60) * 1000;
+  const promise = PhotoUpload.getUrl(photoKey).catch(() => null);
+  _photoUrlCache.set(photoKey, { promise, expiresAt });
+  return promise;
 }
 
 function hydrateStoryPhotos(content) {
