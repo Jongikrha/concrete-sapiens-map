@@ -3,11 +3,13 @@ import { BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
+import { storage } from './storage/resource';
 import { adminUsersFn } from './functions/admin-users/resource';
 
 const backend = defineBackend({
   auth,
   data,
+  storage,
   adminUsersFn,
 });
 

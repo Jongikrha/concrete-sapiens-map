@@ -23,6 +23,11 @@ const schema = a.schema({
       // 없고, 파싱이 아티스트를 못 찾으면 musicTitle만 채워진다.
       musicArtist: a.string(),
       musicTitle: a.string(),
+      // 첨부 사진(1장) — amplify/storage/resource.ts의 story-photos/ 경로에 올린
+      // 파일의 S3 키만 저장한다. URL은 만료되는 presigned URL이라 여기 저장해봐야
+      // 금방 못 쓰게 되므로, 화면에 그릴 때 js/storage.js가 getUrl()로 그때그때
+      // 새로 만든다. optional — 이 필드 이전 기억엔 당연히 없고, 사진 없는 글도 계속 허용.
+      photoKey: a.string(),
       hashtags: a.string().array(),
       authorMode: a.string().required(),
       displayAuthorName: a.string().required(),
