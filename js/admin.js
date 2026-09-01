@@ -274,6 +274,7 @@ function hydrateAdminPhotos() {
       const img = document.createElement("img");
       img.alt = "";
       img.src = url;
+      img.style.objectPosition = `${el.dataset.focusX || 50}% ${el.dataset.focusY || 50}%`;
       el.replaceChildren(img);
     });
   });
@@ -289,7 +290,7 @@ function storyCardHtml(story, { showRestore }) {
   });
   return `
     <div class="admin-card" data-id="${story.id}">
-      ${story.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(story.photoKey)}"></div>` : ""}
+      ${story.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(story.photoKey)}" data-focus-x="${story.photoFocusX ?? 50}" data-focus-y="${story.photoFocusY ?? 50}"></div>` : ""}
       <p class="admin-card-content">${escapeHtml(story.content)}</p>
       <div class="admin-card-meta">
         <span>${escapeHtml(title)}</span>

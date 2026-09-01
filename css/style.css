@@ -2880,7 +2880,7 @@ button.story-place-line:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 160px;
+  aspect-ratio: 4 / 3;
   border: 1.5px dashed var(--cs-gray);
   border-radius: 12px;
   color: var(--cs-text-muted);
@@ -2896,9 +2896,11 @@ button.story-place-line:hover {
   font-size: 13px;
 }
 
+/* 4:3 — 실제 기억 카드(.story-photo)와 동일한 비율로 맞춰서, 여기서
+   드래그로 잡은 위치가 카드에 그대로 반영되게 한다(WYSIWYG). */
 .photo-upload-preview {
   position: relative;
-  height: 160px;
+  aspect-ratio: 4 / 3;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -2908,6 +2910,28 @@ button.story-place-line:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.photo-upload-preview img.dragging {
+  cursor: grabbing;
+}
+
+.photo-upload-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .photo-remove-btn {

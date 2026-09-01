@@ -445,6 +445,7 @@ function hydrateStoryPhotos(content) {
       img.className = "story-photo-img";
       img.alt = "";
       img.src = url;
+      img.style.objectPosition = `${el.dataset.focusX || 50}% ${el.dataset.focusY || 50}%`;
       el.replaceChildren(img);
     });
   });
@@ -828,7 +829,7 @@ function renderStoryItem(story, options = {}) {
       <div class="story-date-divider"></div>
       ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
-      ${story.photoKey ? `<div class="story-photo" data-photo-key="${escapeHtml(story.photoKey)}"></div>` : ""}
+      ${story.photoKey ? `<div class="story-photo" data-photo-key="${escapeHtml(story.photoKey)}" data-focus-x="${story.photoFocusX ?? 50}" data-focus-y="${story.photoFocusY ?? 50}"></div>` : ""}
       ${renderYoutubeEmbed(story)}
       <div class="story-author-row">
         <div class="story-author-identity">

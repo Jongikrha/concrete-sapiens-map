@@ -649,6 +649,8 @@ function openComposerWizard(pin) {
     musicTitle: "",
     photoBlob: null,
     photoPreviewUrl: null,
+    photoFocusX: 50,
+    photoFocusY: 50,
   };
   // startFreePinComposer의 reverseGeocode 콜백이 지금 몇 번째 스텝이든
   // 이름 자동 채움을 state에 반영할 수 있도록 pin에 걸어둔다(아래
@@ -935,7 +937,9 @@ function openComposerWizard(pin) {
           <span class="photo-upload-label">사진 추가하기</span>
         </div>
         <div class="photo-upload-preview ${hasPhoto ? "" : "hidden"}" id="photo-upload-preview">
-          <img id="photo-preview-img" src="${state.photoPreviewUrl || ""}" alt="" />
+          <img id="photo-preview-img" src="${state.photoPreviewUrl || ""}" alt=""
+            style="object-position: ${state.photoFocusX}% ${state.photoFocusY}%" />
+          <div class="photo-upload-hint">드래그해서 위치 조정</div>
           <button type="button" class="photo-remove-btn" id="photo-remove-btn">✕</button>
         </div>
       </div>
@@ -957,6 +961,67 @@ function openComposerWizard(pin) {
       statusEl.classList.remove("hidden");
     };
 
+    const applyFocus = () => {
+      previewImg.style.objectPosition = `${state.photoFocusX}% ${state.photoFocusY}%`;
+    };
+
+    // 미리보기 박스(고정 4:3)를 채우고 남는 실제 이미지의 초과분(overflow)을
+    // 알아야 드래그 픽셀량을 0~100% object-position으로 환산할 수 있다 —
+    // object-fit: cover가 내부적으로 하는 스케일 계산(가로/세로 중 더 크게
+    // 맞추는 쪽)을 그대로 재현한다.
+    let overflowX = 0;
+    let overflowY = 0;
+    const computeOverflow = () => {
+      const rect = previewBox.getBoundingClientRect();
+      const iw = previewImg.naturalWidth;
+      const ih = previewImg.naturalHeight;
+      if (!iw || !ih || !rect.width || !rect.height) {
+        overflowX = 0;
+        overflowY = 0;
+        return;
+      }
+      const scale = Math.max(rect.width / iw, rect.height / ih);
+      overflowX = Math.max(0, iw * scale - rect.width);
+      overflowY = Math.max(0, ih * scale - rect.height);
+    };
+    previewImg.addEventListener("load", computeOverflow);
+
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startFocusX = 50;
+    let startFocusY = 50;
+
+    previewImg.addEventListener("pointerdown", (e) => {
+      computeOverflow();
+      if (overflowX <= 0 && overflowY <= 0) return; // 자를 여백이 없으면 드래그 무의미
+      dragging = true;
+      previewImg.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      startFocusX = state.photoFocusX;
+      startFocusY = state.photoFocusY;
+      previewImg.classList.add("dragging");
+    });
+
+    previewImg.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      if (overflowX > 0) {
+        state.photoFocusX = Math.min(100, Math.max(0, startFocusX - ((e.clientX - startX) / overflowX) * 100));
+      }
+      if (overflowY > 0) {
+        state.photoFocusY = Math.min(100, Math.max(0, startFocusY - ((e.clientY - startY) / overflowY) * 100));
+      }
+      applyFocus();
+    });
+
+    ["pointerup", "pointercancel"].forEach((evt) => {
+      previewImg.addEventListener(evt, () => {
+        dragging = false;
+        previewImg.classList.remove("dragging");
+      });
+    });
+
     emptyBox.onclick = () => fileInput.click();
 
     fileInput.addEventListener("change", () => {
@@ -972,7 +1037,10 @@ function openComposerWizard(pin) {
         if (state.photoPreviewUrl) URL.revokeObjectURL(state.photoPreviewUrl);
         state.photoBlob = blob;
         state.photoPreviewUrl = URL.createObjectURL(blob);
+        state.photoFocusX = 50;
+        state.photoFocusY = 50;
         previewImg.src = state.photoPreviewUrl;
+        applyFocus();
         emptyBox.classList.add("hidden");
         previewBox.classList.remove("hidden");
         statusEl.classList.add("hidden");
@@ -985,6 +1053,8 @@ function openComposerWizard(pin) {
       if (state.photoPreviewUrl) URL.revokeObjectURL(state.photoPreviewUrl);
       state.photoBlob = null;
       state.photoPreviewUrl = null;
+      state.photoFocusX = 50;
+      state.photoFocusY = 50;
       emptyBox.classList.remove("hidden");
       previewBox.classList.add("hidden");
     };
@@ -1302,7 +1372,11 @@ function openComposerWizard(pin) {
       nextBtn.textContent = "업로드 중...";
       PhotoUpload.upload(state.photoBlob, postedStory.publicId)
         .then((photoKey) => {
-          Storage.updateStory(postedStory.id, { photoKey }, {
+          Storage.updateStory(postedStory.id, {
+            photoKey,
+            photoFocusX: Math.round(state.photoFocusX),
+            photoFocusY: Math.round(state.photoFocusY),
+          }, {
             onFail: () => showToast("entry-toast", "사진이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
           });
         })
