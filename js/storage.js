@@ -57,7 +57,7 @@ function loadReadStoryIds() {
 // null → ""로 바꾼다).
 const NULLABLE_STRING_FIELDS = [
   "placeId", "officialPlaceName", "address", "customName",
-  "youtubeUrl", "musicArtist", "musicTitle", "referenceDate",
+  "youtubeUrl", "musicArtist", "musicTitle", "referenceDate", "photoKey",
 ];
 
 // 기억 카드에 주소를 보여줄 때 시/도 풀네임을 축약 — 카카오 역지오코딩이

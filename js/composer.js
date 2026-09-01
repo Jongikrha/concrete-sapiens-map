@@ -290,7 +290,26 @@ function renderEditComposerForm(pin, editing) {
       </div>
     </div>
 
-    <div class="field-heading"><span class="field-num">06</span><span class="field-label-text">NAME</span></div>
+    <div class="composer-field-group">
+      <div class="field-heading"><span class="field-num">06</span><span class="field-label-text">PHOTO</span><span class="field-optional-label">선택</span></div>
+      <div class="photo-upload-box">
+        <input type="file" id="input-photo" accept="image/*" class="hidden" />
+        <div class="photo-upload-empty ${editing.photoKey ? "hidden" : ""}" id="photo-upload-empty">
+          <span class="photo-upload-icon">📷</span>
+          <span class="photo-upload-label">사진 추가하기</span>
+        </div>
+        <div class="photo-upload-preview ${editing.photoKey ? "" : "hidden"}" id="photo-upload-preview">
+          <img id="photo-preview-img" src="" alt=""
+            style="object-position: ${editing.photoFocusX ?? 50}% ${editing.photoFocusY ?? 50}%" />
+          <div class="photo-upload-hint">드래그해서 위치 조정</div>
+          <button type="button" class="photo-remove-btn" id="photo-remove-btn">✕</button>
+        </div>
+      </div>
+      <div class="field-hint">(사진은 <b>1장만</b> 첨부할 수 있어요)</div>
+      <div class="photo-upload-status hidden" id="photo-upload-status"></div>
+    </div>
+
+    <div class="field-heading"><span class="field-num">07</span><span class="field-label-text">NAME</span></div>
     <div class="author-mode-toggle">
       <button class="mode-btn ${authorMode === "anonymous" ? "mode-btn--active" : ""}" data-author-mode="anonymous">🐱 익명으로 남기기</button>
       <button class="mode-btn ${authorMode === "custom" ? "mode-btn--active" : ""}" data-author-mode="custom">👤 이름 또는 닉네임</button>
@@ -501,6 +520,137 @@ function renderEditComposerForm(pin, editing) {
 
   renderTagChips();
 
+  // 사진 — 수정 폼 전용 배선. openComposerWizard의 wirePhotoStep과 로직은
+  // 비슷하지만([[feedback_composer_wizard_isolated_from_edit_form]] 참고
+  // 공유 헬퍼로 묶지 않고 여기 그대로 복제해 분리해둔다), 여기는 이미 있는
+  // 사진(photoKey)을 presigned URL로 불러와 보여주는 것부터 시작한다는
+  // 점과, 제출이 스텝 진행이 아니라 즉시 반영(다른 필드와 동일하게
+  // 백그라운드 저장 + 실패 시 토스트)이라는 점이 다르다.
+  const photoState = {
+    photoKey: editing.photoKey || null,
+    photoBlob: null,
+    photoPreviewUrl: null,
+    photoFocusX: editing.photoFocusX ?? 50,
+    photoFocusY: editing.photoFocusY ?? 50,
+    photoRemoved: false,
+  };
+  {
+    const fileInput = panel.querySelector("#input-photo");
+    const emptyBox = panel.querySelector("#photo-upload-empty");
+    const previewBox = panel.querySelector("#photo-upload-preview");
+    const previewImg = panel.querySelector("#photo-preview-img");
+    const statusEl = panel.querySelector("#photo-upload-status");
+
+    const showPhotoStatus = (msg) => {
+      statusEl.textContent = msg;
+      statusEl.classList.remove("hidden");
+    };
+
+    const applyPhotoFocus = () => {
+      previewImg.style.objectPosition = `${photoState.photoFocusX}% ${photoState.photoFocusY}%`;
+    };
+
+    if (photoState.photoKey) {
+      PhotoUpload.getUrl(photoState.photoKey).then((url) => {
+        // 불러오는 사이 사용자가 이미 지우거나 다른 사진으로 바꿨으면 무시.
+        if (!url || photoState.photoRemoved || photoState.photoBlob) return;
+        previewImg.src = url;
+      }).catch(() => {});
+    }
+
+    let overflowX = 0;
+    let overflowY = 0;
+    const computeOverflow = () => {
+      const rect = previewBox.getBoundingClientRect();
+      const iw = previewImg.naturalWidth;
+      const ih = previewImg.naturalHeight;
+      if (!iw || !ih || !rect.width || !rect.height) {
+        overflowX = 0;
+        overflowY = 0;
+        return;
+      }
+      const scale = Math.max(rect.width / iw, rect.height / ih);
+      overflowX = Math.max(0, iw * scale - rect.width);
+      overflowY = Math.max(0, ih * scale - rect.height);
+    };
+    previewImg.addEventListener("load", computeOverflow);
+
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startFocusX = 50;
+    let startFocusY = 50;
+
+    previewImg.addEventListener("pointerdown", (e) => {
+      computeOverflow();
+      if (overflowX <= 0 && overflowY <= 0) return;
+      dragging = true;
+      previewImg.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      startFocusX = photoState.photoFocusX;
+      startFocusY = photoState.photoFocusY;
+      previewImg.classList.add("dragging");
+    });
+
+    previewImg.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      if (overflowX > 0) {
+        photoState.photoFocusX = Math.min(100, Math.max(0, startFocusX - ((e.clientX - startX) / overflowX) * 100));
+      }
+      if (overflowY > 0) {
+        photoState.photoFocusY = Math.min(100, Math.max(0, startFocusY - ((e.clientY - startY) / overflowY) * 100));
+      }
+      applyPhotoFocus();
+    });
+
+    ["pointerup", "pointercancel"].forEach((evt) => {
+      previewImg.addEventListener(evt, () => {
+        dragging = false;
+        previewImg.classList.remove("dragging");
+      });
+    });
+
+    emptyBox.onclick = () => fileInput.click();
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      fileInput.value = "";
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showPhotoStatus("이미지 파일만 첨부할 수 있어요.");
+        return;
+      }
+      showPhotoStatus("사진을 준비하는 중...");
+      PhotoUpload.resizeImageFile(file).then((blob) => {
+        if (photoState.photoPreviewUrl) URL.revokeObjectURL(photoState.photoPreviewUrl);
+        photoState.photoBlob = blob;
+        photoState.photoPreviewUrl = URL.createObjectURL(blob);
+        photoState.photoRemoved = false;
+        photoState.photoFocusX = 50;
+        photoState.photoFocusY = 50;
+        previewImg.src = photoState.photoPreviewUrl;
+        applyPhotoFocus();
+        emptyBox.classList.add("hidden");
+        previewBox.classList.remove("hidden");
+        statusEl.classList.add("hidden");
+      }).catch(() => {
+        showPhotoStatus("사진을 처리할 수 없어요. 다른 사진을 시도해주세요.");
+      });
+    });
+
+    panel.querySelector("#photo-remove-btn").onclick = () => {
+      if (photoState.photoPreviewUrl) URL.revokeObjectURL(photoState.photoPreviewUrl);
+      photoState.photoBlob = null;
+      photoState.photoPreviewUrl = null;
+      photoState.photoRemoved = true;
+      photoState.photoFocusX = 50;
+      photoState.photoFocusY = 50;
+      emptyBox.classList.remove("hidden");
+      previewBox.classList.add("hidden");
+    };
+  }
+
   document.getElementById("btn-composer-close").onclick = closeComposer;
 
   document.getElementById("btn-submit").onclick = () => {
@@ -599,6 +749,40 @@ function renderEditComposerForm(pin, editing) {
     const story = Storage.updateStory(editing.id, sharedFields, {
       onFail: () => showToast("entry-toast", "수정 내용이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
     });
+
+    // 사진은 다른 필드와 별도 호출 — 새 사진이면 업로드부터 끝나야 키가
+    // 생기고, 위치만 바꿨으면 업로드 없이 바로 반영한다. 다른 필드와
+    // 마찬가지로 여기서도 완료를 기다리지 않고 백그라운드로 흘려보낸다
+    // (실패하면 토스트로만 알림).
+    if (photoState.photoBlob) {
+      PhotoUpload.upload(photoState.photoBlob, editing.publicId)
+        .then((photoKey) => {
+          Storage.updateStory(editing.id, {
+            photoKey,
+            photoFocusX: Math.round(photoState.photoFocusX),
+            photoFocusY: Math.round(photoState.photoFocusY),
+          }, {
+            onFail: () => showToast("entry-toast", "사진이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+          });
+        })
+        .catch(() => {
+          showToast("entry-toast", "사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.", 3000);
+        });
+    } else if (photoState.photoRemoved) {
+      Storage.updateStory(editing.id, { photoKey: null }, {
+        onFail: () => showToast("entry-toast", "사진이 삭제되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+      });
+    } else if (
+      photoState.photoKey &&
+      (photoState.photoFocusX !== (editing.photoFocusX ?? 50) || photoState.photoFocusY !== (editing.photoFocusY ?? 50))
+    ) {
+      Storage.updateStory(editing.id, {
+        photoFocusX: Math.round(photoState.photoFocusX),
+        photoFocusY: Math.round(photoState.photoFocusY),
+      }, {
+        onFail: () => showToast("entry-toast", "사진 위치가 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+      });
+    }
 
     closeComposer();
     clearSearchPin();
