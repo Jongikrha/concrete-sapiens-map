@@ -19,19 +19,20 @@ let searchPinInfo = null; // openSearchAreaModal에 그대로 넘길 { lat, lng,
 // tier/선택/오늘 여부가 실제로 안 바뀌었으면 기존 이미지를 그대로 재사용한다.
 const dotImageCache = new Map();
 
-function getDotImage(key, tier, selected, isToday, hasUnseen) {
+function getDotImage(key, tier, selected, isToday, hasUnseen, hasPhoto) {
   const cached = dotImageCache.get(key);
   if (
     cached &&
     cached.tier === tier &&
     cached.selected === selected &&
     cached.isToday === isToday &&
-    cached.hasUnseen === hasUnseen
+    cached.hasUnseen === hasUnseen &&
+    cached.hasPhoto === hasPhoto
   ) {
     return cached.image;
   }
-  const image = makeDotImage(tier, selected, isToday, hasUnseen);
-  dotImageCache.set(key, { tier, selected, isToday, hasUnseen, image });
+  const image = makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto);
+  dotImageCache.set(key, { tier, selected, isToday, hasUnseen, hasPhoto, image });
   return image;
 }
 
@@ -53,6 +54,12 @@ function groupHasTodayStory(group) {
 // 참고) — isToday와 별개 신호라 마커에도 별개 배지(NEW_BADGE_COLOR)로 그린다.
 function groupHasUnseenStory(group) {
   return group.stories.some((s) => Storage.isUnseen(s));
+}
+
+// 사진이 있는 기억이 하나라도 있으면 마커에 표시 — 지도를 훑어보다가
+// 사진 있는 기억도 자연스럽게 눈에 띄게 하려는 목적(2026-09-01).
+function groupHasPhoto(group) {
+  return group.stories.some((s) => s.photoKey);
 }
 
 // "Memory Light" 컬러 — UI 전반의 --cs-orange(#FF5A36)와는 별개로,
@@ -113,7 +120,7 @@ function burstRays(cx, cy, innerR, outerR, count, color, opacity) {
  * 작아지길 반복한다(BEHAVIOR, 5~7초 주기 — 선택된 점은 이미 크기로
  * 강조되니 정적으로 둔다).
  */
-function makeDotImage(tier, selected, isToday, hasUnseen) {
+function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
   const centerSizes = { 1: 13, 2: 16, 3: 19, 4: 22 };
   const glow1Sizes = { 1: 16, 2: 19, 3: 22, 4: 25 };
   const glow2Sizes = { 1: 26, 2: 30, 3: 34, 4: 38 };
@@ -167,12 +174,27 @@ function makeDotImage(tier, selected, isToday, hasUnseen) {
       })()
     : "";
 
+  // "사진 있음" 배지 — "새 글" 배지(북동쪽)와 겹치지 않게 반대쪽
+  // 남서쪽에 찍는다. 같은 팔레트 안에서 형태로 구분하려고 단색 원이
+  // 아니라 흰 바탕 + 테두리(고리)로 그려서 "새 글"(꽉 찬 주황 점)과
+  // 한눈에 다른 신호로 읽히게 한다(2026-09-01).
+  const photoBadge = hasPhoto
+    ? (() => {
+        const r = 3.4;
+        const offset = (center / 2) * 0.92;
+        const bx = c - offset * 0.7071;
+        const by = c + offset * 0.7071;
+        return `<circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r}" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="1.4"/>`;
+      })()
+    : "";
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas}" height="${canvas}">
     <circle cx="${c}" cy="${c}" r="${glow2 / 2}" fill="${MEMORY_CORE}" opacity="${glow2Opacity}">${glow2Animate}</circle>
     <circle cx="${c}" cy="${c}" r="${glow1 / 2}" fill="${MEMORY_GLOW}" opacity="${glow1Opacity}">${glow1Animate}</circle>
     ${rays}
     <path d="${starPoints(c, c, center / 2, (center / 2) * 0.5)}" fill="${STAR_FILL}" opacity="${coreOpacity}" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"/>
     ${badge}
+    ${photoBadge}
   </svg>`;
 
   const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
@@ -404,10 +426,10 @@ function highlightMarkerForStory(story) {
   if (highlightedMarker && highlightedMarker !== entry.marker) {
     const prevEntry = markers.find((m) => m.marker === highlightedMarker);
     if (prevEntry) {
-      highlightedMarker.setImage(getDotImage(prevEntry.group.key, tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group), groupHasUnseenStory(prevEntry.group)));
+      highlightedMarker.setImage(getDotImage(prevEntry.group.key, tierForCount(prevEntry.group.stories.length), false, groupHasTodayStory(prevEntry.group), groupHasUnseenStory(prevEntry.group), groupHasPhoto(prevEntry.group)));
     }
   }
-  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group)));
+  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), true, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group), groupHasPhoto(entry.group)));
   highlightedMarker = entry.marker;
 }
 
@@ -418,7 +440,7 @@ function refreshMarkerDotForGroup(group) {
   const entry = markers.find((m) => m.group.key === group.key);
   if (!entry) return;
   const selected = entry.marker === highlightedMarker;
-  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), selected, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group)));
+  entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), selected, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group), groupHasPhoto(entry.group)));
 }
 
 // ------------------------------------------------------------
@@ -482,7 +504,7 @@ function renderMarkers() {
     const marker = new kakao.maps.Marker({
       position: new kakao.maps.LatLng(group.lat, group.lng),
       title: Storage.getGroupTitle(group),
-      image: getDotImage(group.key, tier, false, lit, groupHasUnseenStory(group)),
+      image: getDotImage(group.key, tier, false, lit, groupHasUnseenStory(group), groupHasPhoto(group)),
     });
     kakao.maps.event.addListener(marker, "click", () => {
       clearSearchPin();
