@@ -16,15 +16,24 @@ async function initApp() {
   // (2026-08-20 확인) — 다른 초기화와 병렬로 최대한 일찍 시작한다.
   loadYoutubeIframeApi();
   initFadeScrollbars();
-  await Storage.init();
-  await Auth.init();
+  // 지도 컨테이너 자체(빈 배경 지도)는 스토리 목록/로그인 상태와 무관하게
+  // 뜰 수 있는데, 예전엔 Storage.init()(전체 스토리 목록 조회) → Auth.init()
+  // (로그인 세션 확인) 둘 다 끝난 뒤에야 initMap()을 불러서, 저장된 기억이
+  // 많아질수록(목록 전체를 받아오는 시간) 새로고침 직후 지도가 뜨는 체감
+  // 속도까지 함께 느려졌다(2026-09-01 확인 — "새로고침하면 지도가 늦게
+  // 뜬다" 리포트). 지도/이벤트 바인딩은 먼저 실행하고, 실제로 스토리
+  // 데이터가 필요한 부분(마커 렌더링 등)만 아래에서 기다린다.
+  initMap();
+  bindUIEvents();
+  const storageReady = Storage.init();
+  const authReady = Auth.init();
+  await storageReady;
+  await authReady;
   // 마커의 "새 글" 표시(map.js groupHasUnseenStory) 기준을 renderMarkers()
   // 보다 먼저 굳혀둔다.
   Storage.markVisitAndGetUnseenThreshold();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   logVisitKind();
-  initMap();
-  bindUIEvents();
   renderHashtagChips();
   renderMarkers();
   renderMemoryArchiveEntry();

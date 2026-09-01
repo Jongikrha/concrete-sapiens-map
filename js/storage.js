@@ -172,8 +172,11 @@ const Storage = {
    * (숨김/삭제/복구) 이후 재호출해서 화면을 최신 상태로 유지한다.
    */
   async refresh() {
-    _cache = await fetchAll("Story");
-    _bannedWords = await fetchAll("BannedWord");
+    // 서로 의존관계가 없는 두 목록 조회를 순차 대기하고 있었다 — 병렬로
+    // 바꿔 왕복 한 번만큼 부팅 시간을 줄인다(2026-09-01).
+    const [stories, bannedWords] = await Promise.all([fetchAll("Story"), fetchAll("BannedWord")]);
+    _cache = stories;
+    _bannedWords = bannedWords;
   },
 
   // client/_cache 직접 주입 — 원래 테스트 전용이었지만, admin.js도 로그인 후
