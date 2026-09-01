@@ -28,6 +28,12 @@ const schema = a.schema({
       // 금방 못 쓰게 되므로, 화면에 그릴 때 js/storage.js가 getUrl()로 그때그때
       // 새로 만든다. optional — 이 필드 이전 기억엔 당연히 없고, 사진 없는 글도 계속 허용.
       photoKey: a.string(),
+      // 사진 크롭 위치(포커스 포인트) — object-fit: cover로 표시할 때 어느
+      // 지점을 중심으로 자를지 0~100 퍼센트로 저장한다. 작성 마법사에서
+      // 드래그로 지정하고(js/composer.js), 없으면 화면(storySheet.js/admin.js)
+      // 에서 50(중앙)으로 취급한다. optional — 이 필드 이전 사진엔 당연히 없음.
+      photoFocusX: a.integer(),
+      photoFocusY: a.integer(),
       hashtags: a.string().array(),
       authorMode: a.string().required(),
       displayAuthorName: a.string().required(),
