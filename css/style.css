@@ -2852,6 +2852,84 @@ button.story-place-line:hover {
   margin: 0 0 4px;
 }
 
+/* 기억 카드 안 첨부 사진(js/storySheet.js renderStoryItem) — URL을
+   presigned로 비동기 조회해서 채우기 전까지는 빈 배경으로 자리만 잡아둔다
+   (레이아웃이 늦게 팝인되며 흔들리지 않게, aspect-ratio로 높이를 미리 고정). */
+.story-photo {
+  aspect-ratio: 4 / 3;
+  background: var(--cs-map-gray);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.story-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-upload-box {
+  position: relative;
+}
+
+.photo-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 160px;
+  border: 1.5px dashed var(--cs-gray);
+  border-radius: 12px;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+  background: var(--cs-map-gray);
+}
+
+.photo-upload-icon {
+  font-size: 24px;
+}
+
+.photo-upload-label {
+  font-size: 13px;
+}
+
+.photo-upload-preview {
+  position: relative;
+  height: 160px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.photo-upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 20, 22, 0.6);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.photo-upload-status {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
 .input-with-icon {
   position: relative;
 }

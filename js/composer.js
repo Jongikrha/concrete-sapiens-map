@@ -647,6 +647,8 @@ function openComposerWizard(pin) {
     youtubeUrl: "",
     musicArtist: "",
     musicTitle: "",
+    photoBlob: null,
+    photoPreviewUrl: null,
   };
   // startFreePinComposer의 reverseGeocode 콜백이 지금 몇 번째 스텝이든
   // 이름 자동 채움을 state에 반영할 수 있도록 pin에 걸어둔다(아래
@@ -920,6 +922,74 @@ function openComposerWizard(pin) {
     updateSongMatchHint();
   }
 
+  // 사진 1장 첨부 — 선택 즉시 리사이즈해 미리보기용 blob URL을 만들어두고,
+  // 실제 S3 업로드는 마법사를 끝낼 때(handleWizardNext의 step 5)만 한다
+  // (사진을 여러 번 바꿔도 매번 올리지 않게).
+  function renderPhotoStepHtml() {
+    const hasPhoto = !!state.photoPreviewUrl;
+    return `
+      <div class="photo-upload-box">
+        <input type="file" id="input-photo" accept="image/*" class="hidden" />
+        <div class="photo-upload-empty ${hasPhoto ? "hidden" : ""}" id="photo-upload-empty">
+          <span class="photo-upload-icon">📷</span>
+          <span class="photo-upload-label">사진 추가하기</span>
+        </div>
+        <div class="photo-upload-preview ${hasPhoto ? "" : "hidden"}" id="photo-upload-preview">
+          <img id="photo-preview-img" src="${state.photoPreviewUrl || ""}" alt="" />
+          <button type="button" class="photo-remove-btn" id="photo-remove-btn">✕</button>
+        </div>
+      </div>
+      <div class="field-hint">(사진은 <b>1장만</b> 첨부할 수 있어요. 건너뛰어도 괜찮아요)</div>
+      <div class="photo-upload-status hidden" id="photo-upload-status"></div>
+    `;
+  }
+
+  function wirePhotoStep() {
+    const panel = document.getElementById("composer-panel");
+    const fileInput = panel.querySelector("#input-photo");
+    const emptyBox = panel.querySelector("#photo-upload-empty");
+    const previewBox = panel.querySelector("#photo-upload-preview");
+    const previewImg = panel.querySelector("#photo-preview-img");
+    const statusEl = panel.querySelector("#photo-upload-status");
+
+    const showStatus = (msg) => {
+      statusEl.textContent = msg;
+      statusEl.classList.remove("hidden");
+    };
+
+    emptyBox.onclick = () => fileInput.click();
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      fileInput.value = "";
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showStatus("이미지 파일만 첨부할 수 있어요.");
+        return;
+      }
+      showStatus("사진을 준비하는 중...");
+      PhotoUpload.resizeImageFile(file).then((blob) => {
+        if (state.photoPreviewUrl) URL.revokeObjectURL(state.photoPreviewUrl);
+        state.photoBlob = blob;
+        state.photoPreviewUrl = URL.createObjectURL(blob);
+        previewImg.src = state.photoPreviewUrl;
+        emptyBox.classList.add("hidden");
+        previewBox.classList.remove("hidden");
+        statusEl.classList.add("hidden");
+      }).catch(() => {
+        showStatus("사진을 처리할 수 없어요. 다른 사진을 시도해주세요.");
+      });
+    });
+
+    panel.querySelector("#photo-remove-btn").onclick = () => {
+      if (state.photoPreviewUrl) URL.revokeObjectURL(state.photoPreviewUrl);
+      state.photoBlob = null;
+      state.photoPreviewUrl = null;
+      emptyBox.classList.remove("hidden");
+      previewBox.classList.add("hidden");
+    };
+  }
+
   // 진행 바/스텝 카운터는 WHERE~MEMORY 3단계 기준이다 — TAGS/MUSIC은
   // 이 카운트에 안 잡히는 "덤" 취급(아래 렌더 참고).
   const MAIN_STEP_TOTAL = 3;
@@ -929,6 +999,7 @@ function openComposerWizard(pin) {
     { title: "어떤 기억이 있었나요?", render: renderMemoryStepHtml, wire: wireMemoryStep, navLabel: "다음" },
     { title: "태그를 남겨볼까요?", render: renderTagsStepHtml, wire: wireTagsStep, navLabel: "다음" },
     { title: "노래도 함께 남겨볼까요?", render: renderMusicStepHtml, wire: wireMusicStep, navLabel: "다음" },
+    { title: "사진도 함께 남겨볼까요?", render: renderPhotoStepHtml, wire: wirePhotoStep, navLabel: "완료" },
   ];
 
   function renderComposerHeader() {
@@ -1216,7 +1287,29 @@ function openComposerWizard(pin) {
         });
         renderHashtagChips();
       }
-      finishWizard();
+      step = 5;
+      renderWizardStep();
+      return;
+    }
+
+    if (step === 5) {
+      if (!state.photoBlob) {
+        finishWizard();
+        return;
+      }
+      const nextBtn = document.getElementById("wizard-next-btn");
+      nextBtn.disabled = true;
+      nextBtn.textContent = "업로드 중...";
+      PhotoUpload.upload(state.photoBlob, postedStory.publicId)
+        .then((photoKey) => {
+          Storage.updateStory(postedStory.id, { photoKey }, {
+            onFail: () => showToast("entry-toast", "사진이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
+          });
+        })
+        .catch(() => {
+          showToast("entry-toast", "사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.", 3000);
+        })
+        .finally(finishWizard);
     }
   }
 

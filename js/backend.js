@@ -22,6 +22,7 @@ import {
   confirmResetPassword,
   updatePassword,
 } from "https://esm.sh/aws-amplify@6.20.0/auth";
+import { uploadData, getUrl } from "https://esm.sh/aws-amplify@6.20.0/storage";
 
 // localhost에서는 별도 dev sandbox(amplify_outputs.local.json, gitignore
 // 대상)를 쓰고, 배포된 사이트에서는 main과 함께 커밋된 amplify_outputs.json
@@ -50,8 +51,10 @@ fetch(OUTPUTS_FILE)
       confirmResetPassword,
       updatePassword,
     });
+    window._storageReadyResolvers.resolve({ uploadData, getUrl });
   })
   .catch((e) => {
     window._backendClientReadyResolvers.reject(e);
     window._authReadyResolvers.reject(e);
+    window._storageReadyResolvers.reject(e);
   });

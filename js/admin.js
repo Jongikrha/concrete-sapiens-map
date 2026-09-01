@@ -9,6 +9,7 @@
 import { Amplify } from "https://esm.sh/aws-amplify@6.20.0";
 import { signIn, signOut, fetchAuthSession, getCurrentUser } from "https://esm.sh/aws-amplify@6.20.0/auth";
 import { generateClient } from "https://esm.sh/aws-amplify@6.20.0/data";
+import { getUrl } from "https://esm.sh/aws-amplify@6.20.0/storage";
 
 const isLocalDev = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 // /admin(리다이렉트) 경로에서 열릴 수도 있어서 상대경로는 위험하다 — 절대경로로 고정.
@@ -252,6 +253,32 @@ function deviceBadgeHtml(story) {
   return `<button class="device-badge" data-device="${escapeHtml(story.authorDeviceId)}">이 브라우저 기억 ${count}개</button>`;
 }
 
+// 신고 사유가 "사진이 부적절함"인 경우 텍스트만 보고는 판단할 수 없어서
+// 신고 검토 큐/전체 콘텐츠 목록에도 사진 미리보기를 넣는다(2026-09-01).
+// index.html 쪽 js/photoUpload.js와 같은 이유로 presigned URL을 photoKey
+// 기준으로 캐싱해서 재렌더링마다 다시 요청하지 않는다 — 다만 admin.html은
+// 카카오맵 타이밍 제약이 없어 이 파일 하나로 Amplify import까지 직접 하는
+// 구조라(파일 위쪽 주석 참고) PhotoUpload 전역 대신 getUrl을 여기서 바로 쓴다.
+const _adminPhotoUrlCache = new Map();
+function resolveAdminPhotoUrl(photoKey) {
+  if (!_adminPhotoUrlCache.has(photoKey)) {
+    _adminPhotoUrlCache.set(photoKey, getUrl({ path: photoKey }).then((r) => r.url.toString()).catch(() => null));
+  }
+  return _adminPhotoUrlCache.get(photoKey);
+}
+
+function hydrateAdminPhotos() {
+  document.querySelectorAll("#admin-content .admin-card-photo[data-photo-key]").forEach((el) => {
+    resolveAdminPhotoUrl(el.dataset.photoKey).then((url) => {
+      if (!url) { el.remove(); return; }
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = url;
+      el.replaceChildren(img);
+    });
+  });
+}
+
 function storyCardHtml(story, { showRestore }) {
   const title = Storage.getGroupTitle({
     placeId: story.placeId,
@@ -262,6 +289,7 @@ function storyCardHtml(story, { showRestore }) {
   });
   return `
     <div class="admin-card" data-id="${story.id}">
+      ${story.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(story.photoKey)}"></div>` : ""}
       <p class="admin-card-content">${escapeHtml(story.content)}</p>
       <div class="admin-card-meta">
         <span>${escapeHtml(title)}</span>
@@ -827,6 +855,7 @@ function renderActiveTab() {
   else if (activeTab === "visits") renderVisitsTab();
   else if (activeTab === "members") renderMembersTab();
   else if (activeTab === "bulk") renderBulkTab();
+  hydrateAdminPhotos();
 }
 
 document.getElementById("admin-content").addEventListener("click", (e) => {

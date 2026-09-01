@@ -424,6 +424,32 @@ function renderSheetContent(group) {
   }
 }
 
+// 사진 URL은 presigned라 매번 새로 만들어야 하지만(PhotoUpload.getUrl 참고),
+// 같은 화면 안에서 story-item이 여러 번 다시 그려질 때마다(정렬 전환, 공감
+// 등) 매번 새로 요청하면 낭비가 크다 — 세션 동안 photoKey 기준으로
+// 한 번만 요청하고 재사용한다. presigned URL 만료(기본 15분)보다 오래 열어
+// 두면 이미지가 깨질 수 있지만, 그 정도는 감수할 트레이드오프로 둔다.
+const _photoUrlCache = new Map();
+function resolveStoryPhotoUrl(photoKey) {
+  if (!_photoUrlCache.has(photoKey)) {
+    _photoUrlCache.set(photoKey, PhotoUpload.getUrl(photoKey).catch(() => null));
+  }
+  return _photoUrlCache.get(photoKey);
+}
+
+function hydrateStoryPhotos(content) {
+  content.querySelectorAll(".story-photo[data-photo-key]").forEach((el) => {
+    resolveStoryPhotoUrl(el.dataset.photoKey).then((url) => {
+      if (!url) { el.remove(); return; }
+      const img = document.createElement("img");
+      img.className = "story-photo-img";
+      img.alt = "";
+      img.src = url;
+      el.replaceChildren(img);
+    });
+  });
+}
+
 /**
  * story-item 내부 공통 인터랙션(해시태그/연도 이동, 장소 이동, 공감, 전달, 신고/
  * 수정/삭제 메뉴)을 한 곳에서 바인딩한다. renderSheetContent(단일 스팟)와
@@ -431,6 +457,8 @@ function renderSheetContent(group) {
  * 컨텍스트별로 달라지는 부분만 onChange/onRemove로 호출부에서 넘겨준다.
  */
 function bindStoryItemEvents(content, { onChange, onRemove }) {
+  hydrateStoryPhotos(content);
+
   content.querySelectorAll(".hashtag-link").forEach((link) => {
     link.onclick = () => exploreHashtag(link.dataset.tag);
   });
@@ -800,6 +828,7 @@ function renderStoryItem(story, options = {}) {
       <div class="story-date-divider"></div>
       ${locationHtml}
       <p class="story-content">${escapeHtml(story.content)}</p>
+      ${story.photoKey ? `<div class="story-photo" data-photo-key="${escapeHtml(story.photoKey)}"></div>` : ""}
       ${renderYoutubeEmbed(story)}
       <div class="story-author-row">
         <div class="story-author-identity">
