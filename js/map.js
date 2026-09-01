@@ -175,16 +175,22 @@ function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
     : "";
 
   // "사진 있음" 배지 — "새 글" 배지(북동쪽)와 겹치지 않게 반대쪽
-  // 남서쪽에 찍는다. 같은 팔레트 안에서 형태로 구분하려고 단색 원이
-  // 아니라 흰 바탕 + 테두리(고리)로 그려서 "새 글"(꽉 찬 주황 점)과
-  // 한눈에 다른 신호로 읽히게 한다(2026-09-01).
+  // 남서쪽에 찍는다. 단순 점만으로는 "사진"이라는 의미가 전혀 안
+  // 읽힌다는 피드백(2026-09-01)으로, 흰 바탕 위에 작은 카메라
+  // 실루엣(몸체+뷰파인더 돌기+렌즈)을 직접 그려서 축소된 크기에서도
+  // 카메라라는 게 티가 나게 했다.
   const photoBadge = hasPhoto
     ? (() => {
-        const r = 3.4;
-        const offset = (center / 2) * 0.92;
+        const r = 4.6;
+        const offset = (center / 2) * 0.95;
         const bx = c - offset * 0.7071;
         const by = c + offset * 0.7071;
-        return `<circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r}" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="1.4"/>`;
+        return `
+          <circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r}" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="1"/>
+          <rect x="${(bx - 3.3).toFixed(2)}" y="${(by - 1.7).toFixed(2)}" width="6.6" height="4.4" rx="1.1" fill="${STAR_FILL}"/>
+          <rect x="${(bx - 2).toFixed(2)}" y="${(by - 2.7).toFixed(2)}" width="2.4" height="1.3" rx="0.4" fill="${STAR_FILL}"/>
+          <circle cx="${bx.toFixed(2)}" cy="${(by + 0.3).toFixed(2)}" r="1.4" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="0.8"/>
+        `;
       })()
     : "";
 
