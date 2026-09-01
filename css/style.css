@@ -3344,6 +3344,14 @@ button.story-place-line:hover {
   margin: 2px 0 0;
 }
 
+/* 사진 첨부된 기억임을 나타내는 표시 — 실제 사진 대신 아이콘만 (목록이라
+   작고, presigned URL을 목록 항목 수만큼 매번 조회하면 낭비가 크다). */
+.recent-item-photo-badge {
+  display: inline-flex;
+  margin-top: 6px;
+  color: var(--cs-text-muted);
+}
+
 .recent-item-body {
   flex: 1;
   min-width: 0;
