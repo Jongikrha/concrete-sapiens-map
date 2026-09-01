@@ -175,21 +175,26 @@ function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
     : "";
 
   // "사진 있음" 배지 — "새 글" 배지(북동쪽)와 겹치지 않게 반대쪽
-  // 남서쪽에 찍는다. 단순 점만으로는 "사진"이라는 의미가 전혀 안
-  // 읽힌다는 피드백(2026-09-01)으로, 흰 바탕 위에 작은 카메라
-  // 실루엣(몸체+뷰파인더 돌기+렌즈)을 직접 그려서 축소된 크기에서도
-  // 카메라라는 게 티가 나게 했다.
+  // 남서쪽에 찍는다. 카메라 실루엣 위로 반짝이는 플래시(별)를 겹쳐서
+  // "사진"이라는 의미를 더 분명하게 했다 — 카메라 톤은 참고 이미지
+  // 그대로(그레이 계열 바디 + 하늘색 렌즈), 플래시만 이 지도의 포인트
+  // 컬러에 맞춰 노란색 대신 빨간색으로 바꿨다(2026-09-01).
+  const CAMERA_BODY = "#948C81";
+  const CAMERA_BODY_DARK = "#6B6560";
+  const CAMERA_LENS = "#BFE0E8";
   const photoBadge = hasPhoto
     ? (() => {
-        const r = 4.6;
         const offset = (center / 2) * 0.95;
         const bx = c - offset * 0.7071;
         const by = c + offset * 0.7071;
+        const flash = starPoints(bx, by - 3.2, 3.2, 1.3);
         return `
-          <circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="${r}" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="1"/>
-          <rect x="${(bx - 3.3).toFixed(2)}" y="${(by - 1.7).toFixed(2)}" width="6.6" height="4.4" rx="1.1" fill="${STAR_FILL}"/>
-          <rect x="${(bx - 2).toFixed(2)}" y="${(by - 2.7).toFixed(2)}" width="2.4" height="1.3" rx="0.4" fill="${STAR_FILL}"/>
-          <circle cx="${bx.toFixed(2)}" cy="${(by + 0.3).toFixed(2)}" r="1.4" fill="#FFFFFF" stroke="${STAR_FILL}" stroke-width="0.8"/>
+          <circle cx="${bx.toFixed(2)}" cy="${by.toFixed(2)}" r="4.8" fill="#FFFFFF" stroke="${CAMERA_BODY_DARK}" stroke-width="0.6"/>
+          <path d="${flash}" fill="${NEW_BADGE_COLOR}" stroke="#FFFFFF" stroke-width="0.6" stroke-linejoin="round"/>
+          <rect x="${(bx - 3.5).toFixed(2)}" y="${(by - 1.6).toFixed(2)}" width="7" height="4.6" rx="1.2" fill="${CAMERA_BODY}"/>
+          <rect x="${(bx - 1.4).toFixed(2)}" y="${(by - 2.6).toFixed(2)}" width="2.6" height="1.3" rx="0.3" fill="${CAMERA_BODY_DARK}"/>
+          <circle cx="${bx.toFixed(2)}" cy="${(by + 0.6).toFixed(2)}" r="1.9" fill="${CAMERA_LENS}" stroke="${CAMERA_BODY_DARK}" stroke-width="0.5"/>
+          <circle cx="${(bx - 0.6).toFixed(2)}" cy="${by.toFixed(2)}" r="0.55" fill="#FFFFFF" opacity="0.85"/>
         `;
       })()
     : "";
