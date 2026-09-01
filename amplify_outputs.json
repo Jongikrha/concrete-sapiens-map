@@ -135,6 +135,20 @@
               "isRequired": false,
               "attributes": []
             },
+            "photoFocusX": {
+              "name": "photoFocusX",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "photoFocusY": {
+              "name": "photoFocusY",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
             "hashtags": {
               "name": "hashtags",
               "isArray": true,
