@@ -1361,7 +1361,7 @@ function openComposerWizard(pin) {
       .map((t) => t.tag)
       .filter((tag) => {
         const bare = tag.startsWith("#") ? tag.slice(1) : tag;
-        return bare && state.content.includes(bare);
+        return bare && hasWordBoundaryMatch(state.content, bare);
       });
     state.tagChips = [...new Set([...inlineTags, ...corpusMatches])].slice(0, MAX_HASHTAGS);
 
@@ -1622,4 +1622,21 @@ function closeComposer() {
 function extractHashtags(text) {
   const matches = text.match(/#[^\s#]+/g);
   return matches ? [...new Set(matches)] : [];
+}
+
+// "여주"가 "보여주니"(보이다 활용형)처럼 다른 단어 안에 우연히 포함된
+// 부분 문자열까지 자동태그로 잡히는 걸 막기 위한 단어 경계 체크(2026-09-02).
+// 뒤쪽은 검사하지 않는다 — 한국어 조사는 공백 없이 바로 붙기 때문에
+// ("여주에서"처럼) 뒷글자가 한글이라는 이유로 거르면 정상 지명 언급까지
+// 같이 걸러진다. 앞글자만 한글 음절이면 같은 단어 중간이라고 보고 제외한다.
+function hasWordBoundaryMatch(content, bare) {
+  const escaped = bare.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(escaped, "g");
+  const isHangulSyllable = (ch) => !!ch && /[가-힣]/.test(ch);
+  let match;
+  while ((match = re.exec(content))) {
+    const before = content[match.index - 1];
+    if (!isHangulSyllable(before)) return true;
+  }
+  return false;
 }
