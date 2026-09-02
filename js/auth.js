@@ -238,6 +238,10 @@ function renderAuthPanel() {
       <button class="btn-primary" id="auth-submit">계정 만들기</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
       <p class="auth-switch">이미 계정이 있나요? <button class="auth-switch-link" id="auth-goto-login">로그인</button></p>
+      <p class="field-hint">
+        계정을 만들면 <a href="terms.html" target="_blank" rel="noopener">이용약관</a> 및
+        <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+      </p>
     `;
     panel.querySelector("#auth-submit").onclick = handleSignupSubmit;
     panel.querySelector("#auth-goto-login").onclick = () => {

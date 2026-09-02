@@ -1,0 +1,104 @@
+/* 개인정보처리방침 / 이용약관 — 지도 UI와 분리된 정적 문서 페이지.
+   index.html의 --cs-* 토큰과 동일한 값을 그대로 옮겨 톤을 맞춘다
+   (admin.html이 css/admin.css를 따로 두는 것과 같은 패턴). */
+
+:root {
+  --cs-black: #2F3031;
+  --cs-paper: #F4F3EF;
+  --cs-orange: #FF5A36;
+  --cs-text-main: #2F3031;
+  --cs-text-muted: #777875;
+  --cs-gray: #B9B9B5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--cs-paper);
+  color: var(--cs-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  line-height: 1.7;
+}
+
+.legal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--cs-gray);
+}
+
+.legal-header a {
+  color: var(--cs-text-main);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.legal-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 24px 96px;
+}
+
+.legal-wrap h1 {
+  font-size: 24px;
+  margin: 0 0 8px;
+}
+
+.legal-meta {
+  color: var(--cs-text-muted);
+  font-size: 13px;
+  margin: 0 0 36px;
+}
+
+.legal-wrap h2 {
+  font-size: 17px;
+  margin: 36px 0 12px;
+  border-left: 3px solid var(--cs-orange);
+  padding-left: 10px;
+}
+
+.legal-wrap p,
+.legal-wrap li {
+  font-size: 14.5px;
+  color: var(--cs-text-main);
+}
+
+.legal-wrap ul,
+.legal-wrap ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.legal-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13.5px;
+}
+
+.legal-wrap th,
+.legal-wrap td {
+  border: 1px solid var(--cs-gray);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-wrap th {
+  background: #EAE9E4;
+}
+
+.legal-note {
+  color: var(--cs-text-muted);
+  font-size: 13px;
+}
+
+.legal-cross-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--cs-text-muted);
+  font-size: 13.5px;
+}
