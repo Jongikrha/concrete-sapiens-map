@@ -382,7 +382,8 @@
                     "allow": "owner",
                     "operations": [
                       "create",
-                      "read"
+                      "read",
+                      "delete"
                     ],
                     "identityClaim": "cognito:username"
                   },
