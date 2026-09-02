@@ -24,6 +24,13 @@ const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
 const READ_STORIES_KEY = "concrete_sapiens_read_stories_v1";
+// 전체 스토리 목록 로컬 캐시(2026-09-02) — 부팅 시마다 서버에서 전체 목록을
+// 새로 받아오는 동안(920건 기준 약 1MB, 1초 가까이) 지도가 마커 없이
+// 비어 보이는 문제 대응. 지난 방문 때 받아온 목록을 즉시 그려서 "빈 지도"
+// 체감을 없애고, 최신 목록은 백그라운드로 이어서 받아와 조용히 교체한다.
+// 스토리 수가 아주 많아지면(수만 건) 이 캐시 자체도 커지겠지만, localStorage
+// 한도(보통 5~10MB)에는 아직 여유가 커서 지금은 그대로 둔다.
+const STORY_CACHE_KEY = "concrete_sapiens_story_cache_v1";
 
 // "새 글" 지도 표시(2026-08-27)의 기준 시각 — markVisitAndGetUnseenThreshold()가
 // 앱 부팅 시 한 번 채워두고, 세션 내내 이 값을 기준으로 isUnseen()을 판정한다.
@@ -157,12 +164,24 @@ async function fetchAll(modelName) {
 
 const Storage = {
   async init() {
+    // 지난 방문 때 캐시해둔 목록이 있으면 네트워크 응답을 기다리지 않고
+    // 먼저 그려둔다 — map.js가 이미 로드돼 있어야 하는데, app.js가
+    // initMap()을 Storage.init()보다 먼저 부르도록 되어 있어 순서는
+    // 보장된다.
+    const cached = this._loadCachedStories();
+    if (cached) {
+      _cache = cached;
+      if (typeof renderMarkers === "function") renderMarkers();
+    }
+
     try {
       client = await window._backendClientReady;
       await this.refresh();
     } catch (e) {
-      console.error("백엔드 연결 실패 — 빈 지도로 시작합니다", e);
-      _cache = [];
+      console.error("백엔드 연결 실패", e);
+      // 캐시가 있었으면 오래된 목록이라도 보여주는 게 빈 지도보다 낫다 —
+      // 캐시가 아예 없었을 때만(첫 방문 등) 빈 목록으로 시작한다.
+      if (!cached) _cache = [];
     }
   },
 
@@ -177,6 +196,27 @@ const Storage = {
     const [stories, bannedWords] = await Promise.all([fetchAll("Story"), fetchAll("BannedWord")]);
     _cache = stories;
     _bannedWords = bannedWords;
+    this._saveCachedStories(stories);
+  },
+
+  _loadCachedStories() {
+    try {
+      const raw = localStorage.getItem(STORY_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  _saveCachedStories(stories) {
+    try {
+      localStorage.setItem(STORY_CACHE_KEY, JSON.stringify(stories));
+    } catch (e) {
+      // 저장공간 부족 등으로 실패해도 다음 방문에서 그냥 서버 응답을
+      // 기다리는 것으로 조용히 폴백된다 — 캐시는 있으면 좋은 것일 뿐.
+    }
   },
 
   // client/_cache 직접 주입 — 원래 테스트 전용이었지만, admin.js도 로그인 후
