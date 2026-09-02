@@ -24,6 +24,7 @@ async function initApp() {
   // 뜬다" 리포트). 지도/이벤트 바인딩은 먼저 실행하고, 실제로 스토리
   // 데이터가 필요한 부분(마커 렌더링 등)만 아래에서 기다린다.
   initMap();
+  NightMode.init();
   bindUIEvents();
   const storageReady = Storage.init();
   const authReady = Auth.init();
