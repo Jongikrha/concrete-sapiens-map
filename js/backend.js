@@ -21,6 +21,7 @@ import {
   resetPassword,
   confirmResetPassword,
   updatePassword,
+  deleteUser,
 } from "https://esm.sh/aws-amplify@6.20.0/auth";
 import { uploadData, getUrl } from "https://esm.sh/aws-amplify@6.20.0/storage";
 
@@ -50,6 +51,7 @@ fetch(OUTPUTS_FILE)
       resetPassword,
       confirmResetPassword,
       updatePassword,
+      deleteUser,
     });
     window._storageReadyResolvers.resolve({ uploadData, getUrl });
   })

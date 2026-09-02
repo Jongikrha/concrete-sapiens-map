@@ -124,6 +124,20 @@ const Auth = {
     return this._sdk.updatePassword({ oldPassword, newPassword });
   },
 
+  // 회원 자율 탈퇴(2026-09-02) — StoryAuthor(이메일 포함)부터 먼저 지운
+  // 뒤에 Cognito 계정을 지운다. 순서를 반대로 하면 계정이 먼저 사라져
+  // userPool authMode 호출에 필요한 세션이 없어져 StoryAuthor 삭제가
+  // 실패한다. deleteUser()는 Cognito 쪽 세션도 함께 정리해준다 — 이미
+  // 등록된 기억(Story) 본문은 계정과 분리된 별도 모델이라 그대로 지도에
+  // 남는다(js/storage.js deleteMyStoryAuthors 주석 참고).
+  async deleteAccount() {
+    await Storage.deleteMyStoryAuthors();
+    await this._sdk.deleteUser();
+    this._currentUser = null;
+    Storage.clearMyStoryIds();
+    if (typeof renderAccountAvatar === "function") renderAccountAvatar();
+  },
+
   // Cognito 예외 이름을 기획서 17장 문구에 맞춰 한국어로 옮긴다.
   mapError(e) {
     const known = {

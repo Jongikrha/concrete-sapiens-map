@@ -87,7 +87,11 @@ const schema = a.schema({
       // 기존 identityPool 경로(위 authenticated 규칙)로 만든 레코드는
       // owner가 안 채워져 이 규칙으론 안 읽힌다 — 이번 변경 이후 계정으로
       // 로그인해서 새로 쓴 글부터 기기 무관 조회가 된다.
-      allow.owner().to(['create', 'read']),
+      // delete는 회원 탈퇴(js/storage.js deleteMyStoryAuthors, 2026-09-02)
+      // 때 본인이 자기 계정-글 연결(이메일 포함)을 직접 지우게 하려고
+      // 추가했다 — Story(기억) 본문 자체는 별도 모델이라 이 권한과 무관
+      // 하게 지도에 남는다.
+      allow.owner().to(['create', 'read', 'delete']),
       allow.group('Admins').to(['read']),
     ]),
 

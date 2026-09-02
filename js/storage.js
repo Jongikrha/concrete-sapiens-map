@@ -499,6 +499,25 @@ const Storage = {
   },
 
   /**
+   * 회원 탈퇴(auth.js Auth.deleteAccount) 시, 계정에 연결된 개인정보
+   * (email)만 지운다 — StoryAuthor 레코드 자체를 지우는 것뿐, 이미 등록된
+   * Story(기억) 본문은 그대로 지도에 남는다(2026-09-02 결정 — 기억은
+   * 이미 다른 이용자에게 노출/연결돼 있고 displayAuthorName은 애초에
+   * 실명과 분리돼 있어 개인정보가 아니다). create/read와 동일하게 owner
+   * 판정이 되려면 delete도 userPool authMode로 호출해야 한다.
+   */
+  async deleteMyStoryAuthors() {
+    if (!client) return;
+    const records = await this.listMyStoryAuthors();
+    await Promise.all(
+      records.map((r) =>
+        client.models.StoryAuthor.delete({ id: r.id }, { authMode: "userPool" })
+          .catch((e) => console.error("작성자 계정 연결 삭제 실패", r.id, e))
+      )
+    );
+  },
+
+  /**
    * 로그인 직후(auth.js)에 한 번 호출해 "내 글" id 캐시를 채운다.
    * isMyStory()가 카드 렌더링 중 동기로 이 캐시를 참조한다 — 수정하기/
    * 삭제하기 버튼 노출도 오직 계정 연결만 보고, 브라우저 기기ID는

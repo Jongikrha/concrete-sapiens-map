@@ -383,6 +383,31 @@ async function handleLogout() {
   showToast("entry-toast", "로그아웃되었습니다", 2000);
 }
 
+// 회원 자율 탈퇴(2026-09-02) — 되돌릴 수 없는 동작이라 다른 파괴적
+// 동작(글 삭제 등, js/storySheet.js 참고)과 동일하게 confirm() 한 번으로
+// 막는다. 지도 위 기억은 남고 계정 연결만 지워진다는 걸 확인 문구에서
+// 미리 알려준다(Auth.deleteAccount 주석 참고).
+async function handleDeleteAccount() {
+  closeAccountMenu();
+  const confirmed = confirm(
+    "정말 탈퇴하시겠어요?\n\n계정과 로그인 정보는 삭제되고 되돌릴 수 없습니다. 그동안 지도에 남긴 기억은 계정과의 연결만 끊긴 채 그대로 남습니다."
+  );
+  if (!confirmed) return;
+
+  try {
+    const wasMyMemoryActive = myMemoryModeActive;
+    await Auth.deleteAccount();
+    if (wasMyMemoryActive) {
+      closeMyMemoryMode();
+      renderMarkers();
+    }
+    showToast("entry-toast", "탈퇴가 완료되었습니다", 2500);
+  } catch (e) {
+    console.error("회원 탈퇴 실패", e);
+    alert("탈퇴 처리에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  }
+}
+
 function bindAccountMenuEvents() {
   document.getElementById("account-avatar").onclick = (e) => {
     e.stopPropagation();
@@ -398,6 +423,7 @@ function bindAccountMenuEvents() {
     openChangePasswordPanel();
   };
   document.getElementById("menu-logout").onclick = handleLogout;
+  document.getElementById("menu-deleteaccount").onclick = handleDeleteAccount;
 
   // 메뉴가 우상단 드롭다운에서 중앙 시트(overlay)로 바뀌면서(2026-08-21)
   // "바깥 클릭 시 닫기"도 다른 오버레이(mymemory-overlay 등)와 같은
