@@ -90,17 +90,7 @@ body {
      살짝 낮췄다(2026-08-26, 1.05 → 0.9) — 채도/대비는 그대로 둬서
      지도 자체 가독성(거리명 등)은 크게 안 건드리는 선에서. */
   filter: saturate(0.6) brightness(0.9) contrast(0.95);
-  transition: filter 1.2s ease;
-}
-
-/* 일몰~일출 사이(js/nightMode.js) — 기존 filter 접근을 그대로 확장해서
-   한 단계 더 어둡게만 낮춘다. 예전에 시도했던 별도 반투명 레이어는
-   카카오맵이 #map 안에 그리는 마커까지 통째로 덮어버리는 문제가 있었다
-   (위 주석 참고) — 그 문제를 다시 만들지 않도록 필터만 조정한다.
-   brightness를 낮게 잡아도 orange 마커는 채도 대비 덕에 상대적으로
-   또렷하게 남는다. */
-#map.map-night {
-  filter: saturate(0.55) brightness(0.55) contrast(1.05);
+  transition: filter 0.6s ease;
 }
 
 /* 지도를 클릭했을 때 "도장 찍힌" 느낌을 주는 짧은 링 애니메이션 */
