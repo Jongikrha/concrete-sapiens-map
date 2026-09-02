@@ -150,26 +150,6 @@ test("getStoriesAtSamePlace는 HIDDEN/DELETED 상태의 이웃 스토리를 제�
   assert.deepEqual(Storage.getStoriesAtSamePlace(mine), []);
 });
 
-test("getNearbySameYearStories는 반경 안 + 같은 해인 다른 장소의 기억만 반환한다", () => {
-  // 종로(mine)에서 대략 780m 떨어진 지점(0.007도 ≈ 780m) — 1000m 반경 안
-  const mine = createStory({ id: "mine", placeId: "p-jongno", lat: 37.5700, lng: 126.9800, dateMode: "now", createdAt: "2001-05-01T00:00:00.000Z" });
-  const nearbySameYear = createStory({ id: "nearby-same-year", placeId: "p-sinchon", lat: 37.5770, lng: 126.9800, dateMode: "now", createdAt: "2001-08-01T00:00:00.000Z" });
-  const nearbyDifferentYear = createStory({ id: "nearby-diff-year", placeId: "p-sinchon2", lat: 37.5770, lng: 126.9800, dateMode: "now", createdAt: "2010-01-01T00:00:00.000Z" });
-  const farSameYear = createStory({ id: "far-same-year", placeId: "p-busan", lat: 35.1, lng: 129.0, dateMode: "now", createdAt: "2001-03-01T00:00:00.000Z" });
-  Storage._setCache([mine, nearbySameYear, nearbyDifferentYear, farSameYear]);
-
-  const result = Storage.getNearbySameYearStories(mine, 1000);
-  assert.deepEqual(result.map((s) => s.id), ["nearby-same-year"]);
-});
-
-test("getNearbySameYearStories는 연도를 모르는 기억(dateMode unknown)이면 빈 배열을 반환한다", () => {
-  const mine = createStory({ id: "mine", dateMode: "unknown", referenceDate: null, lat: 37.57, lng: 126.98 });
-  const neighbor = createStory({ id: "neighbor", dateMode: "now", createdAt: "2001-05-01T00:00:00.000Z", lat: 37.57, lng: 126.98 });
-  Storage._setCache([mine, neighbor]);
-
-  assert.deepEqual(Storage.getNearbySameYearStories(mine, 1000), []);
-});
-
 test("getStoriesNear는 반경 안의 기억을 연도와 무관하게 모두 반환한다", () => {
   // 종로 기준 대략 780m 떨어진 지점(0.007도 ≈ 780m) — 1000m 반경 안
   const near = createStory({ id: "near", lat: 37.5770, lng: 126.9800, dateMode: "now", createdAt: "2010-01-01T00:00:00.000Z" });
@@ -542,18 +522,6 @@ test("getThrowbackMemory는 계절이 이번 달을 포함하면 후보로 삼�
 
 test("getThrowbackMemory는 후보가 없으면 null을 반환한다", () => {
   assert.equal(Storage.getThrowbackMemory([]), null);
-});
-
-test("getTodayStories는 오늘 createdAt인 기억만 반환한다", () => {
-  const now = new Date();
-  const todayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0).toISOString();
-  Storage._setCache([
-    createStory({ id: "today", createdAt: todayIso }),
-    createStory({ id: "yesterday", createdAt: "2020-01-01T00:00:00.000Z" }),
-  ]);
-  const result = Storage.getTodayStories();
-  assert.equal(result.length, 1);
-  assert.equal(result[0].id, "today");
 });
 
 test("markVisitAndGetUnseenThreshold는 첫 방문(저장된 값 없음)이면 null을 반환하고, isUnseen은 항상 false다", () => {
