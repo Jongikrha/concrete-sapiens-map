@@ -27,6 +27,21 @@ async function initApp() {
   bindUIEvents();
   const storageReady = Storage.init();
   const authReady = Auth.init();
+
+  // Storage.init()은 로컬 캐시가 있으면 첫 await 이전(동기 구간)에 이미
+  // _cache와 마커를 채워둔다. 그런데 handleInitialEntry()(최초 진입 랜딩)는
+  // 예전엔 늘 storageReady(=서버 전체 재조회 + esm.sh 모듈 로딩)까지 기다린
+  // 뒤에야 불렸다 — 캐시를 도입한 뒤에도(2026-09-01) 랜딩 자체는 그 캐시를
+  // 못 쓰고 매번 서버 응답을 기다려서 "지도는 바로 뜨는데 랜딩까지 5초"로
+  // 체감되는 문제가 있었다(2026-09-04 확인). 공유 링크(?story=/?place=)는
+  // 캐시에 없는 최신 글일 수 있어 오답("더 이상 남아있지 않음")을 피하려면
+  // 여전히 서버 응답을 기다려야 하므로, 파라미터 없는 기본 랜딩(오늘 올라온
+  // 기억)만 캐시가 있으면 즉시 처리한다.
+  const params = new URLSearchParams(window.location.search);
+  const isDeepLink = !!(params.get("story") || params.get("place"));
+  const landedFromCache = !isDeepLink && Storage.getAllStories().length > 0;
+  if (landedFromCache) handleInitialEntry();
+
   await storageReady;
   await authReady;
   // 마커의 "새 글" 표시(map.js groupHasUnseenStory) 기준을 renderMarkers()
@@ -37,7 +52,7 @@ async function initApp() {
   renderHashtagChips();
   renderMarkers();
   renderMemoryArchiveEntry();
-  handleInitialEntry();
+  if (!landedFromCache) handleInitialEntry();
   maybeShowWelcomeOverlay();
   maybeShowTitleCard();
 }
