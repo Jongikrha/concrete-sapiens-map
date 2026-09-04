@@ -794,10 +794,12 @@ function showRecallExitCta() {
 
   document.getElementById("recall-exit-cta-write-btn").onclick = () => {
     hideRecallExitCta();
-    navigator.geolocation.getCurrentPosition(
-      (pos) => startFreePinComposer(pos.coords.latitude, pos.coords.longitude),
-      () => alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.")
-    );
+    requireLogin(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => startFreePinComposer(pos.coords.latitude, pos.coords.longitude),
+        () => alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.")
+      );
+    });
   };
   document.getElementById("recall-exit-cta-close-btn").onclick = hideRecallExitCta;
 

@@ -103,22 +103,24 @@ function closeWelcomeOverlay() {
  */
 function handleWelcomeWriteClick() {
   Storage.logEvent("welcome_write_clicked");
-  if (!navigator.geolocation) {
-    alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
-    return;
-  }
-  const btn = document.getElementById("welcome-write-btn");
-  if (btn) btn.disabled = true;
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      closeWelcomeOverlay();
-      startFreePinComposer(pos.coords.latitude, pos.coords.longitude);
-    },
-    () => {
-      if (btn) btn.disabled = false;
-      alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
+  requireLogin(() => {
+    if (!navigator.geolocation) {
+      alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+      return;
     }
-  );
+    const btn = document.getElementById("welcome-write-btn");
+    if (btn) btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        closeWelcomeOverlay();
+        startFreePinComposer(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        if (btn) btn.disabled = false;
+        alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
+      }
+    );
+  });
 }
 
 /** 1회성 방문 로그와 별개로, "재방문"과 "첫 방문"을 로컬스토리지 플래그로만
