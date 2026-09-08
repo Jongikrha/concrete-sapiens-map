@@ -11,9 +11,20 @@ const MAX_HASHTAGS = 7;
 
 // 완료 화면("잘했어요~!") 일러스트는 <img> 태그가 그려지는 시점에야
 // 요청되면 네트워크 fetch 지연 때문에 텍스트만 먼저 보이고 이미지가
-// 뒤늦게 팝인되는 게 보인다(2026-08-27, 영상으로 확인). 스크립트 로드
-// 시점에 미리 받아둬 완료 화면에 도달할 때는 이미 캐시돼 있게 한다.
-new Image().src = "assets/composer/done-illustration.png";
+// 뒤늦게 팝인되는 게 보인다(2026-08-27, 영상으로 확인). 미리 받아두되,
+// 스크립트 로드 시점에 곧바로 fetch하면 부팅 크리티컬 경로(카카오맵 SDK,
+// 스토리 목록 조회 등)와 네트워크 대역폭을 다퉈서 오히려 초기 로딩을
+// 늦춘다(성능 분석, 2026-09-08) — 마법사가 완료 화면(여러 스텝 뒤)에
+// 도달하기 전까지는 여유가 있으니, 브라우저가 한가할 때(requestIdleCallback)
+// 받도록 미룬다. 미지원 브라우저(Safari)는 setTimeout으로 대체.
+const preloadDoneIllustration = () => {
+  new Image().src = "assets/composer/done-illustration.png";
+};
+if (typeof requestIdleCallback === "function") {
+  requestIdleCallback(preloadDoneIllustration, { timeout: 5000 });
+} else {
+  setTimeout(preloadDoneIllustration, 2000);
+}
 
 // getDeviceId()는 storage.js(Storage.getDeviceId)로 이동 — 어드민 화면과
 // GNB의 "내가 남긴 기억"이 같은 비식별 상관관계 ID를 공유해서 쓴다.
