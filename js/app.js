@@ -706,3 +706,10 @@ function escapeHtml(str) {
 window.startConcreteSapiensApp = function () {
   kakao.maps.load(initApp);
 };
+
+// 카카오 SDK 로딩을 config.js 바로 다음(index.html 상단)으로 옮겨 이
+// 스크립트(app.js, 로딩 순서상 맨 마지막)보다 먼저 끝날 수 있게 됐다
+// (2026-09-08, 지도 로딩 체감 속도 개선). 그 경우 SDK의 onload가 이미
+// 지나가버려 위 함수를 아무도 안 부르게 되므로, app.js가 로드되는
+// 시점에 SDK가 이미 끝나 있었는지 여기서 한 번 더 확인한다.
+if (window._kakaoSdkLoaded) window.startConcreteSapiensApp();

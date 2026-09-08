@@ -404,6 +404,35 @@
   </div>
 
   <script src="js/config.js"></script>
+  <!-- 카카오맵 SDK 요청을 최대한 일찍 시작한다 — 원래 이 태그가 아래 로컬
+       스크립트 14개(~400KB)를 전부 순서대로 다운로드+실행한 뒤에야
+       삽입돼서, 지도가 이 서비스의 핵심 화면인데도 정작 SDK 네트워크
+       요청 자체가 가장 늦게 시작되는 구조였다(2026-09-08 확인). config.js
+       (KAKAO_APP_KEY 필요) 바로 다음으로 옮겨서 나머지 로컬 스크립트
+       로딩과 병렬로 돈다.
+       SDK가 로컬 스크립트보다 먼저 끝나면 window.startConcreteSapiensApp이
+       아직 정의 안 된 시점이라 조용히 스킵되는 레이스가 생길 수 있다
+       (index.html 아래쪽 주석/CLAUDE.md에 기록된 2026-08-11 실사고와 같은
+       유형) — "SDK 로딩 완료"와 "app.js 로딩 완료" 중 나중에 끝나는 쪽이
+       시작하도록 플래그로 양쪽 다 잡아둔다(js/app.js 맨 아래
+       window.startConcreteSapiensApp 정의부의 짝 코드 참고). -->
+  <script>
+    window._kakaoSdkLoaded = false;
+    if (
+      !CONFIG.KAKAO_APP_KEY ||
+      CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
+    ) {
+      document.getElementById("key-warning").classList.remove("hidden");
+    } else {
+      const kakaoScript = document.createElement("script");
+      kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
+      kakaoScript.onload = () => {
+        window._kakaoSdkLoaded = true;
+        if (window.startConcreteSapiensApp) window.startConcreteSapiensApp();
+      };
+      document.head.appendChild(kakaoScript);
+    }
+  </script>
   <!-- backend.js(ES 모듈)는 aws-amplify를 CDN에서 받아오는데, 이게 카카오 SDK
        로딩보다 늦게 끝날 수도 있다(네트워크 타이밍에 따라 달라짐 — 실제로
        역전되는 걸 확인함). 그래서 순서에 기대지 않고, 여기서 미리 Promise를
@@ -439,23 +468,6 @@
   <script src="js/recall.js"></script>
   <script src="js/scrollFade.js"></script>
   <script src="js/helpTour.js"></script>
-  <script>
-    if (
-      !CONFIG.KAKAO_APP_KEY ||
-      CONFIG.KAKAO_APP_KEY === "YOUR_KAKAO_JAVASCRIPT_KEY_HERE"
-    ) {
-      document.getElementById("key-warning").classList.remove("hidden");
-    } else {
-      const kakaoScript = document.createElement("script");
-      kakaoScript.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
-      kakaoScript.onload = () => {
-        if (window.startConcreteSapiensApp) {
-          window.startConcreteSapiensApp();
-        }
-      };
-      document.head.appendChild(kakaoScript);
-    }
-  </script>
   <script src="js/app.js"></script>
 </body>
 </html>
