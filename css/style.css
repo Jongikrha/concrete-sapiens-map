@@ -3,14 +3,14 @@
    Design Spec v1.0 / v0.2 반영
    ============================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap");
-/* 기억 카드(js/storySheet.js) 전용 — 제목/연도/본문은 MaruBuri(마루부리,
-   기록물 같은 차분한 분위기), 주소/버튼/태그 등 UI는 Pretendard로
-   구분해서 쓴다(2026-08-13, 폰트 지침 이미지 기준). 다른 화면(작성폼/
-   로그인 등)은 기존 Noto 조합을 그대로 유지 — 이 두 폰트는 기억 카드
-   관련 클래스에만 스코프해서 적용한다. */
-@import url("https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/MaruBuri.css");
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+/* 폰트 3종(Noto, MaruBuri, Pretendard)은 이 파일 안 @import가 아니라
+   index.html <head>의 <link rel="stylesheet">로 옮겼다(2026-09-08) —
+   @import는 브라우저 프리로드 스캐너가 style.css를 다 받아 파싱하기
+   전까지 발견을 못 해서, 실제로는 "style.css 다운로드 → 파싱 → 그제야
+   폰트 CSS 3개 순차 요청"으로 첫 렌더가 밀리는 구조였다. <link> 태그는
+   HTML 파싱 중에 바로 발견되어 style.css와 병렬로 요청된다(성능 분석,
+   2026-09-08). 기억 카드(js/storySheet.js) 전용 폰트 스코프 설명은
+   index.html의 해당 <link> 근처 주석 참고. */
 
 :root {
   --cs-black: #2F3031;

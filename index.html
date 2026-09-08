@@ -40,6 +40,17 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ko_KR" />
+  <!-- 폰트 3종 — 예전엔 css/style.css 안 @import였는데, @import는 브라우저가
+       style.css를 다 받아 파싱한 뒤에야 발견해서 첫 렌더가 그만큼 밀렸다
+       (성능 분석, 2026-09-08). <link>로 옮기면 HTML 파싱 중 바로 발견되어
+       style.css와 병렬로 요청된다. preconnect로 DNS/TLS 왕복도 미리 끝내둔다.
+       MaruBuri/Pretendard는 기억 카드(js/storySheet.js) 전용 폰트다. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/MaruBuri.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
