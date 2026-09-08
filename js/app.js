@@ -138,6 +138,20 @@ function handleWelcomeWriteClick() {
   });
 }
 
+/**
+ * 하단 툴바의 상시 "기억 남기기" 버튼(js/map.js의 지도 클릭 진입로는
+ * 시각적 신호가 없어 발견성이 떨어졌다, 2026-09-08). GPS 권한 요청 없이
+ * 바로 열리도록 현재 지도 중심 좌표를 쓴다 — 사용자가 이미 보고 있는
+ * 위치와 가장 가깝다.
+ */
+function handleWriteFabClick() {
+  Storage.logEvent("write_fab_clicked");
+  requireLogin(() => {
+    const center = map.getCenter();
+    startFreePinComposer(center.getLat(), center.getLng());
+  });
+}
+
 /** 1회성 방문 로그와 별개로, "재방문"과 "첫 방문"을 로컬스토리지 플래그로만
  * 가볍게 구분해 AppEvent에 남긴다 — 실제 사용자 식별 없이 재방문율 근사치를
  * 보려는 목적(2026-08-23, 런칭 전 계측 보강). */
@@ -630,6 +644,7 @@ function bindUIEvents() {
   bindRecallEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
+  document.getElementById("btn-write").onclick = handleWriteFabClick;
   document.getElementById("btn-random").onclick = startMemoryRadio;
   document.getElementById("btn-timeslider").onclick = toggleSlider;
   document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;

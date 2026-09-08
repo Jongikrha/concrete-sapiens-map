@@ -1559,6 +1559,16 @@ body {
   gap: 8px;
 }
 
+/* 기억 라디오(발견) 옆에 기억 남기기(작성)를 같은 줄, 같은 위계로
+   둔다 — 지도 빈 곳 클릭이 유일한 작성 진입로라 발견성이 없었던
+   문제(2026-09-08)를 상시 노출 버튼으로 보완한다. */
+.bottom-toolbar-primary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* 기억산책(회상 모드) 진행 중엔 상단바/툴바를 옅게 지운다(js/recall.js
    enterRecallImmersiveChrome/exitRecallImmersiveChrome이 #app에 토글) —
    display:none이 아니라 opacity라서 위 transition이 실제로 부드럽게
@@ -1640,6 +1650,50 @@ body {
   border-radius: 50%;
   background: var(--cs-orange);
   color: #fff;
+}
+
+/* 기억 라디오(.tool-btn--radio, 검정)와 같은 줄에서 같은 무게로
+   보이도록 크기/폰트는 맞추고, 색만 Signal Orange로 구분한다. */
+.tool-btn--write {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cs-orange);
+  color: #fff;
+  border-color: var(--cs-orange);
+  padding: 10px 20px 10px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(255, 90, 54, 0.32);
+}
+
+.tool-btn--write:hover {
+  background: #e64a28;
+  border-color: #e64a28;
+}
+
+.tool-btn-write-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (max-width: 360px) {
+  .tool-btn--radio,
+  .tool-btn--write {
+    padding-left: 8px;
+    padding-right: 14px;
+    font-size: 13px;
+  }
 }
 
 /* 보조 버튼 줄(내 주변/시간여행/내 기억) — 기억 라디오보다 한 단계

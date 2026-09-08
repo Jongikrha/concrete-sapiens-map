@@ -248,12 +248,21 @@
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
-      <button class="tool-btn tool-btn--radio" id="btn-random">
-        <span class="tool-btn-radio-icon" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.8 5.8a9 9 0 0 0 0 12.4"/><path d="M18.2 5.8a9 9 0 0 1 0 12.4"/></svg>
-        </span>
-        기억 라디오
-      </button>
+      <div class="bottom-toolbar-primary">
+        <button class="tool-btn tool-btn--radio" id="btn-random">
+          <span class="tool-btn-radio-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.8 5.8a9 9 0 0 0 0 12.4"/><path d="M18.2 5.8a9 9 0 0 1 0 12.4"/></svg>
+          </span>
+          기억 라디오
+        </button>
+        <!-- 지도 빈 곳을 클릭하는 게 유일한 작성 진입로였는데, 시각적
+             신호가 전혀 없어 "어딜 눌러야 할지 모르겠다"는 문제가 있었다
+             (2026-09-08). 상시 노출되는 버튼으로 진입로를 명시한다. -->
+        <button class="tool-btn tool-btn--write" id="btn-write">
+          <span class="tool-btn-write-icon" aria-hidden="true">+</span>
+          기억 남기기
+        </button>
+      </div>
       <div class="bottom-toolbar-secondary">
         <button class="tool-btn tool-btn--small" id="btn-my-location">
           <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
