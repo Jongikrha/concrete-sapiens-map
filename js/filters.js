@@ -172,12 +172,12 @@ function renderHashtagChips() {
 // ------------------------------------------------------------
 // 최근 7일 기억 로테이션 칩 — "왜 써야 하는지"에 확률형 약속 대신 확정적
 // 신호(실제로 사람들이 계속 쓰고 있다)를 주려는 목적(2026-08-25, 전광판
-// 시안 중 B안 — 스크롤 대신 타이틀 카드와 같은 페이드 방식을 골랐다.
-// 흐르는 전광판은 새 줄이 필요해 지도가 가려지고, 무거운 개인사 글에는
-// 계속 움직이는 연출이 산만하다는 판단).
+// 시안 중 B안 — 스크롤 대신 페이드 방식을 골랐다. 흐르는 전광판은 새
+// 줄이 필요해 지도가 가려지고, 무거운 개인사 글에는 계속 움직이는
+// 연출이 산만하다는 판단).
 // ------------------------------------------------------------
 const MEMORY_TICKER_WINDOW_DAYS = 7;
-const MEMORY_TICKER_ROTATE_MS = 3200; // js/app.js TITLE_CARD_AUTO_ADVANCE_MS와 같은 리듬
+const MEMORY_TICKER_ROTATE_MS = 3200;
 let memoryTickerItems = [];
 let memoryTickerIndex = 0;
 let memoryTickerTimer = null;

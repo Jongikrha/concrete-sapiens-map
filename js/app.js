@@ -54,7 +54,6 @@ async function initApp() {
   renderMemoryArchiveEntry();
   if (!landedFromCache) handleInitialEntry();
   maybeShowWelcomeOverlay();
-  maybeShowTitleCard();
 }
 
 // 브라우저당 한 번만 보여주는 첫 방문 환영 모달(2026-08-21) — 초대
@@ -161,100 +160,6 @@ function logVisitKind() {
   const isReturning = !!localStorage.getItem(VISITED_BEFORE_KEY);
   Storage.logEvent(isReturning ? "visit_returning" : "visit_first");
   localStorage.setItem(VISITED_BEFORE_KEY, "1");
-}
-
-// 웰컴 모달은 브라우저당 한 번만 떠서, 그 이후 방문에는 "혹하게" 만들
-// 장치가 없었다. 처음엔 하루 1번 뜨는 작은 카드(지도 구석)로 시도했는데
-// (2026-08-25), 매일 들어오는 사람에게는 영화 오프닝 타이틀처럼 화면
-// 전체를 짧게 채우는 장면이 더 강한 인상을 줄 거라는 판단으로 교체했다
-// — 로고/버튼 없이 실제 기억 한 줄만 보여주고, 탭하거나 잠시 기다리면
-// 그 장소로 카메라가 이동하며 카드가 열린다("근처 기억 발견 토스트"를
-// 반복 노출 피로로 하루 만에 없앤 전례가 있어(project_nearby_discovery_
-// toast_removed) 하루 1번 캡은 그대로 유지). 웰컴 모달을 이미 본
-// 사람에게만 보여준다 — 진짜 첫 방문 당일엔 웰컴 모달 하나로 충분하니
-// 그날은 겹치지 않게 건너뛴다.
-const TITLE_CARD_LAST_SHOWN_KEY = "concrete_sapiens_title_card_last_shown";
-const TITLE_CARD_AUTO_ADVANCE_MS = 3200;
-let titleCardAdvanceTimer = null;
-
-function todayDateKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// ♡("떠올랐어요") 반응이 많은 상위 30개 중 랜덤으로 골라 "잘 쓰인" 글이
-// 뽑힐 확률을 높인다(완전 무작위는 내용이 부실한 글이 뽑힐 위험) — 웰컴
-// 모달과 타이틀 카드가 공유하는 선정 로직.
-// 노래가 있는 기억만 후보로 삼는다 — 타이틀 카드에 아티스트·곡명을
-// 같이 보여주기로 하면서(2026-08-25), 노래 없는 글이 뽑히면 그 줄이
-// 통째로 비어 어색해지는 문제를 원천적으로 막는다.
-function pickFeaturedStory() {
-  const stories = Storage.getVisibleStories().filter((s) => s.musicTitle);
-  if (stories.length === 0) return null;
-  const pool = [...stories].sort((a, b) => (b.reactionCount || 0) - (a.reactionCount || 0)).slice(0, 30);
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function maybeShowTitleCard() {
-  if (!localStorage.getItem(WELCOME_SEEN_KEY)) return;
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("story") || params.get("place")) return; // 그날은 공유받은 카드가 우선
-  if (localStorage.getItem(TITLE_CARD_LAST_SHOWN_KEY) === todayDateKey()) return;
-  const story = pickFeaturedStory();
-  if (!story) return;
-  showTitleCard(story);
-}
-
-function showTitleCard(story) {
-  const overlay = document.getElementById("title-card-overlay");
-  const content = document.getElementById("title-card-content");
-  if (!overlay || !content) return;
-
-  const title = Storage.getGroupTitle({
-    placeId: story.placeId,
-    officialPlaceName: story.officialPlaceName,
-    customName: story.customName,
-    address: story.address,
-  });
-  const year = Storage.getStoryYear(story);
-  const musicLabel = story.musicTitle
-    ? buildSongLabel({ artist: story.musicArtist, title: story.musicTitle })
-    : "";
-
-  content.innerHTML = `
-    <p class="title-card-place">${escapeHtml(title)}${year !== null ? ` · ${year}` : ""}</p>
-    <p class="title-card-quote">"${escapeHtml(story.content)}"</p>
-    ${musicLabel ? `<p class="title-card-music">🎧 ${escapeHtml(musicLabel)}</p>` : ""}
-    <p class="title-card-hint">탭하여 이 장소로</p>
-  `;
-
-  overlay.classList.remove("hidden", "title-card-overlay--out");
-  // 열어보든 자동으로 넘어가든 "오늘은 봤다"로 친다.
-  localStorage.setItem(TITLE_CARD_LAST_SHOWN_KEY, todayDateKey());
-  Storage.logEvent("title_card_shown");
-
-  const advance = () => {
-    clearTimeout(titleCardAdvanceTimer);
-    overlay.removeEventListener("click", advance);
-    dismissTitleCard(story.id);
-  };
-  overlay.addEventListener("click", advance);
-  titleCardAdvanceTimer = setTimeout(advance, TITLE_CARD_AUTO_ADVANCE_MS);
-}
-
-// 오버레이가 페이드아웃되는 동안 바로 그 장소로 카메라가 이동하며 카드가
-// 열린다 — "타이틀이 사라지자 이미 그 장면"이 아니라 "타이틀이 사라지며
-// 카메라가 그 장면으로 움직인다"는 쪽이 카카오맵 panTo의 자연스러운
-// 애니메이션과 맞아서 더 매끄럽다.
-function dismissTitleCard(storyId) {
-  const overlay = document.getElementById("title-card-overlay");
-  if (!overlay) return;
-  overlay.classList.add("title-card-overlay--out");
-  setTimeout(() => {
-    overlay.classList.add("hidden");
-    overlay.classList.remove("title-card-overlay--out");
-  }, 380);
-  navigateToStoryFromList(storyId);
 }
 
 // 예전엔 "N개의 기억이 쌓였습니다"라는 숫자 배너였다 — 첫인상을 끄는

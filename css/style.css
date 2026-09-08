@@ -671,8 +671,8 @@ body {
 }
 
 /* 최근 7일 기억 로테이션 칩 — .chip 기본 틀(pill/blur/테두리)은 그대로
-   쓰고, 안에서 3.2초마다(TITLE_CARD_AUTO_ADVANCE_MS와 같은 리듬) 문구만
-   페이드로 바뀐다(js/filters.js renderMemoryTicker, 2026-08-25). */
+   쓰고, 안에서 3.2초마다 문구만 페이드로 바뀐다(js/filters.js
+   renderMemoryTicker, 2026-08-25). */
 /* 다른 필터 칩과 같은 중립 톤이면 "지금 흐르고 있는 채널"이라는 느낌이
    안 산다는 피드백(2026-08-25) — 틸+주황 조합은 보색이라 탁하게 부딪힌다는
    피드백으로, spot-banner--song과 같은 --cs-memory-core(테라코타) 틴트로
@@ -952,100 +952,6 @@ body {
   color: var(--cs-paper);
   border-color: var(--cs-orange);
   font-weight: 500;
-}
-
-/* ------------------------------------------------------------
-   하루 1번 뜨는 "타이틀 카드" — 영화 오프닝처럼 화면 전체를 짧게
-   채우는 장면(2026-08-25). map-overlay-top(z-index:20)이나 .overlay
-   (z-index:100)보다 위에 떠야 해서 별도로 더 높은 z-index를 쓴다.
-   전체가 클릭 영역(탭하면 바로 그 장소로 이동)이라 dismiss 버튼이
-   따로 없다 — 잠시 기다리면 자동으로도 넘어간다.
-   ------------------------------------------------------------ */
-.title-card-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  /* 어두운 배경 사진 위에 스크림을 한 겹 깔아, 사진의 밝은 구름
-     부분에서도 흰 글자 대비가 항상 확보되게 한다(2026-08-25). */
-  background:
-    linear-gradient(rgba(8, 10, 14, 0.55), rgba(8, 10, 14, 0.55)),
-    url("../assets/title-card-bg.jpg") center / cover no-repeat;
-  cursor: pointer;
-  opacity: 1;
-  transition: opacity 380ms ease;
-}
-
-.title-card-overlay.hidden {
-  display: none;
-}
-
-.title-card-overlay--out {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.title-card-content {
-  max-width: 480px;
-  text-align: center;
-  animation: titleCardIn 900ms ease;
-}
-
-.title-card-place {
-  margin: 0 0 26px;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(244, 243, 239, 0.6);
-}
-
-.title-card-quote {
-  margin: 0;
-  font-family: var(--font-maruburi);
-  font-size: 24px;
-  font-weight: 500;
-  line-height: 1.9;
-  letter-spacing: 0.01em;
-  color: var(--cs-paper);
-}
-
-.title-card-music {
-  margin: 18px 0 0;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(244, 243, 239, 0.7);
-}
-
-.title-card-hint {
-  margin: 40px 0 0;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: rgba(244, 243, 239, 0.5);
-  opacity: 0;
-  animation: titleCardHintIn 500ms ease 1600ms forwards;
-}
-
-@keyframes titleCardIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes titleCardHintIn {
-  to {
-    opacity: 1;
-  }
 }
 
 /* ------------------------------------------------------------
