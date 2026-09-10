@@ -40,17 +40,29 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ko_KR" />
-  <!-- 폰트 3종 — 예전엔 css/style.css 안 @import였는데, @import는 브라우저가
+  <!-- 폰트 4종 — 예전엔 css/style.css 안 @import였는데, @import는 브라우저가
        style.css를 다 받아 파싱한 뒤에야 발견해서 첫 렌더가 그만큼 밀렸다
        (성능 분석, 2026-09-08). <link>로 옮기면 HTML 파싱 중 바로 발견되어
        style.css와 병렬로 요청된다. preconnect로 DNS/TLS 왕복도 미리 끝내둔다.
-       MaruBuri/Pretendard는 기억 카드(js/storySheet.js) 전용 폰트다. -->
+       MaruBuri/Pretendard는 기억 카드(js/storySheet.js)와 작성 모달 전용 폰트다.
+
+       MaruBuri/Pretendard는 "dynamic subset" 빌드를 쓴다(2026-09-10). 통짜
+       빌드는 굵기 하나당 Pretendard 766KB / MaruBuri 280KB인데 이 사이트는
+       Pretendard를 400~800 다섯 굵기, MaruBuri를 300/400/700 세 굵기 쓴다 —
+       다 합치면 4MB가 넘어서, 폰트가 도착할 때까지 화면이 iOS 기본 고딕으로
+       그려졌다가 뒤늦게 갈아끼워지는 게 눈에 보였다(FOUT. 2026-09-10 기억
+       남기기 모달에서 제보). dynamic subset은 한글을 유니코드 구간별로
+       쪼개둬서 실제로 화면에 뜬 글자에 해당하는 20~25KB짜리 조각만 받는다.
+       Pretendard는 굵기별 파일이 따로 없는 variable 빌드라 조각 하나가
+       400~800 전 굵기를 커버한다(그래서 --font-pretendard의 첫 이름이
+       "Pretendard"가 아니라 "Pretendard Variable"이다 — css/style.css 참고).
+       Noto Sans/Serif KR은 구글 폰트가 이미 같은 방식으로 쪼개서 준다. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/MaruBuri.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/subsets/MaruBuri-dynamic-subset.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>

@@ -9,7 +9,8 @@
    전까지 발견을 못 해서, 실제로는 "style.css 다운로드 → 파싱 → 그제야
    폰트 CSS 3개 순차 요청"으로 첫 렌더가 밀리는 구조였다. <link> 태그는
    HTML 파싱 중에 바로 발견되어 style.css와 병렬로 요청된다(성능 분석,
-   2026-09-08). 기억 카드(js/storySheet.js) 전용 폰트 스코프 설명은
+   2026-09-08). 기억 카드(js/storySheet.js) 전용 폰트 스코프 설명과,
+   MaruBuri/Pretendard를 dynamic subset 빌드로 바꾼 이유(2026-09-10)는
    index.html의 해당 <link> 근처 주석 참고. */
 
 :root {
@@ -38,7 +39,10 @@
   --font-serif: "Noto Serif KR", serif;
   --font-sans: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
   --font-maruburi: "Maru Buri", var(--font-serif);
-  --font-pretendard: "Pretendard", var(--font-sans);
+  /* dynamic subset 빌드의 패밀리 이름은 "Pretendard"가 아니라 "Pretendard
+     Variable"이다(index.html 폰트 주석 참고). 뒤의 "Pretendard"는 기기에
+     이미 설치돼 있는 경우를 위한 폴백이라 그대로 둔다. */
+  --font-pretendard: "Pretendard Variable", "Pretendard", var(--font-sans);
 }
 
 * {
