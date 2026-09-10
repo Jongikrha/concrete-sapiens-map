@@ -56,7 +56,8 @@
        Pretendard는 굵기별 파일이 따로 없는 variable 빌드라 조각 하나가
        400~800 전 굵기를 커버한다(그래서 --font-pretendard의 첫 이름이
        "Pretendard"가 아니라 "Pretendard Variable"이다 — css/style.css 참고).
-       Noto Sans/Serif KR은 구글 폰트가 이미 같은 방식으로 쪼개서 준다. -->
+       Noto Sans/Serif KR은 구글 폰트가 이미 같은 방식으로 쪼개서 준다.
+       남은 FOUT은 js/fontWarmup.js가 첫 렌더 뒤에 미리 받아두는 걸로 지운다. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -472,6 +473,7 @@
   <script src="js/recall.js"></script>
   <script src="js/scrollFade.js"></script>
   <script src="js/helpTour.js"></script>
+  <script src="js/fontWarmup.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
