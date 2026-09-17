@@ -4299,3 +4299,39 @@ button.story-place-line:hover {
 .recall-card .btn-primary {
   width: 100%;
 }
+
+/* 기억 라디오 "이 기억의 노래 듣기" — 지금 나오는 곡이 이 기억의 곡이
+   아닐 때만 뜬다(js/recall.js refreshRecallListenButton). .btn-secondary의
+   투명 텍스트 버튼은 카드 위에서 너무 약해 보여 테두리를 준다. 곡명은
+   아래 줄에 작게 — 누르기 전에 무슨 노래로 바뀌는지 알 수 있게. */
+.recall-card-listen-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 24px;
+  padding: 10px 14px;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+  color: var(--cs-black);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.recall-card-listen-song {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cs-text-muted);
+}
+
+.recall-card-listen-song:empty {
+  display: none;
+}
+
+.recall-card-listen-btn:not(.hidden) + .btn-primary {
+  margin-top: 8px;
+}

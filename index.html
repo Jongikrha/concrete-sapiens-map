@@ -389,6 +389,11 @@
       <div class="recall-card" id="recall-card">
         <p class="recall-card-yearplace" id="recall-card-yearplace"></p>
         <p class="story-content" id="recall-card-content"></p>
+        <!-- 기억 라디오 전용 — 지금 나오는 노래가 이 기억의 노래가 아닐 때만 뜬다(js/recall.js refreshRecallListenButton) -->
+        <button type="button" class="btn-secondary recall-card-listen-btn hidden" id="recall-card-listen-btn">
+          <span class="recall-card-listen-label">이 기억의 노래 듣기</span>
+          <span class="recall-card-listen-song" id="recall-card-listen-song"></span>
+        </button>
         <button type="button" class="btn-primary" id="recall-card-next-btn">다음 기억으로</button>
       </div>
     </div>

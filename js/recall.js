@@ -24,10 +24,12 @@
 //    recall-choice-overlay/panel을 재사용. 고른 채널의 곡만 모아 랜덤
 //    플레이리스트처럼 계속 재생하고, 지도도 밤처럼 어둡게 바꾼다
 //    (enterRecallNightMode — 기억산책엔 안 준다, 개인적 산책과 배경
-//    라디오의 분위기를 다르게 두려는 의도). 첫 곡만 "N초 후 재생됩니다"
-//    예고를 보여주고, 그다음부터는(곡이 끝나 자동으로 넘어가든 "다음
-//    기억으로"를 직접 누르든) 예고 없이 바로 재생된다 — 켜놓고 다른 일을
-//    해도 되게.
+//    라디오의 분위기를 다르게 두려는 의도). 기억과 노래는 따로 움직인다
+//    (2026-09-15) — "다음 기억으로"를 눌러도 나오던 노래는 계속 나오고,
+//    카드의 "이 기억의 노래 듣기"를 눌러야 그 기억의 노래로 바뀐다. 곡이
+//    끝나면 카드와 곡이 같은 기억일 땐 다음 기억으로 함께 넘어가고, 카드를
+//    넘겨봐서 어긋나 있을 땐 지금 카드의 노래로 이어간다 — 켜놓고 다른
+//    일을 해도 되게.
 //
 // 별자리에서 점을 잇는 선은 실제 카카오 지도가 아니라 이 파일 안의 별도
 // 캔버스에 그린다 — 2026-08-13에 실제 지도 위에서 점을 선으로 이었다가
@@ -724,32 +726,73 @@ function openRecallCard() {
     `${year !== null ? year : "· · ·"} · <span class="recall-card-place">${escapeHtml(place)}</span>`;
   document.getElementById("recall-card-content").textContent = story.content;
 
-  const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
-  if (videoId) {
-    const musicLabel = story.musicTitle
-      ? story.musicArtist
-        ? `${story.musicArtist} · ${story.musicTitle}`
-        : story.musicTitle
-      : "";
-
-    // 미니 플레이어를 카드 안 DOM으로 옮겨 넣었던 적이 있었는데(2026-08-20,
-    // 곡 정보 줄 자리에 끼워 넣는 디자인), 그 DOM 이동(referenceEl.after)
-    // 자체가 iframe을 재초기화시켜 그 직후 보낸 재생 명령이 유실되는
-    // 원인이었을 가능성이 높아 되돌렸다 — 일반 카드 재생(DOM 이동 없음)은
-    // 이 세션 내내 안정적이었는데 회상 카드만 계속 실패한 유일한 구조적
-    // 차이가 이 DOM 이동이었다. 화면 하단 고정 바 그대로 쓴다(z-index는
-    // 이미 회상 모달보다 높게 고쳐둠).
-    playMiniPlayerVideo(videoId, musicLabel);
-  }
+  // 기억 라디오는 기억과 노래를 따로 움직인다(2026-09-15) — 이미 노래가
+  // 나오고 있으면 카드를 넘겨도 그 노래를 끊지 않고, 이 기억의 노래는
+  // "이 기억의 노래 듣기" 버튼으로 골라 들을 때만 바뀐다. 아무것도 안
+  // 나오고 있을 때(세션 첫 카드, 또는 미니 플레이어 ✕로 끈 뒤)만 이
+  // 기억의 노래로 바로 시작한다. 기억산책(scope="mine")은 예전처럼 카드마다
+  // 그 기억의 노래로 바꾼다.
+  if (recallScope !== "songs" || !activeMiniPlayerVideoId) playRecallStorySong(story);
+  refreshRecallListenButton();
 
   document.getElementById("recall-card").classList.add("recall-card--visible");
+}
+
+function getRecallStoryMusicLabel(story) {
+  if (!story.musicTitle) return "";
+  return story.musicArtist ? `${story.musicArtist} · ${story.musicTitle}` : story.musicTitle;
+}
+
+function playRecallStorySong(story) {
+  const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
+  if (!videoId) return;
+  // 미니 플레이어를 카드 안 DOM으로 옮겨 넣었던 적이 있었는데(2026-08-20,
+  // 곡 정보 줄 자리에 끼워 넣는 디자인), 그 DOM 이동(referenceEl.after)
+  // 자체가 iframe을 재초기화시켜 그 직후 보낸 재생 명령이 유실되는
+  // 원인이었을 가능성이 높아 되돌렸다 — 일반 카드 재생(DOM 이동 없음)은
+  // 이 세션 내내 안정적이었는데 회상 카드만 계속 실패한 유일한 구조적
+  // 차이가 이 DOM 이동이었다. 화면 하단 고정 바 그대로 쓴다(z-index는
+  // 이미 회상 모달보다 높게 고쳐둠).
+  playMiniPlayerVideo(videoId, getRecallStoryMusicLabel(story));
+  refreshRecallListenButton();
+}
+
+// "이 기억의 노래 듣기" 버튼 — 기억 라디오에서, 지금 미니 플레이어에 나오는
+// 곡이 카드에 떠 있는 기억의 곡이 아닐 때만 보인다. 곡이 바뀌는 모든
+// 지점(카드 열기/버튼/곡 끝남/미니 플레이어 ✕)에서 다시 부른다.
+function refreshRecallListenButton() {
+  const btn = document.getElementById("recall-card-listen-btn");
+  const story = recallCurrentStory;
+  const videoId = story && Storage.extractYoutubeVideoId(story.youtubeUrl);
+  const show = recallSessionOpen && recallScope === "songs" && !!videoId && activeMiniPlayerVideoId !== videoId;
+  btn.classList.toggle("hidden", !show);
+  if (!show) return;
+  document.getElementById("recall-card-listen-song").textContent = getRecallStoryMusicLabel(story);
+  btn.onclick = () => playRecallStorySong(story);
 }
 
 function hideRecallCard() {
   document.getElementById("recall-card").classList.remove("recall-card--visible");
 }
 
+// "다음 기억으로" — 기억 라디오에선 나오던 노래를 끊지 않는다(openRecallCard 주석 참고).
 function advanceRecall() {
+  if (recallScope !== "songs") stopMiniPlayer();
+  showNextRecallMemory();
+}
+
+// 기억 라디오에서 곡이 끝났을 때 — 사용자가 카드를 넘겨봐서 지금 카드의
+// 기억이 방금 끝난 곡의 기억이 아니면, 카드는 그대로 두고 그 기억의
+// 노래로 이어간다(다시 둘을 맞춰준다). 카드와 곡이 이미 같은 기억이면
+// 예전처럼 다음 기억으로 넘어가며 그 노래를 튼다 — 켜놓고 다른 일을 해도
+// 계속 흘러가게.
+function handleRadioSongEnded() {
+  const story = recallCurrentStory;
+  const videoId = story && Storage.extractYoutubeVideoId(story.youtubeUrl);
+  if (videoId && activeMiniPlayerVideoId !== videoId) {
+    playRecallStorySong(story);
+    return;
+  }
   stopMiniPlayer();
   showNextRecallMemory();
 }
@@ -905,11 +948,15 @@ function bindRecallEvents() {
   document.getElementById("recall-exit-btn").onclick = endRecallSession;
   document.getElementById("recall-card-next-btn").onclick = advanceRecall;
 
-  // 기억 라디오에서만 곡이 끝나면 자동으로 다음 기억으로 넘어간다 —
+  // 기억 라디오에서만 곡이 끝나면 다음 곡으로 이어간다(handleRadioSongEnded) —
   // 기억산책(scope="mine")이나 일반 카드 재생 중엔 아무것도
   // 하지 않는다(storySheet.js의 미니 플레이어는 이 화면 밖에서도 쓰이므로,
   // 콜백 안에서 매번 지금이 정말 플레이리스트 세션인지 확인한다).
   setMiniPlayerEndedCallback(() => {
-    if (recallSessionOpen && recallScope === "songs") advanceRecall();
+    if (recallSessionOpen && recallScope === "songs") handleRadioSongEnded();
   });
+  // 미니 플레이어 ✕로 노래를 끄면 카드의 "이 기억의 노래 듣기"가 다시
+  // 보여야 한다. app.js가 onclick(stopMiniPlayer)을 이보다 먼저 등록하므로
+  // 이 리스너는 정지된 뒤에 돈다.
+  document.getElementById("mini-player-stop").addEventListener("click", refreshRecallListenButton);
 }
