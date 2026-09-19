@@ -1572,6 +1572,15 @@ body {
   }
 }
 
+/* 기억 라디오/기억산책 중엔 미니 플레이어 ✕를 숨긴다(2026-09-19) — 노래만
+   끄면 소리 없는 라디오 화면이 어중간하게 남고, 오른쪽 위 나가기 ✕와도
+   헷갈린다. 멈추기는 일시정지로, 끄기는 세션을 나가면 같이 꺼진다.
+   지도에서 기억 카드 노래를 틀 땐(떠 있지 않은 평소 모드) 바를 치울
+   방법이 ✕뿐이라 그대로 둔다. */
+.mini-player--floating .mini-player-stop {
+  display: none;
+}
+
 @media (max-width: 360px) {
   .mini-player-wave {
     display: none;
@@ -4320,10 +4329,11 @@ button.story-place-line:hover {
   pointer-events: auto;
 }
 
-/* 기억 라디오 전용 클릭 캐처 — 배경은 이미 .recall-radio-night::before의
-   밤하늘 사진이 깔려 있어서 여기엔 색을 주지 않는다. 회상 카드보다 DOM
-   앞에 있어서 카드 클릭은 여기까지 내려오지 않는다. 기억산책(scope="mine")
-   에선 지도를 계속 만질 수 있어야 해서 .hidden으로 꺼둔다. */
+/* 기억 라디오 전용 클릭 막이 — 눌러도 세션이 꺼지지 않는다(2026-09-19,
+   잘못 눌러 꺼진다는 피드백으로 나가기는 다시 ✕로). 배경은 이미
+   .recall-radio-night::before의 밤하늘 사진이 깔려 있어서 여기엔 색을
+   주지 않는다. 기억산책(scope="mine")에선 지도를 계속 만질 수 있어야
+   해서 .hidden으로 꺼둔다. */
 .recall-backdrop {
   position: absolute;
   inset: 0;
