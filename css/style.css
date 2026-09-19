@@ -1353,16 +1353,22 @@ body {
    붙여 z-index 120으로 다시 최상단에 뜨게 한다 — 세션 종료 시 다시
    #filter-banner 뒤로 옮기고 클래스를 뗀다.
    ------------------------------------------------------------ */
+/* 2026-09-19 디자인 변경 — 레코드판(분홍 라벨) + 아티스트/곡명 두 줄 +
+   파형(재생 위치만큼 코랄) + 연한 코랄 원형 일시정지 + ✕. 기억 라디오
+   카드의 노래 카드(.recall-song)와 같은 코랄 톤이다. 크기는 예전(44px
+   CD, 360px)보다 키웠고, 좁은 화면에선 아래 @media에서 줄인다. */
 .mini-player {
+  --mini-coral: #EC6A63;
   display: flex;
   align-items: center;
-  gap: 10px;
-  max-width: 360px;
-  background: #fff;
-  border: 1px solid var(--cs-gray);
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(90deg, #FDF4F3 0%, #FFFFFF 35%, #FFFFFF 70%, #FDF4F3 100%);
+  border: 1px solid rgba(236, 106, 99, 0.14);
   border-radius: var(--cs-radius-chip);
-  padding: 6px 8px 6px 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 7px 14px 7px 7px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 /* 회상 세션 중 #app 바로 아래로 재배치됐을 때만 붙는 상태 — 평소
@@ -1381,22 +1387,37 @@ body {
   display: none;
 }
 
-/* CD(바이닐) 디자인 — 사용자가 준 레퍼런스 사진(연한 원판+톤암+그루브
-   +라벨)을 그대로 쓰는 정적 이미지(assets/mini-player-cd.png)다. 재생
-   중인 곡이 무엇이든 항상 같은 그래픽만 보이며, 실제 유튜브 썸네일은
-   더 이상 보여주지 않는다(2026-08-20, "통째로 정적인 CD 그래픽" 요청).
-   크기(44px)는 이전과 동일. 오디오 재생 자체는 여전히 iframe(유튜브
-   IFrame Player)이 담당해야 해서 완전히 없애지는 못하고, 이 이미지
-   뒤로 완전히 숨겨서(opacity:0) 소리만 나오게 한다. */
+/* 레코드판 — 예전엔 정적 이미지(assets/mini-player-cd.png)였는데 곡
+   카드와 톤을 맞추려고 그라디언트로 직접 그린다(분홍 라벨 + 홈 + 광택).
+   오디오 재생 자체는 여전히 이 마운트 안의 iframe(유튜브 IFrame Player)이
+   담당해서 없애지 못하고, opacity:0으로 숨겨 소리만 나오게 한다 — 판은
+   iframe이 아니라 ::before에 그려서 돌린다(iframe에 transform을 걸지
+   않으려고). 재생 중일 때만 돈다. */
 .mini-player-frame-mount {
   position: relative;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   overflow: hidden;
-  background: #fff url("../assets/mini-player-cd.png") center / cover no-repeat;
-  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.25);
+}
+
+.mini-player-frame-mount::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #FFFFFF 0 2px, #2B2B2B 2.5px 3.5px, #F4A3A0 4px 10px, #D98683 10.5px 11px, transparent 11.5px),
+    conic-gradient(from 30deg, rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0.2) 40deg, rgba(255, 255, 255, 0) 90deg, rgba(255, 255, 255, 0) 180deg, rgba(255, 255, 255, 0.16) 220deg, rgba(255, 255, 255, 0) 270deg),
+    repeating-radial-gradient(circle, #2E2E2E 0 1.2px, #444 1.2px 2.4px);
+  animation: recall-disc-spin 4s linear infinite;
+  animation-play-state: paused;
+}
+
+.mini-player--playing .mini-player-frame-mount::before {
+  animation-play-state: running;
 }
 
 .mini-player-frame {
@@ -1409,38 +1430,148 @@ body {
   pointer-events: none;
 }
 
-.mini-player-title {
-  flex: 1;
+.mini-player-text {
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.mini-player-title,
+.mini-player-sub {
   margin: 0;
   font-family: var(--font-pretendard);
-  font-size: 12.5px;
-  color: var(--cs-text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.mini-player-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-black);
+}
+
+.mini-player-sub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.mini-player-sub:empty {
+  display: none;
+}
+
+.mini-player-wave {
+  flex: 0 1 120px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: 24px;
+  overflow: hidden;
+}
+
+.mini-player-wave > span {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 2.5px;
+  border-radius: 2px;
+  background: #D5D3D1;
+  transform-origin: center;
+}
+
+.mini-player-wave > span.is-played {
+  background: var(--mini-coral);
+}
+
+.mini-player--playing .mini-player-wave > span {
+  animation: recall-wave-bounce 1.2s ease-in-out infinite;
+}
+
 .mini-player-pause,
 .mini-player-stop {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: none;
-  background: var(--cs-map-gray);
-  color: var(--cs-text-muted);
-  font-size: 12px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
 }
 
-.mini-player-pause:hover,
+.mini-player-pause {
+  width: 42px;
+  height: 42px;
+  background: rgba(236, 106, 99, 0.14);
+  color: var(--mini-coral);
+  transition: background var(--cs-transition-fast);
+}
+
+.mini-player-pause:hover {
+  background: rgba(236, 106, 99, 0.24);
+}
+
+.mini-player-pause .mini-player-icon-play,
+.mini-player--paused .mini-player-pause .mini-player-icon-pause {
+  display: none;
+}
+
+.mini-player--paused .mini-player-pause .mini-player-icon-play {
+  display: block;
+}
+
+.mini-player-stop {
+  width: 32px;
+  height: 32px;
+  background: none;
+  color: #8A8886;
+}
+
 .mini-player-stop:hover {
-  background: var(--cs-gray);
   color: var(--cs-black);
+}
+
+/* 좁은 화면 — 판/버튼을 조금 줄이고, 파형은 남는 폭만큼만 쓰다가 아주
+   좁으면(글자가 먼저 잘리므로) 아예 뺀다. */
+@media (max-width: 480px) {
+  .mini-player {
+    gap: 10px;
+    padding: 6px 8px 6px 6px;
+  }
+
+  .mini-player-frame-mount {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mini-player-title {
+    font-size: 13.5px;
+  }
+
+  .mini-player-sub {
+    font-size: 12px;
+  }
+
+  .mini-player-wave {
+    flex-basis: 72px;
+    height: 20px;
+  }
+
+  .mini-player-pause {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mini-player-stop {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mini-player-wave {
+    display: none;
+  }
 }
 
 .bottom-toolbar {

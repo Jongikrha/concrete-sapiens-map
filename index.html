@@ -207,9 +207,18 @@
            모달 위에 뜨게 한다. -->
       <div class="mini-player hidden" id="mini-player">
         <div class="mini-player-frame-mount" id="mini-player-frame-mount"></div>
-        <p class="mini-player-title" id="mini-player-title">노래 재생 중</p>
-        <button type="button" class="mini-player-pause" id="mini-player-pause" aria-label="일시정지">⏸</button>
-        <button type="button" class="mini-player-stop" id="mini-player-stop" aria-label="재생 중지">✕</button>
+        <div class="mini-player-text">
+          <p class="mini-player-title" id="mini-player-title">노래 재생 중</p>
+          <p class="mini-player-sub" id="mini-player-sub"></p>
+        </div>
+        <div class="mini-player-wave" id="mini-player-wave" aria-hidden="true"></div>
+        <button type="button" class="mini-player-pause" id="mini-player-pause" aria-label="일시정지">
+          <svg class="mini-player-icon-pause" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6.5" y="5.5" width="3.6" height="13" rx="1.2" fill="currentColor" /><rect x="13.9" y="5.5" width="3.6" height="13" rx="1.2" fill="currentColor" /></svg>
+          <svg class="mini-player-icon-play" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8.5 5.8v12.4l10-6.2z" fill="currentColor" /></svg>
+        </button>
+        <button type="button" class="mini-player-stop" id="mini-player-stop" aria-label="재생 중지">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+        </button>
       </div>
 
       <!-- 시간 슬라이더 (누적 보기) -->

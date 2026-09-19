@@ -177,25 +177,29 @@ function closeSheet() {
 // 두 번째 곡부터는(그리고 API가 미리 로드돼 있으면 첫 곡부터도) 재생이
 // 사용자의 탭과 같은 이벤트 틱 안에서 동기적으로 시작된다.
 // ------------------------------------------------------------
-function playMiniPlayerVideo(videoId, musicLabel) {
+// music: { title, artist } — 작성 시 확인/수정한 곡 정보. 미니 플레이어는
+// 아티스트를 굵게 윗줄에, 곡명을 아랫줄에 나눠 보여준다(2026-09-19 디자인
+// 변경 — 예전엔 "아티스트 · 곡명" 한 줄). 아티스트를 못 찾은 곡은 곡명만
+// 윗줄에.
+function playMiniPlayerVideo(videoId, music) {
   activeMiniPlayerVideoId = videoId;
   miniPlayerActuallyPlaying = false;
   setMiniPlayerPaused(false);
   document.getElementById("mini-player").classList.remove("hidden");
+  document.getElementById("mini-player-wave").innerHTML = buildSongWaveBars(videoId, MINI_PLAYER_WAVE_BARS);
+  startMiniPlayerTicker();
 
-  // 작성 시 사용자가 확인/수정한 곡 정보(musicLabel)가 있으면 그대로 쓴다 —
-  // 없으면(이 기능 이전에 저장된 옛 기억) API 키 없이 쓸 수 있는 유튜브
-  // oEmbed로 원본 제목만 최선을 다해 가져온다(실패해도 기능엔 지장 없음).
-  if (musicLabel) {
-    document.getElementById("mini-player-title").textContent = musicLabel;
+  // 작성 시 사용자가 확인/수정한 곡 정보가 있으면 그대로 쓴다 — 없으면(이
+  // 기능 이전에 저장된 옛 기억) API 키 없이 쓸 수 있는 유튜브 oEmbed로
+  // 원본 제목만 최선을 다해 가져온다(실패해도 기능엔 지장 없음).
+  if (music && music.title) {
+    setMiniPlayerText(music.artist || music.title, music.artist ? music.title : "");
   } else {
-    document.getElementById("mini-player-title").textContent = "노래 재생 중";
+    setMiniPlayerText("노래 재생 중", "");
     Storage.fetchYoutubeTitle(videoId).then((title) => {
       // 응답이 오는 사이 다른 곡으로 넘어갔거나 정지됐을 수 있어 videoId가
       // 여전히 지금 재생 중인 곡일 때만 반영한다.
-      if (title && activeMiniPlayerVideoId === videoId) {
-        document.getElementById("mini-player-title").textContent = title;
-      }
+      if (title && activeMiniPlayerVideoId === videoId) setMiniPlayerText(title, "");
     });
   }
 
@@ -219,7 +223,65 @@ function stopMiniPlayer() {
   // iframe을 지우지 않고 정지만 한다 — 프레임을 계속 재사용해야 위에서
   // 설명한 모바일 자동재생 문제가 다시 생기지 않는다.
   if (ytPlayer && typeof ytPlayer.stopVideo === "function") ytPlayer.stopVideo();
+  stopMiniPlayerTicker();
   document.getElementById("mini-player").classList.add("hidden");
+}
+
+function setMiniPlayerText(title, sub) {
+  document.getElementById("mini-player-title").textContent = title;
+  document.getElementById("mini-player-sub").textContent = sub;
+}
+
+// ------------------------------------------------------------
+// 곡 파형(장식용) — 실제 음원 분석이 아니라 videoId로 시드를 준 막대라서
+// 같은 곡이면 어디서 보든(미니 플레이어/기억 라디오 노래 카드) 늘 같은
+// 모양이다. 재생 위치만큼 앞쪽 막대에 .is-played를 붙여 진하게 칠한다.
+// ------------------------------------------------------------
+const MINI_PLAYER_WAVE_BARS = 28;
+let miniPlayerTicker = null;
+
+function buildSongWaveBars(videoId, count) {
+  let seed = 0;
+  for (let i = 0; i < videoId.length; i++) seed = (seed * 31 + videoId.charCodeAt(i)) >>> 0;
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    const rand = (seed >>> 16) / 65536;
+    // 가운데가 조금 더 높게 — 한 곡의 파형처럼 보이게
+    const envelope = 0.55 + 0.45 * Math.sin((i / (count - 1)) * Math.PI);
+    const height = Math.round(18 + rand * 82 * envelope);
+    bars.push(`<span style="height:${Math.min(100, height)}%;animation-delay:${-(rand * 1.2).toFixed(2)}s"></span>`);
+  }
+  return bars.join("");
+}
+
+// 지금 곡의 재생 비율(0~1) — 아직 로드 전이라 길이를 모르면 0.
+function getMiniPlayerProgress() {
+  if (!ytPlayer || typeof ytPlayer.getDuration !== "function") return 0;
+  const duration = ytPlayer.getDuration();
+  return duration ? Math.min(1, (ytPlayer.getCurrentTime() || 0) / duration) : 0;
+}
+
+function markPlayedWaveBars(waveEl, progress) {
+  const bars = waveEl.children;
+  const played = Math.round(progress * bars.length);
+  for (let i = 0; i < bars.length; i++) bars[i].classList.toggle("is-played", i < played);
+}
+
+function refreshMiniPlayerProgress() {
+  document.getElementById("mini-player").classList.toggle("mini-player--playing", !miniPlayerPaused);
+  markPlayedWaveBars(document.getElementById("mini-player-wave"), getMiniPlayerProgress());
+}
+
+function startMiniPlayerTicker() {
+  stopMiniPlayerTicker();
+  refreshMiniPlayerProgress();
+  miniPlayerTicker = setInterval(refreshMiniPlayerProgress, 500);
+}
+
+function stopMiniPlayerTicker() {
+  clearInterval(miniPlayerTicker);
+  miniPlayerTicker = null;
 }
 
 /**
@@ -237,7 +299,8 @@ function toggleMiniPlayerPause() {
 function setMiniPlayerPaused(paused) {
   miniPlayerPaused = paused;
   const btn = document.getElementById("mini-player-pause");
-  btn.textContent = paused ? "▶" : "⏸";
+  document.getElementById("mini-player").classList.toggle("mini-player--paused", paused);
+  document.getElementById("mini-player").classList.toggle("mini-player--playing", !paused);
   btn.setAttribute("aria-label", paused ? "재생" : "일시정지");
 }
 
@@ -504,7 +567,7 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
       // 다시 시도한다. 이번 탭은 사용자의 진짜 클릭 이벤트 안에서 동기적
       // 으로 이뤄지니 첫 시도보다 성공할 가능성이 높다.
       if (activeMiniPlayerVideoId === videoId && miniPlayerActuallyPlaying) stopMiniPlayer();
-      else playMiniPlayerVideo(videoId, container.dataset.musicLabel || null);
+      else playMiniPlayerVideo(videoId, { title: container.dataset.musicTitle, artist: container.dataset.musicArtist });
       onChange();
     };
   });
@@ -755,16 +818,11 @@ function renderYoutubeEmbed(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return "";
   const playing = videoId === activeMiniPlayerVideoId;
-  // 작성 시 확인/수정한 곡 정보가 있으면 "🎧 아티스트 · 곡명"으로, 아티스트를
-  // 못 찾았으면 곡명만 보여준다 — 이 기능 이전 기억은 musicTitle이 없어 표시가
-  // 통째로 생략된다(재생하면 미니 플레이어가 oEmbed로 폴백해서 채워줌).
-  const musicLabel = story.musicTitle
-    ? story.musicArtist
-      ? `${story.musicArtist} · ${story.musicTitle}`
-      : story.musicTitle
-    : "";
+  // 곡 정보는 data 속성으로 넘겨 미니 플레이어가 아티스트/곡명 두 줄로
+  // 보여준다 — 이 기능 이전 기억은 musicTitle이 없어 비어 있고, 재생하면
+  // 미니 플레이어가 oEmbed로 폴백해서 채워준다.
   return `
-    <div class="story-youtube" data-video-id="${videoId}" data-music-label="${escapeHtml(musicLabel)}">
+    <div class="story-youtube" data-video-id="${videoId}" data-music-title="${escapeHtml(story.musicTitle || "")}" data-music-artist="${escapeHtml(story.musicArtist || "")}">
       <button type="button" class="story-youtube-thumb ${playing ? "story-youtube-thumb--playing" : ""}" aria-label="${playing ? "노래 정지" : "노래 재생"}">
         <span class="story-youtube-play">${playing ? "⏸" : "▶"}</span>
       </button>

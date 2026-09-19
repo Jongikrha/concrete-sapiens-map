@@ -746,11 +746,6 @@ function openRecallCard() {
   document.getElementById("recall-card").classList.add("recall-card--visible");
 }
 
-function getRecallStoryMusicLabel(story) {
-  if (!story.musicTitle) return "";
-  return story.musicArtist ? `${story.musicArtist} · ${story.musicTitle}` : story.musicTitle;
-}
-
 function playRecallStorySong(story) {
   const videoId = Storage.extractYoutubeVideoId(story.youtubeUrl);
   if (!videoId) return;
@@ -761,7 +756,7 @@ function playRecallStorySong(story) {
   // 이 세션 내내 안정적이었는데 회상 카드만 계속 실패한 유일한 구조적
   // 차이가 이 DOM 이동이었다. 화면 하단 고정 바 그대로 쓴다(z-index는
   // 이미 회상 모달보다 높게 고쳐둠).
-  playMiniPlayerVideo(videoId, getRecallStoryMusicLabel(story));
+  playMiniPlayerVideo(videoId, { title: story.musicTitle, artist: story.musicArtist });
   refreshRecallSongCard();
 }
 
@@ -786,23 +781,6 @@ function getRecallSongState(story) {
   return { videoId, isThisSong, isPlaying: isThisSong && !miniPlayerPaused };
 }
 
-// 곡마다 모양이 다르지만 같은 곡이면 늘 같은 파형 — 실제 음원 분석이
-// 아니라 videoId로 시드를 준 장식용 막대다.
-function buildRecallSongWave(videoId) {
-  let seed = 0;
-  for (let i = 0; i < videoId.length; i++) seed = (seed * 31 + videoId.charCodeAt(i)) >>> 0;
-  const bars = [];
-  for (let i = 0; i < RECALL_SONG_WAVE_BARS; i++) {
-    seed = (seed * 1103515245 + 12345) >>> 0;
-    const rand = (seed >>> 16) / 65536;
-    // 가운데가 조금 더 높게 — 한 곡의 파형처럼 보이게
-    const envelope = 0.55 + 0.45 * Math.sin((i / (RECALL_SONG_WAVE_BARS - 1)) * Math.PI);
-    const height = Math.round(18 + rand * 82 * envelope);
-    bars.push(`<span style="height:${Math.min(100, height)}%;animation-delay:${-(rand * 1.2).toFixed(2)}s"></span>`);
-  }
-  return bars.join("");
-}
-
 function formatRecallSongTime(seconds) {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -821,7 +799,7 @@ function refreshRecallSongCard() {
     recallSongRenderedStoryId = story.id;
     document.getElementById("recall-song-title").textContent = story.musicTitle || "이 기억의 노래";
     document.getElementById("recall-song-artist").textContent = story.musicArtist || "";
-    document.getElementById("recall-song-wave").innerHTML = buildRecallSongWave(videoId);
+    document.getElementById("recall-song-wave").innerHTML = buildSongWaveBars(videoId, RECALL_SONG_WAVE_BARS);
     document.getElementById("recall-song-play").onclick = () => {
       if (getRecallSongState(story).isThisSong) toggleMiniPlayerPause();
       else playRecallStorySong(story);
@@ -850,10 +828,7 @@ function refreshRecallSongCard() {
   const duration = isThisSong && ytPlayer && typeof ytPlayer.getDuration === "function" ? ytPlayer.getDuration() : 0;
   const current = duration ? ytPlayer.getCurrentTime() || 0 : 0;
   document.getElementById("recall-song-time").textContent = duration ? formatRecallSongTime(duration - current) : "";
-  const playedBars = duration ? Math.round((current / duration) * RECALL_SONG_WAVE_BARS) : 0;
-  document.querySelectorAll("#recall-song-wave > span").forEach((bar, i) => {
-    bar.classList.toggle("is-played", i < playedBars);
-  });
+  markPlayedWaveBars(document.getElementById("recall-song-wave"), duration ? current / duration : 0);
 }
 
 function startRecallSongTicker() {
