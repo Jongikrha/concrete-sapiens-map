@@ -71,10 +71,18 @@ function updateFadeScrollbarThumb(el) {
     return;
   }
 
+  // 스크롤 요소 자체가 둥근 모서리를 가진 경우(.recall-card 등), 썸이
+  // 맨 위/맨 아래까지 가면 모서리 곡선 밖으로 삐져나왔다(2026-09-19
+  // 제보 영상). 오른쪽 위/아래 radius만큼 이동 구간을 안쪽으로 줄인다 —
+  // radius가 없는 컨테이너는 0이라 기존과 같다.
+  const style = getComputedStyle(el);
+  const cornerTop = parseFloat(style.borderTopRightRadius) || 0;
+  const cornerBottom = parseFloat(style.borderBottomRightRadius) || 0;
+
   const rect = el.getBoundingClientRect();
-  const topInset = getFadeScrollbarTopInset(el);
+  const topInset = Math.max(getFadeScrollbarTopInset(el), cornerTop);
   const trackTop = rect.top + topInset;
-  const trackHeight = clientHeight - topInset;
+  const trackHeight = clientHeight - topInset - cornerBottom;
   const maxScroll = scrollHeight - clientHeight;
   const thumbHeight = Math.max((clientHeight / scrollHeight) * trackHeight, FADE_SCROLLBAR_MIN_THUMB_PX);
   const progress = maxScroll > 0 ? scrollTop / maxScroll : 0;
