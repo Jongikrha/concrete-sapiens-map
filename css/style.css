@@ -1377,9 +1377,13 @@ body {
 .mini-player--floating {
   position: absolute;
   top: 70px;
-  left: 16px;
-  right: 16px;
+  left: 0;
+  right: 0;
   z-index: 120;
+  /* 기억 라디오 카드(.recall-card)와 같은 폭 — 둘이 위아래로 같은 선에
+     맞춰 보이게 한다(2026-09-19). 예전 left/right:16px에 기본 width:100%가
+     겹쳐 모바일에서 화면 오른쪽 밖으로 삐져나갔었다. */
+  width: min(380px, calc(100vw - 32px));
   margin: 0 auto;
 }
 
@@ -1570,6 +1574,14 @@ body {
 
 @media (max-width: 360px) {
   .mini-player-wave {
+    display: none;
+  }
+}
+
+/* 기억 라디오(위에 뜨는 모드)는 모바일에서 카드 폭에 맞춰 좁아지므로
+   파형을 빼고 곡 정보에 자리를 준다(2026-09-19 피드백). */
+@media (max-width: 480px) {
+  .mini-player--floating .mini-player-wave {
     display: none;
   }
 }
