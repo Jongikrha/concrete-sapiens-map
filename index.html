@@ -393,12 +393,41 @@
       <div class="recall-card" id="recall-card">
         <p class="recall-card-yearplace" id="recall-card-yearplace"></p>
         <p class="story-content" id="recall-card-content"></p>
-        <!-- 기억 라디오 전용 — 지금 나오는 노래가 이 기억의 노래가 아닐 때만 뜬다(js/recall.js refreshRecallListenButton) -->
-        <button type="button" class="btn-secondary recall-card-listen-btn hidden" id="recall-card-listen-btn">
-          <span class="recall-card-listen-label">이 기억의 노래 듣기</span>
-          <span class="recall-card-listen-song" id="recall-card-listen-song"></span>
+        <!-- 이 기억의 노래 카드 — 노래가 있는 기억일 때만 뜬다(js/recall.js refreshRecallSongCard) -->
+        <div class="recall-song hidden" id="recall-song">
+          <div class="recall-song-art" aria-hidden="true">
+            <div class="recall-song-disc"></div>
+            <div class="recall-song-arm"></div>
+          </div>
+          <div class="recall-song-body">
+            <p class="recall-song-label">
+              <svg class="recall-song-label-icon" viewBox="0 0 16 12" width="16" height="12" aria-hidden="true">
+                <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+                  <line x1="1" y1="5" x2="1" y2="7" /><line x1="4" y1="3" x2="4" y2="9" /><line x1="7" y1="1" x2="7" y2="11" />
+                  <line x1="10" y1="3" x2="10" y2="9" /><line x1="13" y1="5" x2="13" y2="7" />
+                </g>
+              </svg>
+              <span id="recall-song-label-text">이 기억의 노래 듣기</span>
+            </p>
+            <p class="recall-song-title" id="recall-song-title"></p>
+            <p class="recall-song-artist" id="recall-song-artist"></p>
+            <div class="recall-song-controls">
+              <button type="button" class="recall-song-play" id="recall-song-play" aria-label="이 기억의 노래 듣기">
+                <svg class="recall-song-icon-play" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>
+                <svg class="recall-song-icon-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /><rect x="13.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /></svg>
+              </button>
+              <div class="recall-song-wave" id="recall-song-wave" aria-hidden="true"></div>
+              <span class="recall-song-time" id="recall-song-time"></span>
+            </div>
+          </div>
+          <button type="button" class="recall-song-like" id="recall-song-like" aria-label="떠올랐어요">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.5-7.5 10.1-7.5 10.1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+          </button>
+        </div>
+        <button type="button" class="btn-primary recall-card-next-btn" id="recall-card-next-btn">
+          <span>다음 기억으로</span>
+          <svg class="recall-card-next-arrow" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
-        <button type="button" class="btn-primary" id="recall-card-next-btn">다음 기억으로</button>
       </div>
     </div>
   </div>

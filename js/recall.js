@@ -741,7 +741,7 @@ function openRecallCard() {
   // 기억의 노래로 바로 시작한다. 기억산책(scope="mine")은 예전처럼 카드마다
   // 그 기억의 노래로 바꾼다.
   if (recallScope !== "songs" || !activeMiniPlayerVideoId) playRecallStorySong(story);
-  refreshRecallListenButton();
+  startRecallSongTicker();
 
   document.getElementById("recall-card").classList.add("recall-card--visible");
 }
@@ -762,24 +762,113 @@ function playRecallStorySong(story) {
   // 차이가 이 DOM 이동이었다. 화면 하단 고정 바 그대로 쓴다(z-index는
   // 이미 회상 모달보다 높게 고쳐둠).
   playMiniPlayerVideo(videoId, getRecallStoryMusicLabel(story));
-  refreshRecallListenButton();
+  refreshRecallSongCard();
 }
 
-// "이 기억의 노래 듣기" 버튼 — 기억 라디오에서, 지금 미니 플레이어에 나오는
-// 곡이 카드에 떠 있는 기억의 곡이 아닐 때만 보인다. 곡이 바뀌는 모든
-// 지점(카드 열기/버튼/곡 끝남/미니 플레이어 ✕)에서 다시 부른다.
-function refreshRecallListenButton() {
-  const btn = document.getElementById("recall-card-listen-btn");
-  const story = recallCurrentStory;
+// ------------------------------------------------------------
+// 카드 안 "이 기억의 노래" 카드(2026-09-19 디자인 변경) — 예전엔 기억
+// 라디오에서 지금 나오는 곡이 이 기억의 곡이 아닐 때만 "이 기억의 노래
+// 듣기" 텍스트 버튼이 떴는데, 레코드판/곡명/재생 버튼/파형이 있는 노래
+// 카드로 바꾸고 노래가 있는 기억이면 항상 보여준다. 재생 버튼은 이 기억의
+// 곡이 아니면 그 곡으로 바꿔 틀고(기존 버튼과 같은 동작), 이미 이 곡이면
+// 미니 플레이어의 일시정지 ⇄ 재생과 같다. 하트는 기억 카드 시트의
+// "떠올랐어요"(Storage.toggleReaction)와 같은 반응이다 — 새 반응 종류를
+// 만들지 않았다. 실제 소리는 여전히 화면 위 미니 플레이어가 낸다
+// (playRecallStorySong 주석의 DOM 이동 이력 참고) — 이 카드는 조작/표시만.
+// ------------------------------------------------------------
+const RECALL_SONG_WAVE_BARS = 26;
+let recallSongTicker = null;
+let recallSongRenderedStoryId = null;
+
+function getRecallSongState(story) {
   const videoId = story && Storage.extractYoutubeVideoId(story.youtubeUrl);
-  const show = recallSessionOpen && recallScope === "songs" && !!videoId && activeMiniPlayerVideoId !== videoId;
-  btn.classList.toggle("hidden", !show);
-  if (!show) return;
-  document.getElementById("recall-card-listen-song").textContent = getRecallStoryMusicLabel(story);
-  btn.onclick = () => playRecallStorySong(story);
+  const isThisSong = !!videoId && activeMiniPlayerVideoId === videoId;
+  return { videoId, isThisSong, isPlaying: isThisSong && !miniPlayerPaused };
+}
+
+// 곡마다 모양이 다르지만 같은 곡이면 늘 같은 파형 — 실제 음원 분석이
+// 아니라 videoId로 시드를 준 장식용 막대다.
+function buildRecallSongWave(videoId) {
+  let seed = 0;
+  for (let i = 0; i < videoId.length; i++) seed = (seed * 31 + videoId.charCodeAt(i)) >>> 0;
+  const bars = [];
+  for (let i = 0; i < RECALL_SONG_WAVE_BARS; i++) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    const rand = (seed >>> 16) / 65536;
+    // 가운데가 조금 더 높게 — 한 곡의 파형처럼 보이게
+    const envelope = 0.55 + 0.45 * Math.sin((i / (RECALL_SONG_WAVE_BARS - 1)) * Math.PI);
+    const height = Math.round(18 + rand * 82 * envelope);
+    bars.push(`<span style="height:${Math.min(100, height)}%;animation-delay:${-(rand * 1.2).toFixed(2)}s"></span>`);
+  }
+  return bars.join("");
+}
+
+function formatRecallSongTime(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// 곡이 바뀌는 모든 지점(카드 열기/재생 버튼/곡 끝남/미니 플레이어 ✕)에서
+// 부르고, 카드가 떠 있는 동안엔 재생 위치를 보여주려고 주기적으로도 부른다.
+function refreshRecallSongCard() {
+  const box = document.getElementById("recall-song");
+  const story = recallSessionOpen ? recallCurrentStory : null;
+  const { videoId, isThisSong, isPlaying } = getRecallSongState(story);
+  box.classList.toggle("hidden", !videoId);
+  if (!videoId) return;
+
+  if (recallSongRenderedStoryId !== story.id) {
+    recallSongRenderedStoryId = story.id;
+    document.getElementById("recall-song-title").textContent = story.musicTitle || "이 기억의 노래";
+    document.getElementById("recall-song-artist").textContent = story.musicArtist || "";
+    document.getElementById("recall-song-wave").innerHTML = buildRecallSongWave(videoId);
+    document.getElementById("recall-song-play").onclick = () => {
+      if (getRecallSongState(story).isThisSong) toggleMiniPlayerPause();
+      else playRecallStorySong(story);
+      refreshRecallSongCard();
+    };
+    const likeBtn = document.getElementById("recall-song-like");
+    likeBtn.classList.toggle("hidden", Storage.isMyStory(story.id));
+    likeBtn.onclick = () => {
+      Storage.toggleReaction(story.id);
+      refreshRecallSongCard();
+    };
+  }
+
+  box.classList.toggle("recall-song--active", isThisSong);
+  box.classList.toggle("recall-song--playing", isPlaying);
+  document.getElementById("recall-song-label-text").textContent = isThisSong ? "지금 흐르는 노래" : "이 기억의 노래 듣기";
+  const playBtn = document.getElementById("recall-song-play");
+  playBtn.setAttribute("aria-label", isPlaying ? "일시정지" : "재생");
+
+  const reacted = Storage.hasReacted(story.id);
+  const likeBtn = document.getElementById("recall-song-like");
+  likeBtn.classList.toggle("recall-song-like--active", reacted);
+  likeBtn.setAttribute("aria-pressed", reacted ? "true" : "false");
+
+  // 재생 위치 — 이 기억의 곡이 실제로 로드돼 길이를 알 때만 보여준다.
+  const duration = isThisSong && ytPlayer && typeof ytPlayer.getDuration === "function" ? ytPlayer.getDuration() : 0;
+  const current = duration ? ytPlayer.getCurrentTime() || 0 : 0;
+  document.getElementById("recall-song-time").textContent = duration ? formatRecallSongTime(duration - current) : "";
+  const playedBars = duration ? Math.round((current / duration) * RECALL_SONG_WAVE_BARS) : 0;
+  document.querySelectorAll("#recall-song-wave > span").forEach((bar, i) => {
+    bar.classList.toggle("is-played", i < playedBars);
+  });
+}
+
+function startRecallSongTicker() {
+  stopRecallSongTicker();
+  refreshRecallSongCard();
+  recallSongTicker = setInterval(refreshRecallSongCard, 500);
+}
+
+function stopRecallSongTicker() {
+  clearInterval(recallSongTicker);
+  recallSongTicker = null;
 }
 
 function hideRecallCard() {
+  stopRecallSongTicker();
   document.getElementById("recall-card").classList.remove("recall-card--visible");
 }
 
@@ -967,8 +1056,9 @@ function bindRecallEvents() {
   setMiniPlayerEndedCallback(() => {
     if (recallSessionOpen && recallScope === "songs") handleRadioSongEnded();
   });
-  // 미니 플레이어 ✕로 노래를 끄면 카드의 "이 기억의 노래 듣기"가 다시
-  // 보여야 한다. app.js가 onclick(stopMiniPlayer)을 이보다 먼저 등록하므로
-  // 이 리스너는 정지된 뒤에 돈다.
-  document.getElementById("mini-player-stop").addEventListener("click", refreshRecallListenButton);
+  // 미니 플레이어 ✕/일시정지로 노래를 바꾸면 카드의 노래 카드도 바로
+  // 따라가야 한다. app.js가 onclick을 이보다 먼저 등록하므로 이 리스너는
+  // 정지/토글된 뒤에 돈다.
+  document.getElementById("mini-player-stop").addEventListener("click", refreshRecallSongCard);
+  document.getElementById("mini-player-pause").addEventListener("click", refreshRecallSongCard);
 }
