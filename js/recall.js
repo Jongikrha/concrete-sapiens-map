@@ -469,6 +469,14 @@ function openRecallSessionShell() {
   recallSessionOpen = true;
   enterRecallImmersiveChrome();
   if (recallScope === "songs") enterRecallNightMode();
+  // 기억 라디오는 오른쪽 위 ✕ 대신 "카드 밖 아무 데나 탭"으로 나간다
+  // (2026-09-19 피드백) — 야간 모드로 지도가 밤하늘 사진에 덮여 있어
+  // 어차피 카드 밖은 만질 게 없다. 기억산책(scope="mine")은 지도 위를
+  // 그대로 걸어다니는 화면이라 클릭 캐처를 깔면 안 되고, ✕를 남긴다.
+  // 진입할 때마다 둘 다 명시적으로 맞춰주므로 종료 시 되돌릴 필요는 없다.
+  const isRadio = recallScope === "songs";
+  document.getElementById("recall-backdrop").classList.toggle("hidden", !isRadio);
+  document.getElementById("recall-exit-btn").classList.toggle("hidden", isRadio);
   document.getElementById("recall-session").classList.remove("hidden");
 }
 
@@ -945,6 +953,10 @@ async function shareConstellationCard() {
 
 function bindRecallEvents() {
   bindOverlayClickToClose("recall-choice-overlay", closeRecallChoice);
+  // 기억 라디오의 카드 밖 탭 — 드래그가 카드 밖에서 끝난 경우까지
+  // 걸러내는 로직이 같아서 오버레이 헬퍼를 그대로 쓴다(백드롭은 자식이
+  // 없어 e.target === overlay 조건이 그대로 성립한다).
+  bindOverlayClickToClose("recall-backdrop", endRecallSession);
   document.getElementById("recall-exit-btn").onclick = endRecallSession;
   document.getElementById("recall-card-next-btn").onclick = advanceRecall;
 
