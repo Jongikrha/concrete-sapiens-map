@@ -51,6 +51,13 @@ let recallScope = null; // "mine"(기억산책) | "songs"(기억 라디오)
 let recallPool = [];
 let recallQueue = []; // pop()으로 뒤에서 하나씩 꺼내 쓰는 셔플 큐
 let recallCurrentStory = null;
+// 이번 세션에서 본 기억들 — "이전 기억" 버튼(2026-09-19)으로 되돌아가려고
+// 둔다. recallHistoryIndex가 지금 카드의 위치이고, 뒤로 갔다가 "다음 기억으로"
+// 를 누르면 새 기억을 뽑지 않고 이미 본 기억으로 앞으로 간다(브라우저
+// 뒤로/앞으로와 같은 방식).
+let recallHistory = [];
+let recallHistoryIndex = -1;
+const RECALL_HISTORY_MAX = 50;
 let recallDotMarker = null;
 // 별자리 개요에서 쓴 스토리 목록 — 공유 카드 생성 시 다시 계산하지 않고 재사용.
 let recallConstellationStories = null;
@@ -679,16 +686,36 @@ function buildRecallQueue(pool, avoidId) {
 function beginRecallWalk(pool) {
   recallPool = pool;
   recallQueue = buildRecallQueue(pool, null);
+  recallHistory = [];
+  recallHistoryIndex = -1;
   showNextRecallMemory();
 }
 
 function showNextRecallMemory() {
-  hideRecallCard();
+  if (recallHistoryIndex < recallHistory.length - 1) {
+    recallHistoryIndex += 1;
+    showRecallStory(recallHistory[recallHistoryIndex]);
+    return;
+  }
   if (recallQueue.length === 0) {
     recallQueue = buildRecallQueue(recallPool, recallCurrentStory ? recallCurrentStory.id : null);
   }
-  const story = recallQueue.pop();
+  recallHistory.push(recallQueue.pop());
+  if (recallHistory.length > RECALL_HISTORY_MAX) recallHistory.shift();
+  recallHistoryIndex = recallHistory.length - 1;
+  showRecallStory(recallHistory[recallHistoryIndex]);
+}
+
+function showPrevRecallMemory() {
+  if (recallHistoryIndex <= 0) return;
+  recallHistoryIndex -= 1;
+  showRecallStory(recallHistory[recallHistoryIndex]);
+}
+
+function showRecallStory(story) {
+  hideRecallCard();
   recallCurrentStory = story;
+  document.getElementById("recall-card-prev-btn").disabled = recallHistoryIndex <= 0;
   map.setLevel(4);
   map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
   placeRecallDot(story);
@@ -853,6 +880,13 @@ function advanceRecall() {
   showNextRecallMemory();
 }
 
+// "이전 기억" — 다음 기억으로와 같은 규칙(라디오에선 노래를 끊지 않는다).
+function retreatRecall() {
+  if (recallHistoryIndex <= 0) return;
+  if (recallScope !== "songs") stopMiniPlayer();
+  showPrevRecallMemory();
+}
+
 // 기억 라디오에서 곡이 끝났을 때 — 사용자가 카드를 넘겨봐서 지금 카드의
 // 기억이 방금 끝난 곡의 기억이 아니면, 카드는 그대로 두고 그 기억의
 // 노래로 이어간다(다시 둘을 맞춰준다). 카드와 곡이 이미 같은 기억이면
@@ -885,6 +919,8 @@ function endRecallSession() {
   recallScope = null;
   recallPool = [];
   recallQueue = [];
+  recallHistory = [];
+  recallHistoryIndex = -1;
   recallCurrentStory = null;
   recallConstellationStories = null;
   recallDecadeLabel = null;
@@ -1023,6 +1059,7 @@ function bindRecallEvents() {
   bindOverlayClickToClose("recall-backdrop", endRecallSession);
   document.getElementById("recall-exit-btn").onclick = endRecallSession;
   document.getElementById("recall-card-next-btn").onclick = advanceRecall;
+  document.getElementById("recall-card-prev-btn").onclick = retreatRecall;
 
   // 기억 라디오에서만 곡이 끝나면 다음 곡으로 이어간다(handleRadioSongEnded) —
   // 기억산책(scope="mine")이나 일반 카드 재생 중엔 아무것도

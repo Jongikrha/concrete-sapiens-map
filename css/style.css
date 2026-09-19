@@ -4656,13 +4656,48 @@ button.story-place-line:hover {
   fill: currentColor;
 }
 
-.recall-card .recall-card-next-btn {
-  position: relative;
+/* 이전 기억(작은 원) + 다음 기억으로(주인공 알약) — 이전은 필요할 때만
+   쓰는 보조 버튼이라 일부러 작고 옅게 둔다(2026-09-19). */
+.recall-card-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.recall-card-prev-btn {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 16px;
-  padding: 16px 52px;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgba(236, 106, 99, 0.3);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--recall-coral);
+  cursor: pointer;
+  transition: background var(--cs-transition-fast), opacity var(--cs-transition-fast);
+}
+
+.recall-card-prev-btn:hover:not(:disabled) {
+  background: rgba(236, 106, 99, 0.1);
+}
+
+.recall-card-prev-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.recall-card .recall-card-next-btn {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 16px 44px;
   border-radius: var(--cs-radius-chip);
   background: linear-gradient(90deg, #EE7770 0%, #E9625B 100%);
   box-shadow: 0 8px 18px rgba(236, 106, 99, 0.3);
@@ -4675,7 +4710,7 @@ button.story-place-line:hover {
 
 .recall-card-next-arrow {
   position: absolute;
-  right: 22px;
+  right: 18px;
   top: 50%;
   transform: translateY(-50%);
 }
