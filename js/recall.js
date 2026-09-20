@@ -497,12 +497,26 @@ function enterRecallImmersiveChrome() {
   miniPlayer.classList.add("mini-player--floating");
 }
 
+// 밤 8시~다음 날 새벽 6시 사이면 밤하늘 대신 늦은 밤 사진(비 오는 버스
+// 창밖의 도시 야경)을 깐다(2026-09-20, css/style.css
+// .recall-radio-night--late). 기기 로컬 시각 기준이고, 세션을 여는
+// 시점에 한 번만 판정한다 — 틀어놓은 채로 8시를 넘겨도 중간에 바뀌지는
+// 않는다.
+function isRadioLateNight(now = new Date()) {
+  const hour = now.getHours();
+  return hour >= 20 || hour < 6;
+}
+
 function enterRecallNightMode() {
-  document.getElementById("app").classList.add("recall-radio-night");
+  const app = document.getElementById("app");
+  app.classList.add("recall-radio-night");
+  app.classList.toggle("recall-radio-night--late", isRadioLateNight());
 }
 
 function exitRecallNightMode() {
-  document.getElementById("app").classList.remove("recall-radio-night");
+  const app = document.getElementById("app");
+  app.classList.remove("recall-radio-night");
+  app.classList.remove("recall-radio-night--late");
 }
 
 function exitRecallImmersiveChrome() {

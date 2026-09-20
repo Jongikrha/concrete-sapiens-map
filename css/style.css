@@ -1663,6 +1663,14 @@ body {
   pointer-events: none;
 }
 
+/* 밤 8시~다음 날 새벽 6시엔 같은 자리를 다른 사진(비 오는 버스 창밖의
+   도시 야경)으로 바꾼다(2026-09-20). 낮에 트는 라디오와 늦은 밤에 트는
+   라디오의 분위기를 다르게 두려는 의도 — 판정은 세션을 열 때 기기
+   로컬 시각 기준으로 js/recall.js enterRecallNightMode가 한다. */
+.recall-radio-night--late::before {
+  background-image: url("../assets/radio-late-night-bg.jpg");
+}
+
 .tool-btn {
   border: 1px solid var(--cs-gray);
   background: rgba(244, 243, 239, 0.72);
