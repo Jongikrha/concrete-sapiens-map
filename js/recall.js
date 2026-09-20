@@ -471,6 +471,12 @@ function openRecallSessionShell() {
   clearFilters();
   closeSlider();
   closeMyMemoryMode();
+  // 기억카드에서 노래를 틀어둔 채 기억 라디오로 들어오면 그 노래가 계속
+  // 나오던 문제(2026-09-20) — 라디오 안에서 카드를 넘길 때 노래를 안 끊는
+  // 규칙(openRecallCard 주석)이 세션을 "시작"하는 순간까지 적용돼서,
+  // activeMiniPlayerVideoId가 살아 있으면 첫 카드의 노래를 아예 틀지
+  // 않았다. 세션 시작은 새로 트는 시점이 맞으니 여기서 한 번 끊는다.
+  stopMiniPlayer();
   clusterer.clear();
   clearSearchPin();
   recallSessionOpen = true;
