@@ -763,6 +763,7 @@ function placeRecallDot(story) {
 function openRecallCard() {
   const story = recallCurrentStory;
   if (!story) return;
+  const card = document.getElementById("recall-card");
 
   const year = Storage.getStoryYear(story);
   // 장소 이름이 없어 주소로 폴백하는 경우, 기억 라디오에서만큼은 지번
@@ -789,7 +790,12 @@ function openRecallCard() {
   if (recallScope !== "songs" || !activeMiniPlayerVideoId) playRecallStorySong(story);
   startRecallSongTicker();
 
-  document.getElementById("recall-card").classList.add("recall-card--visible");
+  // 카드(.recall-card)는 max-height 안에서 스크롤되는데, 긴 기억을 아래까지
+  // 내려 읽다가 "다음 기억으로"를 누르면 그 스크롤 위치가 그대로 남아 다음
+  // 기억이 노래 카드부터 보였다(2026-09-20). 내용이 바뀌었으니 맨 위(연도·
+  // 장소)부터 보이게 되돌린다.
+  card.scrollTop = 0;
+  card.classList.add("recall-card--visible");
 }
 
 function playRecallStorySong(story) {
