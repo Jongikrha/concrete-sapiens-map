@@ -780,6 +780,7 @@ function openRecallCard() {
   document.getElementById("recall-card-yearplace").innerHTML =
     `${year !== null ? year : "· · ·"} · <span class="recall-card-place">${escapeHtml(place)}</span>`;
   document.getElementById("recall-card-content").textContent = story.content;
+  renderRecallCardPhoto(story);
 
   // 기억 라디오는 기억과 노래를 따로 움직인다(2026-09-15) — 이미 노래가
   // 나오고 있으면 카드를 넘겨도 그 노래를 끊지 않고, 이 기억의 노래는
@@ -796,6 +797,58 @@ function openRecallCard() {
   // 장소)부터 보이게 되돌린다.
   card.scrollTop = 0;
   card.classList.add("recall-card--visible");
+}
+
+// ------------------------------------------------------------
+// 회상 카드 안 첨부 사진(2026-09-30) — 사진이 있는 기억이 기억 라디오/
+// 기억산책에서 나와도 카드에는 연도·장소와 본문만 보이고 사진은 한 장도
+// 안 나왔다. 기억 열람 시트(js/storySheet.js renderStoryItem)와 같은 4:3 +
+// photoFocusX/Y 크롭 규칙으로 연도·장소 바로 아래에 걸어준다. presigned
+// URL 캐시(js/storySheet.js resolveStoryPhotoUrl)는 시트와 그대로 공유한다 —
+// 같은 사진을 시트에서 이미 봤다면 URL을 다시 만들지 않고, 오래 켜둔
+// 세션에서 만료되는 처리(TTL)도 거기 것을 그대로 따른다.
+// ------------------------------------------------------------
+function renderRecallCardPhoto(story) {
+  const slot = document.getElementById("recall-card-photo");
+  // 카드 DOM은 기억마다 재사용되므로 먼저 비운다 — 안 그러면 사진 없는
+  // 기억으로 넘어갔을 때 직전 사진이 그대로 남는다. 또 URL 조회가 비동기라
+  // 늦게 도착한 응답이 이미 다음 기억으로 넘어간 카드에 꽂히는 것도
+  // recallCurrentStory 비교로 막는다(showRecallStory의 500ms 타이머와 같은 방식).
+  slot.replaceChildren();
+  if (!story.photoKey) {
+    slot.classList.add("hidden");
+    return;
+  }
+  slot.classList.remove("hidden");
+  resolveStoryPhotoUrl(story.photoKey).then((url) => {
+    if (recallCurrentStory !== story) return;
+    if (!url) {
+      slot.classList.add("hidden");
+      return;
+    }
+    const img = document.createElement("img");
+    img.className = "recall-card-photo-img";
+    img.alt = "";
+    img.src = url;
+    img.style.objectPosition = `${story.photoFocusX ?? 50}% ${story.photoFocusY ?? 50}%`;
+    slot.replaceChildren(img);
+  });
+  prefetchNextRecallPhoto();
+}
+
+// 바로 다음에 나올 기억의 사진 한 장만 미리 받아둔다 — 사진이 있는 기억이
+// 연달아 나오면 카드가 열린 뒤 사진이 뒤늦게 채워지는 게 눈에 띈다. 큐에
+// 있는 사진을 다 미리 받으면(현재 사진 있는 기억 100개 × 수백KB) 모바일
+// 데이터가 아까우니 딱 한 장까지만 — 앨범 형태로 확장할 때도 이 상한은 유지한다.
+function prefetchNextRecallPhoto() {
+  // 뒤로 갔다 오는 중(recallHistory 되짚기)이면 다음 카드는 이미 본 기억이라
+  // URL 캐시에 남아 있다 — 새로 받을 게 없다.
+  if (recallHistoryIndex !== recallHistory.length - 1) return;
+  const next = recallQueue[recallQueue.length - 1]; // 큐는 pop()으로 뒤에서 꺼낸다
+  if (!next || !next.photoKey) return;
+  resolveStoryPhotoUrl(next.photoKey).then((url) => {
+    if (url) new Image().src = url;
+  });
 }
 
 function playRecallStorySong(story) {

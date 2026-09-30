@@ -4492,6 +4492,32 @@ button.story-place-line:hover {
   width: 100%;
 }
 
+/* 회상 카드 안 첨부 사진(js/recall.js renderRecallCardPhoto) — 비율(4:3)과
+   크롭 규칙은 기억 열람 시트의 .story-photo와 같게 맞춘다. 작성 폼에서
+   드래그로 잡은 위치(photoFocusX/Y)가 시트든 회상 카드든 같은 그림으로
+   보여야 하기 때문. 연도·장소 바로 아래 자리라 아래쪽 여백만 이 카드에
+   맞춰 따로 둔다. URL을 받아오기 전에도 aspect-ratio로 높이를 미리 잡아
+   카드가 늦게 늘어나며 흔들리지 않게 한다. */
+.recall-card-photo {
+  aspect-ratio: 4 / 3;
+  background: var(--cs-map-gray);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 0 18px;
+  /* 카드 자체가 max-height: 60vh 안에서 스크롤되는데, 4:3 사진을 그대로
+     펼치면 화면이 짧은 기기에서 사진만으로 카드가 꽉 차 본문이 스크롤
+     아래로 밀린다. 높이에 상한을 둬서(초과분은 object-position 기준으로
+     위아래가 잘린다) 사진 + 첫 문장이 같이 보이게 한다. */
+  max-height: 30vh;
+}
+
+.recall-card-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* 기억 라디오 카드의 "이 기억의 노래" 카드 + 다음 기억으로 버튼
    (2026-09-19 디자인 변경 — 레코드판/곡명/재생 버튼/파형, 연한 코랄 톤).
    동작은 js/recall.js refreshRecallSongCard 참고. 코랄은 이 카드에서만
