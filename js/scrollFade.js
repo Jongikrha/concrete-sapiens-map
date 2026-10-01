@@ -48,7 +48,15 @@ function initFadeScrollbars() {
 function handleAnyScroll(e) {
   const el = e.target;
   if (!(el instanceof Element) || !el.matches(FADE_SCROLLBAR_SELECTOR)) return;
+  if (isFadeScrollbarSuppressed(el)) return;
   updateFadeScrollbarThumb(el);
+}
+
+// 기억 카드 시트(.sheet-scroll)와 회상 세션 카드(.recall-card — 기억산책/
+// 기억 라디오 공통)에서는 스크롤바를 아예 보이지 않게 한다(2026-10-01
+// 요청). 스크롤 자체는 그대로 된다.
+function isFadeScrollbarSuppressed(el) {
+  return el.matches(".sheet-scroll, .recall-card");
 }
 
 // "지금까지 쌓인 기억" 등 헤더(제목+닫기 버튼)가 스크롤 컨테이너 맨 위에
