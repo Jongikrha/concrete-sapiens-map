@@ -4394,6 +4394,24 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
+/* 모바일 기억 라디오 — 어두운 밤하늘 위에서 흰 원 ✕가 혼자 튀어 거슬린다는
+   피드백(2026-10-02). 터치 영역(44px)은 그대로 두고, 보이는 건 반투명
+   32px 원 + 얇은 흰 ✕로만 가볍게 그린다. 기억산책은 밝은 지도 위라
+   흰 ✕가 안 보이므로 라디오(.recall-radio-night)에만 적용. */
+@media (max-width: 767px) {
+  .recall-radio-night .recall-exit-btn {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 15.5px, transparent 16px);
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 16px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  .recall-radio-night .recall-exit-btn:hover {
+    color: #fff;
+  }
+}
+
 /* 별자리 개요 — 실제 카카오 지도가 아니라 별도의 "밤하늘" 캔버스에
    내 기억을 점으로 찍는다. 예전에 실제 지도 위에서 점을 선으로 이었다가
    "지하철 노선도 같다"는 피드백으로 뺀 이력이 있어(js/map.js
