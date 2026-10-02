@@ -4396,18 +4396,32 @@ button.story-place-line:hover {
 
 /* 모바일 기억 라디오 — 어두운 밤하늘 위에서 흰 원 ✕가 혼자 튀어 거슬린다는
    피드백(2026-10-02). 터치 영역(44px)은 그대로 두고, 보이는 건 반투명
-   32px 원 + 얇은 흰 ✕로만 가볍게 그린다. 기억산책은 밝은 지도 위라
-   흰 ✕가 안 보이므로 라디오(.recall-radio-night)에만 적용. */
+   32px 원 + 얇은 ✕로만 가볍게 그린다. 기억산책은 밝은 지도 위라
+   라디오(.recall-radio-night)에만 적용.
+   ✕ 색은 배경 사진에 맞춰 시간대별로 나눈다 — 낮 배경(radio-day-bg,
+   밝은 비 오는 버스 창가)에선 흰 ✕가 묻혀 안 보여서 어두운 ✕, 늦은 밤
+   배경(--late, 어두운 야경)에선 흰 ✕. 배경 사진을 바꾸면 여기 색도
+   같이 맞춰야 한다. */
 @media (max-width: 767px) {
   .recall-radio-night .recall-exit-btn {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 15.5px, transparent 16px);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 15.5px, transparent 16px);
     box-shadow: none;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(0, 0, 0, 0.72);
     font-size: 16px;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
   }
 
   .recall-radio-night .recall-exit-btn:hover {
+    color: #000;
+  }
+
+  .recall-radio-night--late .recall-exit-btn {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 15.5px, transparent 16px);
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  .recall-radio-night--late .recall-exit-btn:hover {
     color: #fff;
   }
 }
