@@ -6,10 +6,19 @@
 // js/storage.js는 클래식 스크립트로 그대로 재사용하되, 게스트 클라이언트
 // 대신 로그인된 관리자 클라이언트를 Storage._setClient로 주입한다.
 
-import { Amplify } from "https://esm.sh/aws-amplify@6.20.0";
-import { signIn, signOut, fetchAuthSession, getCurrentUser } from "https://esm.sh/aws-amplify@6.20.0/auth";
-import { generateClient } from "https://esm.sh/aws-amplify@6.20.0/data";
-import { getUrl } from "https://esm.sh/aws-amplify@6.20.0/storage";
+// esm.sh에서 진입점별로 따로 받으면 하위 패키지의 캐럿 범위(@aws-amplify/core@^6.x)가
+// 진입점마다 다른 버전으로 풀릴 수 있다 — 실제로 core 6.19.x 배포 후 Amplify.configure는
+// core@6.18.0에, signIn은 core@6.19.2에 붙어 싱글턴이 갈라지면서 "Auth UserPool not
+// configured"로 어드민 로그인이 막혔다(2026-10-05). 메인 앱과 같은 버전 고정 번들을 쓴다.
+import {
+  Amplify,
+  signIn,
+  signOut,
+  fetchAuthSession,
+  getCurrentUser,
+  generateClient,
+  getUrl,
+} from "/js/vendor/aws-amplify.bundle.js";
 
 const isLocalDev = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 // /admin(리다이렉트) 경로에서 열릴 수도 있어서 상대경로는 위험하다 — 절대경로로 고정.
