@@ -194,6 +194,22 @@ function showLogin(errorMessage) {
   }
 }
 
+// 예전엔 모든 실패를 "비밀번호 틀림"으로 보여줘서, Amplify 설정 오류(2026-10-05)를
+// 비밀번호 문제로 착각해 원인 파악이 늦어졌다 — 실제로 자격증명이 틀린 경우에만
+// 그 문구를 쓰고, 나머지는 에러 이름을 그대로 노출한다.
+function getSignInErrorMessage(err) {
+  if (err?.name === "NotAuthorizedException") {
+    if (/attempts exceeded/i.test(err.message)) {
+      return "로그인 시도가 너무 많아 잠시 막혔습니다. 잠시 후 다시 시도해주세요.";
+    }
+    return "이메일 또는 비밀번호가 올바르지 않습니다.";
+  }
+  if (err?.name === "UserNotFoundException") return "이메일 또는 비밀번호가 올바르지 않습니다.";
+  if (err?.name === "UserNotConfirmedException") return "이메일 인증이 끝나지 않은 계정입니다.";
+  if (err?.name === "PasswordResetRequiredException") return "비밀번호 재설정이 필요한 계정입니다.";
+  return `로그인 중 오류가 발생했습니다 (비밀번호 문제 아님): ${err?.name || ""} ${err?.message || err}`;
+}
+
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("login-email").value.trim();
@@ -202,11 +218,12 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   try {
     const result = await signIn({ username: email, password });
     if (!result.isSignedIn) {
-      showLogin("로그인을 완료하지 못했습니다.");
+      showLogin(`로그인을 완료하지 못했습니다. (추가 단계: ${result.nextStep?.signInStep})`);
       return;
     }
   } catch (err) {
-    showLogin("이메일 또는 비밀번호가 올바르지 않습니다.");
+    console.error("어드민 로그인 실패", err);
+    showLogin(getSignInErrorMessage(err));
     return;
   }
 
