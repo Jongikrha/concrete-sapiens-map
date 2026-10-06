@@ -29,6 +29,28 @@
       "require_symbols": true,
       "require_uppercase": true
     },
+    "oauth": {
+      "identity_providers": [],
+      "redirect_sign_in_uri": [
+        "https://concretesapiens.com/",
+        "https://www.concretesapiens.com/",
+        "http://localhost:8765/"
+      ],
+      "redirect_sign_out_uri": [
+        "https://concretesapiens.com/",
+        "https://www.concretesapiens.com/",
+        "http://localhost:8765/"
+      ],
+      "response_type": "code",
+      "scopes": [
+        "phone",
+        "email",
+        "openid",
+        "profile",
+        "aws.cognito.signin.user.admin"
+      ],
+      "domain": "4c3b1e5f7a520c3550b6.auth.ap-northeast-2.amazoncognito.com"
+    },
     "unauthenticated_identities_enabled": true
   },
   "data": {
