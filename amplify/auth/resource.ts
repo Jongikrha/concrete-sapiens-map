@@ -1,4 +1,4 @@
-import { defineAuth } from '@aws-amplify/backend';
+import { defineAuth, secret } from '@aws-amplify/backend';
 import { preSignUpFn } from '../functions/pre-signup/resource';
 
 /**
@@ -24,6 +24,42 @@ export const auth = defineAuth({
         `앱 화면에 이 코드를 입력하고 새 비밀번호를 설정해 주세요.\n\n` +
         `본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다. ` +
         `코드를 입력하지 않으면 비밀번호는 그대로 유지됩니다.`,
+    },
+    // 카카오 로그인(2026-10-06) — 인스타그램 릴스 유입이 대부분 인앱
+    // 브라우저라 이메일/비밀번호를 두 번 입력하는 가입에서 많이 빠져나간다.
+    // Cognito에 카카오 전용 공급자가 없어 OIDC(kauth.kakao.com)로 붙인다.
+    //
+    // - 카카오는 ID 토큰에 email을 넣지 않고 userinfo API로만 준다 — Cognito가
+    //   discovery 문서의 userinfo_endpoint를 불러 email을 채운다. 이 User
+    //   Pool은 email이 필수 속성이라 카카오 앱에서 "카카오계정(이메일)"을
+    //   **필수 동의**로 켜둬야 한다(비즈 앱 전환 필요). 빠지면 가입이 실패한다.
+    // - clientId = 카카오 REST API 키, clientSecret = 카카오 Client Secret.
+    //   둘 다 SSM 시크릿으로만 넣는다(코드/채팅에 절대 남기지 않음):
+    //   npx ampx sandbox secret set KAKAO_CLIENT_ID --identifier prod --profile concrete-sapiens-deploy
+    // - 카카오 콘솔 Redirect URI: https://<Cognito 도메인>/oauth2/idpresponse.
+    //   도메인 접두사는 Amplify가 백엔드 해시로 자동 생성한다(직접 지정하는
+    //   옵션이 막혀 있음) — 배포 후 amplify_outputs.json의 auth.oauth.domain 값.
+    externalProviders: {
+      oidc: [
+        {
+          name: 'Kakao',
+          clientId: secret('KAKAO_CLIENT_ID'),
+          clientSecret: secret('KAKAO_CLIENT_SECRET'),
+          issuerUrl: 'https://kauth.kakao.com',
+          scopes: ['openid', 'account_email'],
+          attributeMapping: { email: 'email' },
+        },
+      ],
+      callbackUrls: [
+        'https://concretesapiens.com/',
+        'https://www.concretesapiens.com/',
+        'http://localhost:8765/',
+      ],
+      logoutUrls: [
+        'https://concretesapiens.com/',
+        'https://www.concretesapiens.com/',
+        'http://localhost:8765/',
+      ],
     },
   },
   // 가입 시 이메일 인증 코드 단계를 건너뛰기 위한 트리거(2026-08-13,
