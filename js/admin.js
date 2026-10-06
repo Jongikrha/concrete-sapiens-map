@@ -511,6 +511,9 @@ const FUNNEL_PAIRS = [
   // 가입 퍼널(2026-10-06) — 가입 화면 노출 → 가입 버튼 → 가입 완료.
   { label: "가입 화면 → 가입 버튼 누름", openType: "auth_shown", confirmType: "signup_submitted" },
   { label: "가입 버튼 → 가입 완료", openType: "signup_submitted", confirmType: "signup_succeeded" },
+  // 비회원이 마법사에서 기억을 다 적고 게시를 눌렀을 때 가입을 요구받은
+  // 횟수 → 가입/로그인 후 실제로 게시까지 간 횟수(2026-10-06).
+  { label: "게시 시 가입 요구 → 가입 후 게시", openType: "publish_auth_required", confirmType: "publish_after_auth" },
 ];
 
 function buildFunnelHtml(appEvents) {

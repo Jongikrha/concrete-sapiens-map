@@ -1513,9 +1513,22 @@ function openComposerWizard(pin) {
       }
       if (postedStory) {
         updatePublishedStory();
-      } else {
-        publishStory();
+        return;
       }
+      // 가입은 작성 진입이 아니라 여기(게시 버튼)에서 받는다(2026-10-06).
+      // 진입 시점에 가입부터 요구하면 아직 쓴 게 없어 "취소"가 가장 쉬운
+      // 선택이 됐다 — 이미 기억을 다 적은 뒤라면 버리기 아까워 가입까지
+      // 이어질 확률이 높다. 가입 화면을 취소해도 마법사는 그대로 열려
+      // 있어 적은 내용이 남는다.
+      if (!Auth.isLoggedIn()) {
+        Storage.logEvent("publish_auth_required");
+        requireLogin(() => {
+          Storage.logEvent("publish_after_auth");
+          publishStory();
+        }, { reason: "publish" });
+        return;
+      }
+      publishStory();
       return;
     }
 

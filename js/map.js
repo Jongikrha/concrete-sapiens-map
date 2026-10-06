@@ -282,7 +282,7 @@ function initMap() {
     const latlng = mouseEvent.latLng;
     spawnClickStamp(mouseEvent);
     const promptPrefill = consumePendingDailyPrompt();
-    requireLogin(() => startFreePinComposer(latlng.getLat(), latlng.getLng(), promptPrefill));
+    startFreePinComposer(latlng.getLat(), latlng.getLng(), promptPrefill);
   });
 
   // 검색 위치 핀은 "다른 곳을 클릭하는 등 어떠한 액션"을 취하면 바로

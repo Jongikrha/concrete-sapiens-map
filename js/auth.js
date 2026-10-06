@@ -16,9 +16,11 @@
 //
 // 이 파일은 두 가지를 담당한다.
 // 1) 전역 Auth 객체 — 로그인 상태 조회/변경의 단일 창구.
-// 2) openAuthOverlay(onSuccess) — "기억 남기기" 진입점에서 로그인 안
-//    되어 있을 때 띄우는 가입/로그인 UI. 로그인(또는 가입) 성공 시
-//    onSuccess()를 호출해 원래 하려던 작성 흐름으로 이어간다.
+// 2) openAuthOverlay(onSuccess) — 로그인이 필요한 동작(기억 게시, 내 기억)
+//    에서 로그인 안 되어 있을 때 띄우는 가입/로그인 UI. 로그인(또는 가입)
+//    성공 시 onSuccess()를 호출해 원래 하려던 흐름으로 이어간다. 기억
+//    남기기는 작성 진입이 아니라 마법사의 게시 버튼에서 요구한다
+//    (2026-10-06, js/composer.js handleWizardNext 참고).
 // ============================================================
 
 const Auth = {
@@ -178,19 +180,22 @@ let authEmailValue = "";
 let authPasswordValue = "";
 let authPasswordConfirmValue = "";
 
-// "기억 남기기"로 이어지는 모든 진입점(플로팅 버튼, 스팟 상세, 지도 클릭,
-// 검색 결과)이 공통으로 쓰는 게이트. 로그인 상태면 바로
-// action()을 실행하고, 아니면 가입/로그인 화면을 띄운 뒤 성공 시 이어서
-// 실행한다.
-function requireLogin(action) {
+// 로그인이 필요한 동작(기억 게시, 내 기억 모드)이 공통으로 쓰는 게이트.
+// 로그인 상태면 바로 action()을 실행하고, 아니면 가입/로그인 화면을 띄운
+// 뒤 성공 시 이어서 실행한다. options.reason === "publish"면 "다 쓴 기억을
+// 남기려면 계정이 필요하다"는 게시 시점 문구로 바꿔 보여준다.
+function requireLogin(action, options) {
   if (Auth.isLoggedIn()) {
     action();
     return;
   }
-  openAuthOverlay(action);
+  openAuthOverlay(action, options);
 }
 
-function openAuthOverlay(onSuccess) {
+let authReason = null;
+
+function openAuthOverlay(onSuccess, options) {
+  authReason = options?.reason || null;
   // 가입 퍼널 계측(2026-10-06) — 릴스 유입 대비 가입이 거의 없어서, 가입
   // 화면이 실제로 얼마나 뜨고 어디서 빠져나가는지 어드민 방문 현황에서
   // 보려는 목적. 이벤트 이름 규칙은 아래 cancelAuthOverlay 참고.
@@ -251,8 +256,12 @@ function renderAuthPanel() {
   const errorHtml = authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : "";
 
   if (authMode === "signup") {
+    const signupHeading = authReason === "publish"
+      ? `<h2 class="composer-title">이 기억을 지도에 남기려면<br />계정이 필요해요</h2>
+      <p class="field-hint">적어두신 기억은 그대로 있어요. 가입하면 바로 남겨져요.</p>`
+      : `<h2 class="composer-title">기억을 계속 남겨두려면<br />계정을 만들어주세요</h2>`;
     panel.innerHTML = `
-      <h2 class="composer-title">기억을 계속 남겨두려면<br />계정을 만들어주세요</h2>
+      ${signupHeading}
       <label class="field-label">이메일</label>
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>

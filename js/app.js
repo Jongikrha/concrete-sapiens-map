@@ -117,24 +117,22 @@ function closeWelcomeOverlay() {
  */
 function handleWelcomeWriteClick() {
   Storage.logEvent("welcome_write_clicked");
-  requireLogin(() => {
-    if (!navigator.geolocation) {
-      alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
-      return;
+  if (!navigator.geolocation) {
+    alert("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+    return;
+  }
+  const btn = document.getElementById("welcome-write-btn");
+  if (btn) btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      closeWelcomeOverlay();
+      startFreePinComposer(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      if (btn) btn.disabled = false;
+      alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
     }
-    const btn = document.getElementById("welcome-write-btn");
-    if (btn) btn.disabled = true;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        closeWelcomeOverlay();
-        startFreePinComposer(pos.coords.latitude, pos.coords.longitude);
-      },
-      () => {
-        if (btn) btn.disabled = false;
-        alert("위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.");
-      }
-    );
-  });
+  );
 }
 
 /**
@@ -145,10 +143,8 @@ function handleWelcomeWriteClick() {
  */
 function handleWriteFabClick() {
   Storage.logEvent("write_fab_clicked");
-  requireLogin(() => {
-    const center = map.getCenter();
-    startFreePinComposer(center.getLat(), center.getLng());
-  });
+  const center = map.getCenter();
+  startFreePinComposer(center.getLat(), center.getLng());
 }
 
 /** 1회성 방문 로그와 별개로, "재방문"과 "첫 방문"을 로컬스토리지 플래그로만
@@ -577,7 +573,7 @@ function bindUIEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       if (sheetOpen) closeSheetToUnfiltered();
-      else if (!document.getElementById("auth-overlay").classList.contains("hidden")) closeAuthOverlay();
+      else if (!document.getElementById("auth-overlay").classList.contains("hidden")) cancelAuthOverlay();
       else if (!document.getElementById("mymemory-overlay").classList.contains("hidden")) closeMyMemoryList();
       else if (!document.getElementById("changepw-overlay").classList.contains("hidden")) closeChangePasswordPanel();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();

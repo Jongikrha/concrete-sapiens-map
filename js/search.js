@@ -130,13 +130,13 @@ function renderSearchAreaModal() {
 
   document.getElementById("search-area-write").onclick = () => {
     document.getElementById("search-area-overlay").classList.add("hidden");
-    requireLogin(() => openComposer({
+    openComposer({
       lat, lng,
       officialPlaceName: placeName,
       placeId,
       address: address || null,
       isFreePin: false,
-    }));
+    });
   };
 }
 
@@ -249,14 +249,14 @@ function bindSearchEvents() {
 
           const promptPrefill = consumePendingDailyPrompt();
           if (promptPrefill) {
-            requireLogin(() => openComposer({
+            openComposer({
               lat, lng,
               officialPlaceName: placeName,
               placeId,
               address,
               isFreePin: false,
               prefillContent: promptPrefill,
-            }));
+            });
             return;
           }
 
