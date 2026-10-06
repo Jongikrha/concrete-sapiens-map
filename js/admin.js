@@ -508,6 +508,9 @@ const FUNNEL_PAIRS = [
   { label: "이맘때 기억", openType: "throwback_opened", confirmType: "throwback_confirmed" },
   { label: "작성 폼", openType: "composer_opened", confirmType: "composer_submitted" },
   { label: "웰컴 모달 → 내 위치에 기억 남기기", openType: "welcome_shown", confirmType: "welcome_write_clicked" },
+  // 가입 퍼널(2026-10-06) — 가입 화면 노출 → 가입 버튼 → 가입 완료.
+  { label: "가입 화면 → 가입 버튼 누름", openType: "auth_shown", confirmType: "signup_submitted" },
+  { label: "가입 버튼 → 가입 완료", openType: "signup_submitted", confirmType: "signup_succeeded" },
 ];
 
 function buildFunnelHtml(appEvents) {
@@ -528,6 +531,16 @@ function buildFunnelHtml(appEvents) {
 const STANDALONE_EVENT_LABELS = [
   { type: "story_card_opened", label: "기억 카드 열람" },
   { type: "share_clicked", label: "나의 기억 지도 공유 클릭" },
+  { type: "visit_inapp_instagram", label: "인스타그램 인앱 브라우저 방문" },
+  { type: "login_succeeded", label: "로그인 성공(기존 회원)" },
+];
+
+// 접두사 하나에 원인/화면이 뒤에 붙는 이벤트(예: "signup_failed:password_mismatch",
+// "auth_cancelled:signup") — 종류가 열려 있어 고정 목록 대신 접두사로 묶어
+// 세부 항목별 개수를 보여준다.
+const PREFIXED_EVENT_GROUPS = [
+  { prefix: "auth_cancelled:", label: "가입/로그인 화면 취소" },
+  { prefix: "signup_failed:", label: "가입 실패" },
 ];
 
 function buildEventCountsHtml(appEvents) {
@@ -535,9 +548,17 @@ function buildEventCountsHtml(appEvents) {
   appEvents.forEach((e) => {
     counts[e.type] = (counts[e.type] || 0) + 1;
   });
-  return STANDALONE_EVENT_LABELS.map(
+  const standalone = STANDALONE_EVENT_LABELS.map(
     ({ type, label }) => `<div class="top-story-row"><span>${escapeHtml(label)}</span><span>${counts[type] || 0}</span></div>`
   ).join("");
+  const prefixed = PREFIXED_EVENT_GROUPS.map(({ prefix, label }) =>
+    Object.keys(counts)
+      .filter((type) => type.startsWith(prefix))
+      .sort((a, b) => counts[b] - counts[a])
+      .map((type) => `<div class="top-story-row"><span>${escapeHtml(label)} — ${escapeHtml(type.slice(prefix.length))}</span><span>${counts[type]}</span></div>`)
+      .join("")
+  ).join("");
+  return standalone + prefixed;
 }
 
 function computeReturningVisitRate(appEvents) {

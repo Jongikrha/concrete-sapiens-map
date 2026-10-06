@@ -160,6 +160,10 @@ function logVisitKind() {
   const isReturning = !!localStorage.getItem(VISITED_BEFORE_KEY);
   Storage.logEvent(isReturning ? "visit_returning" : "visit_first");
   localStorage.setItem(VISITED_BEFORE_KEY, "1");
+  // 인스타그램 릴스 유입은 대부분 인스타 인앱 브라우저로 열린다 — 이
+  // 환경은 비밀번호 자동완성이 약하고 저장공간도 일반 브라우저와 분리돼
+  // 있어 가입 전환에 불리하다. 비중을 보려고 따로 센다(2026-10-06).
+  if (/Instagram/i.test(navigator.userAgent)) Storage.logEvent("visit_inapp_instagram");
 }
 
 // 예전엔 "N개의 기억이 쌓였습니다"라는 숫자 배너였다 — 첫인상을 끄는

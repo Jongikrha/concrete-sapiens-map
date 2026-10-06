@@ -191,6 +191,10 @@ function requireLogin(action) {
 }
 
 function openAuthOverlay(onSuccess) {
+  // 가입 퍼널 계측(2026-10-06) — 릴스 유입 대비 가입이 거의 없어서, 가입
+  // 화면이 실제로 얼마나 뜨고 어디서 빠져나가는지 어드민 방문 현황에서
+  // 보려는 목적. 이벤트 이름 규칙은 아래 cancelAuthOverlay 참고.
+  Storage.logEvent("auth_shown");
   pendingAuthSuccess = onSuccess || null;
   authMode = "signup";
   authError = "";
@@ -220,6 +224,14 @@ function closeAuthOverlay() {
   // 비밀번호 값과 한 쌍으로 착각해 "비밀번호를 저장하시겠습니까?"를
   // 띄우는 원인이 된다 — 닫을 때 실제로 비워서 렌더링한다.
   renderAuthPanel();
+}
+
+// 사용자가 직접 "취소"를 눌렀을 때만 기록한다 — closeAuthOverlay는 가입/
+// 로그인 성공 후에도 불리므로 거기서 찍으면 이탈과 성공이 섞인다. 어느
+// 화면(signup/login/verify/forgot/reset)에서 포기했는지 타입 뒤에 붙인다.
+function cancelAuthOverlay() {
+  Storage.logEvent(`auth_cancelled:${authMode}`);
+  closeAuthOverlay();
 }
 
 function isValidEmail(v) {
@@ -264,7 +276,7 @@ function renderAuthPanel() {
       authPasswordValue = "";
       renderAuthPanel();
     };
-    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+    panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
   } else if (authMode === "verify") {
     panel.innerHTML = `
       <h2 class="composer-title">이메일을 확인해주세요</h2>
@@ -278,7 +290,7 @@ function renderAuthPanel() {
     `;
     panel.querySelector("#auth-submit").onclick = handleVerifySubmit;
     panel.querySelector("#auth-resend").onclick = handleResendCode;
-    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+    panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
   } else if (authMode === "login") {
     panel.innerHTML = `
       <h2 class="composer-title">다시 만난 기억들</h2>
@@ -307,7 +319,7 @@ function renderAuthPanel() {
       authPasswordValue = "";
       renderAuthPanel();
     };
-    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+    panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
   } else if (authMode === "forgot") {
     panel.innerHTML = `
       <h2 class="composer-title">비밀번호를 잊으셨나요?</h2>
@@ -325,7 +337,7 @@ function renderAuthPanel() {
       authError = "";
       renderAuthPanel();
     };
-    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+    panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
   } else if (authMode === "reset") {
     panel.innerHTML = `
       <h2 class="composer-title">새 비밀번호를 설정해주세요</h2>
@@ -342,7 +354,7 @@ function renderAuthPanel() {
     `;
     panel.querySelector("#auth-submit").onclick = handleResetSubmit;
     panel.querySelector("#auth-resend").onclick = handleForgotResend;
-    panel.querySelector("#auth-cancel").onclick = closeAuthOverlay;
+    panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
   }
 
   const submitBtn = panel.querySelector("#auth-submit");
@@ -357,17 +369,22 @@ async function handleSignupSubmit() {
   authPasswordValue = password;
   authPasswordConfirmValue = passwordConfirm;
 
+  // 클라이언트 검증에서 막힌 것도 원인별로 남긴다 — 인앱 브라우저에서
+  // 비밀번호 확인 불일치가 잦은지 등을 보려는 것.
   if (!isValidEmail(email)) {
+    Storage.logEvent("signup_failed:invalid_email");
     authError = "이메일 형식을 확인해주세요.";
     renderAuthPanel();
     return;
   }
   if (!isValidPassword(password)) {
+    Storage.logEvent("signup_failed:short_password");
     authError = "비밀번호는 8자 이상이어야 합니다.";
     renderAuthPanel();
     return;
   }
   if (password !== passwordConfirm) {
+    Storage.logEvent("signup_failed:password_mismatch");
     authError = "비밀번호가 일치하지 않습니다.";
     renderAuthPanel();
     return;
@@ -376,13 +393,16 @@ async function handleSignupSubmit() {
   authBusy = true;
   authError = "";
   renderAuthPanel();
+  Storage.logEvent("signup_submitted");
 
   try {
     await Auth.signUp({ email, password });
+    Storage.logEvent("signup_succeeded");
     const onSuccess = pendingAuthSuccess;
     closeAuthOverlay();
     if (onSuccess) onSuccess();
   } catch (e) {
+    Storage.logEvent(`signup_failed:${e?.name || "unknown"}`);
     authBusy = false;
     authError = Auth.mapError(e);
     renderAuthPanel();
@@ -455,6 +475,7 @@ async function handleLoginSubmit() {
       renderAuthPanel();
       return;
     }
+    Storage.logEvent("login_succeeded");
     const onSuccess = pendingAuthSuccess;
     closeAuthOverlay();
     if (onSuccess) onSuccess();
