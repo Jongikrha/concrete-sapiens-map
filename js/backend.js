@@ -34,6 +34,7 @@ import {
   confirmResetPassword,
   updatePassword,
   deleteUser,
+  signInWithRedirect,
   uploadData,
   getUrl,
 } from "./vendor/aws-amplify.bundle.js";
@@ -65,6 +66,7 @@ fetch(OUTPUTS_FILE)
       confirmResetPassword,
       updatePassword,
       deleteUser,
+      signInWithRedirect,
     });
     window._storageReadyResolvers.resolve({ uploadData, getUrl });
   })

@@ -54,6 +54,7 @@ async function initApp() {
   renderMemoryArchiveEntry();
   if (!landedFromCache) handleInitialEntry();
   maybeShowWelcomeOverlay();
+  resumeAfterKakaoLogin();
 }
 
 // 브라우저당 한 번만 보여주는 첫 방문 환영 모달(2026-08-21) — 초대

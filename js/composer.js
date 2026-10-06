@@ -852,6 +852,40 @@ function openComposerWizard(pin) {
   // startFreePinComposer 참고).
   pin._wizardState = state;
 
+  // 카카오 로그인으로 페이지를 떠났다 돌아온 경우(js/auth.js
+  // resumeAfterKakaoLogin) — 저장해둔 초안으로 MEMORY 스텝부터 다시 연다.
+  // 사진은 게시 이후 스텝이라 초안에 없다.
+  const restoreDraft = pin._restoreDraft || null;
+  if (restoreDraft) {
+    Object.assign(state, restoreDraft.state);
+    step = 2;
+  }
+
+  // 위 복원의 반대편 — 리다이렉트 전에 sessionStorage에 남길 직렬화
+  // 가능한 초안(장소 + WHERE/WHEN/MEMORY 입력값).
+  function buildDraftForRedirect() {
+    captureStep(2);
+    return {
+      pin: {
+        lat: pin.lat,
+        lng: pin.lng,
+        officialPlaceName: pin.officialPlaceName || null,
+        placeId: pin.placeId || null,
+        address: pin.address || null,
+        isFreePin: !!pin.isFreePin,
+      },
+      state: {
+        placeName: state.placeName,
+        authorMode: state.authorMode,
+        authorName: state.authorName,
+        dateMode: state.dateMode,
+        year: state.year,
+        month: state.month,
+        content: state.content,
+      },
+    };
+  }
+
   function captureStep(n) {
     const panel = document.getElementById("composer-panel");
     if (n === 0) {
@@ -1525,7 +1559,7 @@ function openComposerWizard(pin) {
         requireLogin(() => {
           Storage.logEvent("publish_after_auth");
           publishStory();
-        }, { reason: "publish" });
+        }, { reason: "publish", getDraft: buildDraftForRedirect });
         return;
       }
       publishStory();
@@ -1596,6 +1630,14 @@ function openComposerWizard(pin) {
   }
 
   renderWizardStep();
+  // 로그인에 성공해 돌아왔으면 사용자가 이미 누른 "게시"를 이어서 실행한다
+  // — MEMORY 스텝 검증(금칙어 등)을 그대로 다시 거친다.
+  if (restoreDraft?.autoPublish) handleWizardNext();
+}
+
+/** 카카오 로그인 복귀 후 초안 복원 진입점(js/auth.js resumeAfterKakaoLogin). */
+function resumeComposerDraft(draft, { autoPublish }) {
+  openComposer({ ...draft.pin, _restoreDraft: { state: draft.state, autoPublish } });
 }
 
 // ------------------------------------------------------------

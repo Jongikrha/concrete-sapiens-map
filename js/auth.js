@@ -39,9 +39,21 @@ const Auth = {
   async _refreshCurrentUser() {
     try {
       const user = await this._sdk.getCurrentUser();
+      // 카카오(리다이렉트) 로그인은 signInDetails가 없고 username도
+      // "kakao_..."라, 실제 이메일은 ID 토큰(Cognito가 카카오 userinfo에서
+      // 받아 매핑한 email 속성)에서 읽는다.
+      let email = user.signInDetails?.loginId;
+      if (!email) {
+        try {
+          const session = await this._sdk.fetchAuthSession();
+          email = session.tokens?.idToken?.payload?.email;
+        } catch (_) {
+          // 토큰을 못 읽어도 로그인 자체는 유효 — 아래 username으로 대체
+        }
+      }
       this._currentUser = {
         userId: user.userId,
-        email: user.signInDetails?.loginId || user.username,
+        email: email || user.username,
       };
     } catch (e) {
       this._currentUser = null;
@@ -106,6 +118,14 @@ const Auth = {
     this._currentUser = null;
     Storage.clearMyStoryIds();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
+  },
+
+  // 카카오 로그인(2026-10-06) — Cognito 호스티드 로그인을 거쳐 카카오로
+  // 페이지 전체가 이동한다. 돌아오면 backend.js 번들의 OAuth 리스너가
+  // ?code=를 처리하고, Auth.init()의 getCurrentUser가 그 완료를 기다린 뒤
+  // 로그인 상태가 된다(이어서 할 일은 resumeAfterKakaoLogin 참고).
+  async signInWithKakao() {
+    return this._sdk.signInWithRedirect({ provider: { custom: "Kakao" } });
   },
 
   async requestPasswordReset({ email }) {
@@ -193,9 +213,14 @@ function requireLogin(action, options) {
 }
 
 let authReason = null;
+// 카카오 로그인은 페이지를 떠났다 돌아오므로 onSuccess 콜백이 사라진다.
+// 게시 직전에 가입을 요구받은 경우엔 쓰던 기억을 잃지 않도록, 호출한 쪽이
+// 넘긴 getDraft()로 직렬화 가능한 초안을 받아 sessionStorage에 남겨둔다.
+let authGetDraft = null;
 
 function openAuthOverlay(onSuccess, options) {
   authReason = options?.reason || null;
+  authGetDraft = options?.getDraft || null;
   // 가입 퍼널 계측(2026-10-06) — 릴스 유입 대비 가입이 거의 없어서, 가입
   // 화면이 실제로 얼마나 뜨고 어디서 빠져나가는지 어드민 방문 현황에서
   // 보려는 목적. 이벤트 이름 규칙은 아래 cancelAuthOverlay 참고.
@@ -239,6 +264,65 @@ function cancelAuthOverlay() {
   closeAuthOverlay();
 }
 
+const KAKAO_PENDING_KEY = "concrete_sapiens_kakao_pending";
+
+function kakaoButtonHtml() {
+  return `
+      <button class="btn-kakao" id="auth-kakao">
+        <svg class="btn-kakao-symbol" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.48 3 2 6.5 2 10.82c0 2.79 1.86 5.24 4.66 6.62l-.95 3.47c-.08.3.26.54.52.37l4.13-2.73c.54.07 1.08.11 1.64.11 5.52 0 10-3.5 10-7.84S17.52 3 12 3z"/></svg>
+        카카오로 시작하기
+      </button>
+      <div class="auth-divider"><span>또는 이메일로</span></div>`;
+}
+
+async function handleKakaoClick() {
+  Storage.logEvent("kakao_clicked");
+  try {
+    const draft = authGetDraft ? authGetDraft() : null;
+    sessionStorage.setItem(KAKAO_PENDING_KEY, JSON.stringify({ reason: authReason, draft }));
+  } catch (_) {
+    // 저장 실패(사파리 프라이빗 등)해도 로그인 자체는 진행 — 초안만 못 살린다
+  }
+  authBusy = true;
+  authError = "";
+  renderAuthPanel();
+  try {
+    await Auth.signInWithKakao();
+  } catch (e) {
+    Storage.logEvent(`kakao_failed:${e?.name || "unknown"}`);
+    try { sessionStorage.removeItem(KAKAO_PENDING_KEY); } catch (_) {}
+    authBusy = false;
+    authError = "카카오 로그인을 시작하지 못했어요. 잠시 후 다시 시도해주세요.";
+    renderAuthPanel();
+  }
+}
+
+// initApp()이 지도/마커/최초 랜딩까지 끝낸 뒤 부른다. 카카오에서 돌아온
+// 게 아니면(대기 표시가 없으면) 아무것도 안 한다. 게시 직전에 떠났던
+// 경우엔 쓰던 기억을 마법사 MEMORY 스텝으로 되살리고, 로그인에
+// 성공했으면 바로 게시까지 이어간다(이메일 가입의 onSuccess와 같은 결과).
+function resumeAfterKakaoLogin() {
+  let pending = null;
+  try {
+    pending = JSON.parse(sessionStorage.getItem(KAKAO_PENDING_KEY) || "null");
+    sessionStorage.removeItem(KAKAO_PENDING_KEY);
+  } catch (_) {
+    return;
+  }
+  if (!pending) return;
+
+  const loggedIn = Auth.isLoggedIn();
+  Storage.logEvent(loggedIn ? "kakao_login_succeeded" : "kakao_login_failed");
+  if (!loggedIn) {
+    showToast("entry-toast", "카카오 로그인을 완료하지 못했어요. 다시 시도해주세요.", 3000);
+  }
+  if (pending.draft) {
+    if (loggedIn) Storage.logEvent("publish_after_auth");
+    if (typeof sheetOpen !== "undefined" && sheetOpen) closeSheet();
+    resumeComposerDraft(pending.draft, { autoPublish: loggedIn });
+  }
+}
+
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
@@ -262,6 +346,7 @@ function renderAuthPanel() {
       : `<h2 class="composer-title">기억을 계속 남겨두려면<br />계정을 만들어주세요</h2>`;
     panel.innerHTML = `
       ${signupHeading}
+      ${kakaoButtonHtml()}
       <label class="field-label">이메일</label>
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>
@@ -303,6 +388,7 @@ function renderAuthPanel() {
   } else if (authMode === "login") {
     panel.innerHTML = `
       <h2 class="composer-title">다시 만난 기억들</h2>
+      ${kakaoButtonHtml()}
       <label class="field-label">이메일</label>
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>
@@ -364,6 +450,12 @@ function renderAuthPanel() {
     panel.querySelector("#auth-submit").onclick = handleResetSubmit;
     panel.querySelector("#auth-resend").onclick = handleForgotResend;
     panel.querySelector("#auth-cancel").onclick = cancelAuthOverlay;
+  }
+
+  const kakaoBtn = panel.querySelector("#auth-kakao");
+  if (kakaoBtn) {
+    kakaoBtn.onclick = handleKakaoClick;
+    kakaoBtn.disabled = authBusy;
   }
 
   const submitBtn = panel.querySelector("#auth-submit");

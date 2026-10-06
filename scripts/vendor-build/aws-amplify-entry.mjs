@@ -14,5 +14,10 @@ export {
   confirmResetPassword,
   updatePassword,
   deleteUser,
+  signInWithRedirect,
 } from "aws-amplify/auth";
+// 카카오 로그인(signInWithRedirect)에서 돌아왔을 때 URL의 ?code=를 받아
+// 로그인을 마무리하는 리스너 — Amplify.configure()와 같은 번들에 있어야
+// 페이지 로드 시 자동으로 처리된다(2026-10-06).
+import "aws-amplify/auth/enable-oauth-listener";
 export { uploadData, getUrl } from "aws-amplify/storage";

@@ -4824,3 +4824,54 @@ button.story-place-line:hover {
   top: 50%;
   transform: translateY(-50%);
 }
+
+/* ------------------------------------------------------------
+   카카오 로그인 버튼 (2026-10-06) — 카카오 디자인 가이드의 컨테이너
+   색(#FEE500)/심볼/라벨 색을 따른다. 가입·로그인 화면 맨 위에 두고
+   이메일 입력은 "또는 이메일로" 구분선 아래로 내린다.
+------------------------------------------------------------ */
+.btn-kakao {
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px;
+  border: none;
+  border-radius: var(--cs-radius-card);
+  background: #fee500;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.btn-kakao:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-kakao-symbol {
+  width: 18px;
+  height: 18px;
+  fill: #000;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 4px;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.3;
+}

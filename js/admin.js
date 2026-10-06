@@ -514,6 +514,8 @@ const FUNNEL_PAIRS = [
   // 비회원이 마법사에서 기억을 다 적고 게시를 눌렀을 때 가입을 요구받은
   // 횟수 → 가입/로그인 후 실제로 게시까지 간 횟수(2026-10-06).
   { label: "게시 시 가입 요구 → 가입 후 게시", openType: "publish_auth_required", confirmType: "publish_after_auth" },
+  // 카카오 로그인(2026-10-06) — 버튼 클릭 → 돌아와서 로그인 완료.
+  { label: "카카오 버튼 → 카카오 로그인 완료", openType: "kakao_clicked", confirmType: "kakao_login_succeeded" },
 ];
 
 function buildFunnelHtml(appEvents) {
@@ -544,6 +546,7 @@ const STANDALONE_EVENT_LABELS = [
 const PREFIXED_EVENT_GROUPS = [
   { prefix: "auth_cancelled:", label: "가입/로그인 화면 취소" },
   { prefix: "signup_failed:", label: "가입 실패" },
+  { prefix: "kakao_failed:", label: "카카오 로그인 시작 실패" },
 ];
 
 function buildEventCountsHtml(appEvents) {
