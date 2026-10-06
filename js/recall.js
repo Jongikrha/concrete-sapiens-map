@@ -754,7 +754,9 @@ function placeRecallDot(story) {
   recallDotMarker = new kakao.maps.Marker({
     map,
     position: new kakao.maps.LatLng(story.lat, story.lng),
-    image: makeDotImage(1, false, false), // selected=false라 map.js의 5~7초 숨쉬기 애니메이션이 그대로 적용된다
+    // 지도 위 일반 점은 켜진 점만 숨쉬지만(map.js makeDotImage), 기억산책의
+    // 점 하나는 예전처럼 숨쉬게 breathe를 강제한다.
+    image: makeDotImage(1, false, false, false, false, 0, true),
     zIndex: 15,
   });
   kakao.maps.event.addListener(recallDotMarker, "click", openRecallCard);

@@ -11,28 +11,33 @@ let highlightedMarker = null;
 let searchPinMarker = null;
 let searchPinInfo = null; // openSearchAreaModal에 그대로 넘길 { lat, lng, placeName, placeId, address }
 
-// 장소 키(group.key) → { tier, selected, isToday, image } — makeDotImage는
-// 마커마다 반짝임 애니메이션 위상을 매번 새 난수로 만들어서 캐싱 없이는
-// renderMarkers()가 호출될 때마다(검색으로 지도 이동, 필터 전환 등) 화면에
-// 있는 모든 마커의 SVG 이미지를 처음부터 다시 생성해야 했다 — 마커가
-// 수백 개면 그때마다 눈에 띄게 느려지는 원인이었다(2026-08-19). 이 장소의
-// tier/선택/오늘 여부가 실제로 안 바뀌었으면 기존 이미지를 그대로 재사용한다.
+// 마커 이미지는 "모양 조합"(tier/선택/켜짐/새 글/사진 + 켜진 점의 호흡
+// 위상) 단위로 캐싱해 같은 모양의 장소끼리 같은 이미지(같은 data URI
+// 문자열)를 공유한다(2026-10-06). 예전엔 장소마다 숨쉬기 애니메이션
+// 위상을 난수로 뽑아 장소 881곳이 서로 다른 SVG 878개(합계 약 4.5MB —
+// 사진 마커마다 카메라 PNG가 통째로 인라인돼 그중 대부분)가 됐고,
+// 브라우저가 이걸 전부 따로 해석하고 화면에 보이는 점마다 무한 애니메이션을
+// 돌려 지도가 무겁다는 피드백의 원인이 됐다. 지금은 조합이 최대 수십 개라
+// 같은 URL을 브라우저가 한 번만 해석한다.
 const dotImageCache = new Map();
+const BREATH_PHASES = 3;
+
+// 켜진 점들이 한꺼번에 똑같이 숨쉬지 않도록 장소 키로 위상 3종 중 하나를
+// 고른다 — 난수가 아니라 키 기반이라 다시 그려도 같은 이미지가 재사용된다.
+function breathPhaseForKey(key) {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
+  return Math.abs(h) % BREATH_PHASES;
+}
 
 function getDotImage(key, tier, selected, isToday, hasUnseen, hasPhoto) {
-  const cached = dotImageCache.get(key);
-  if (
-    cached &&
-    cached.tier === tier &&
-    cached.selected === selected &&
-    cached.isToday === isToday &&
-    cached.hasUnseen === hasUnseen &&
-    cached.hasPhoto === hasPhoto
-  ) {
-    return cached.image;
+  const phase = isToday && !selected ? breathPhaseForKey(String(key)) : 0;
+  const variant = `${tier}|${selected}|${isToday}|${hasUnseen}|${hasPhoto}|${phase}`;
+  let image = dotImageCache.get(variant);
+  if (!image) {
+    image = makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto, phase);
+    dotImageCache.set(variant, image);
   }
-  const image = makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto);
-  dotImageCache.set(key, { tier, selected, isToday, hasUnseen, hasPhoto, image });
   return image;
 }
 
@@ -128,11 +133,17 @@ function burstRays(cx, cy, innerR, outerR, count, color, opacity) {
  * 반투명 원 겹치기)으로 되돌리고 대신 불투명도를 확실히 올렸다.
  * 기억 수는 크기로(기존 tier), "오늘 남긴 기억이 있는가"는 광원의
  * 선명도로 구분한다(VARIATIONS: 오늘의 기억 = 더 선명·따뜻, 오래된
- * 기억 = 더 희미·부드러움). 선택되지 않은 점만 아주 느리게 커졌다
- * 작아지길 반복한다(BEHAVIOR, 5~7초 주기 — 선택된 점은 이미 크기로
- * 강조되니 정적으로 둔다).
+ * 기억 = 더 희미·부드러움). 숨쉬기(아주 느리게 커졌다 작아짐)는 "켜진"
+ * 점(isToday — 오늘 남긴 기억/검색 반경/내 기억 모드)에만 준다(2026-10-06).
+ * 예전엔 모든 점이 숨쉬었는데, 점이 수백 개라 상시 애니메이션 비용이
+ * 컸고 정작 "지금 살아있는 기억"이라는 신호도 묻혔다 — 오래된 기억은
+ * 조용히 빛나고, 오늘의 기억만 숨쉰다. 선택된 점은 크기로 이미 강조되니
+ * 정적으로 둔다.
  */
-function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
+// breathe: 켜짐 여부와 무관하게 숨쉬기를 강제한다 — 기억산책에서 화면에
+// 점 하나만 띄우는 연출(js/recall.js placeRecallDot)용. 점이 하나뿐이라
+// 비용 문제가 없고, 밝기(isToday)는 평소 점 그대로 두고 싶어서 분리했다.
+function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto, phase = 0, breathe = false) {
   const centerSizes = { 1: 13, 2: 16, 3: 19, 4: 22 };
   const glow1Sizes = { 1: 16, 2: 19, 3: 22, 4: 25 };
   const glow2Sizes = { 1: 26, 2: 30, 3: 34, 4: 38 };
@@ -151,14 +162,15 @@ function makeDotImage(tier, selected, isToday, hasUnseen, hasPhoto) {
   const canvas = glow2 + 6;
   const c = canvas / 2;
 
-  // 선택되지 않은 점만 숨쉬듯 커졌다 작아진다. 마커마다 주기/시작
-  // 위상을 랜덤하게 뽑아서 다 같이 움직이지 않고 제각각 호흡하게 한다
-  // (begin을 음수로 줘서 로드 즉시 각자 다른 위상에서 시작).
+  // 켜진 점만 숨쉰다(위 주석). 주기는 6초로 고정하고 시작 위상만
+  // phase(0~2, breathPhaseForKey)로 1/3씩 어긋나게 해서 같은 이미지를
+  // 재사용하면서도 다 같이 움직이지는 않게 한다(begin을 음수로 줘서
+  // 로드 즉시 각자 다른 위상에서 시작).
   let glow2Animate = "";
   let glow1Animate = "";
-  if (!selected) {
-    const dur = (5 + Math.random() * 2).toFixed(2);
-    const begin = (Math.random() * dur).toFixed(2);
+  if (!selected && (isToday || breathe)) {
+    const dur = "6.00";
+    const begin = ((6 / BREATH_PHASES) * phase).toFixed(2);
     const glow2Peak = (glow2 / 2) * 1.15;
     const glow1PeakOpacity = Math.min(glow1Opacity + 0.08, 0.5);
     glow2Animate = `<animate attributeName="r" values="${glow2 / 2};${glow2Peak.toFixed(2)};${glow2 / 2}" dur="${dur}s" begin="-${begin}s" repeatCount="indefinite"/>`;
