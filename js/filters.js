@@ -170,33 +170,27 @@ function renderHashtagChips() {
 }
 
 // ------------------------------------------------------------
-// 최근 7일 기억 로테이션 칩 — "왜 써야 하는지"에 확률형 약속 대신 확정적
-// 신호(실제로 사람들이 계속 쓰고 있다)를 주려는 목적(2026-08-25, 전광판
-// 시안 중 B안 — 스크롤 대신 페이드 방식을 골랐다. 흐르는 전광판은 새
-// 줄이 필요해 지도가 가려지고, 무거운 개인사 글에는 계속 움직이는
-// 연출이 산만하다는 판단).
+// 기억 로테이션 칩(전광판) — 지도 위에 실제로 남겨진 기억을 하나씩
+// 페이드로 보여준다(2026-08-25, 전광판 시안 중 B안 — 스크롤 대신 페이드
+// 방식을 골랐다. 흐르는 전광판은 새 줄이 필요해 지도가 가려지고, 무거운
+// 개인사 글에는 계속 움직이는 연출이 산만하다는 판단).
+//
+// 2026-10-06 — 처음엔 "최근 7일부터, 다 돌면 창을 넓혀 예전 것도"였는데,
+// 전체 기억을 무작위로 보여주도록 바꿨다(요청). 사진 기억만으로 좁히는
+// 안도 검토했지만 전체의 10%(106/1013)뿐이라 같은 글이 자주 반복돼 보여,
+// "실제로 많은 사람이 쓰고 있다"는 원래 목적에 맞게 전부 노출한다.
+// 한 바퀴를 다 돌면 다시 섞는다.
 // ------------------------------------------------------------
-const MEMORY_TICKER_WINDOW_DAYS = 7;
 const MEMORY_TICKER_ROTATE_MS = 3200;
 let memoryTickerItems = [];
 let memoryTickerIndex = 0;
 let memoryTickerTimer = null;
-// 처음엔 최근 7일로 시작하고, 그 안의 기억을 한 바퀴 다 보여주면(=한 번
-// 순환) 창을 넓혀 더 오래된 기억도 섞는다 — "최근 것부터, 다
-// 보여줬으면 예전 것도"라는 요청(2026-08-25). 새로 렌더될 때(새 글 작성,
-// 필터 변경 등)는 다시 7일로 리셋해 항상 최신을 우선 보여준다.
-// 단 최근 7일이 비어 있으면 전광판을 숨기지 않고 곧바로 예전 기억까지
-// 창을 넓힌다(2026-09-18) — 한산한 시기에 전광판이 통째로 사라지던 문제.
-let memoryTickerWindowDays = MEMORY_TICKER_WINDOW_DAYS;
 
-function getRecentTickerStories(windowDays) {
-  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
-  return Storage.getVisibleStories().filter((s) => new Date(s.createdAt).getTime() >= cutoff);
+function getTickerStories() {
+  return Storage.getVisibleStories();
 }
 
-// Fisher-Yates — 최신순으로 두면 항상 같은 한두 개만 자주 보여서, 노출
-// 순서를 매 렌더마다 섞는다(2026-08-25, "이왕이면 순서보다 랜덤"이라는
-// 피드백). 어떤 글이 최근 7일 안인지(필터링) 자체는 순서와 무관하다.
+// Fisher-Yates — 매 렌더/매 바퀴마다 순서를 새로 섞는다.
 function shuffleTickerItems(items) {
   const shuffled = [...items];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -212,19 +206,7 @@ function renderMemoryTicker() {
 
   clearInterval(memoryTickerTimer);
   memoryTickerTimer = null;
-  memoryTickerWindowDays = MEMORY_TICKER_WINDOW_DAYS;
-  memoryTickerItems = shuffleTickerItems(getRecentTickerStories(memoryTickerWindowDays));
-
-  // 최근 7일에 아무것도 없으면 가장 최근 기억이 들어올 만큼 창을 한 번에
-  // 넓힌다 — 전부 훑는 게 아니라 "그 다음으로 최근"부터 이어가는 것이라,
-  // 오래된 기억이 무작위로 튀어나오지 않는다.
-  if (memoryTickerItems.length === 0) {
-    const widened = nextTickerWindowDays(memoryTickerWindowDays);
-    if (widened !== null) {
-      memoryTickerWindowDays = widened;
-      memoryTickerItems = shuffleTickerItems(getRecentTickerStories(memoryTickerWindowDays));
-    }
-  }
+  memoryTickerItems = shuffleTickerItems(getTickerStories());
 
   if (memoryTickerItems.length === 0) {
     el.classList.add("hidden");
@@ -239,45 +221,29 @@ function renderMemoryTicker() {
   memoryTickerIndex = 0;
   showMemoryTickerItem();
 
-  // 하나뿐이어도 타이머는 계속 둔다 — 매 틱마다 "한 바퀴 다 돌았다"로
-  // 치고 더 오래된 기억이 있는지 확인해야, 글이 하나뿐인 동네에서도
-  // 시간이 지나면 다른 기억으로 넓혀갈 수 있다.
-  memoryTickerTimer = setInterval(advanceMemoryTicker, MEMORY_TICKER_ROTATE_MS);
+  if (memoryTickerItems.length > 1) {
+    memoryTickerTimer = setInterval(advanceMemoryTicker, MEMORY_TICKER_ROTATE_MS);
+  }
 }
 
 function advanceMemoryTicker() {
   if (memoryTickerIndex + 1 >= memoryTickerItems.length) {
-    growMemoryTickerPool();
+    // 한 바퀴를 다 돌았으면 다시 섞어서 처음부터 — 직전 마지막 항목이
+    // 곧바로 다시 나오는 것만 피한다.
+    const last = memoryTickerItems[memoryTickerIndex];
+    memoryTickerItems = shuffleTickerItems(getTickerStories());
+    if (memoryTickerItems.length > 1 && memoryTickerItems[0] === last) {
+      memoryTickerItems.push(memoryTickerItems.shift());
+    }
+    memoryTickerIndex = 0;
+  } else {
+    memoryTickerIndex += 1;
   }
-  memoryTickerIndex = (memoryTickerIndex + 1) % memoryTickerItems.length;
+  if (memoryTickerItems.length === 0) {
+    renderMemoryTicker();
+    return;
+  }
   showMemoryTickerItem();
-}
-
-// 지금 창 밖에 남은 기억 중 "가장 최근 것"을 담을 수 있는 7일 배수 창을
-// 돌려준다. 더 넓힐 게 없으면(=이미 전부 보여주는 중) null.
-// 7일씩 기계적으로 더하면 몇 달 비어있는 구간에서 한 바퀴를 돌아도
-// 아무것도 늘지 않는 헛돌기가 생겨서, 필요한 만큼 건너뛴다.
-function nextTickerWindowDays(currentDays) {
-  const cutoff = Date.now() - currentDays * 24 * 60 * 60 * 1000;
-  let newestOutside = null;
-  Storage.getVisibleStories().forEach((s) => {
-    const t = new Date(s.createdAt).getTime();
-    if (!Number.isFinite(t) || t >= cutoff) return;
-    if (newestOutside === null || t > newestOutside) newestOutside = t;
-  });
-  if (newestOutside === null) return null;
-  const ageDays = (Date.now() - newestOutside) / (24 * 60 * 60 * 1000);
-  // floor+1 — 경계에 딱 걸려 그 기억이 다시 빠지는 일이 없게 항상 넘겨 잡는다.
-  return (Math.floor(ageDays / MEMORY_TICKER_WINDOW_DAYS) + 1) * MEMORY_TICKER_WINDOW_DAYS;
-}
-
-// 창을 다 썼는데 더 보여줄 기억이 남아있으면 창을 넓혀서 다시 섞는다.
-// 이미 전부 보여주고 있으면 그대로 둔다.
-function growMemoryTickerPool() {
-  const widened = nextTickerWindowDays(memoryTickerWindowDays);
-  if (widened === null) return;
-  memoryTickerWindowDays = widened;
-  memoryTickerItems = shuffleTickerItems(getRecentTickerStories(memoryTickerWindowDays));
 }
 
 function showMemoryTickerItem() {
