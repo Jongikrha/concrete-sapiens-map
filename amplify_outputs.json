@@ -639,6 +639,15 @@
                     "groups": [
                       "Admins"
                     ]
+                  },
+                  {
+                    "provider": "userPools",
+                    "ownerField": "userId",
+                    "allow": "owner",
+                    "operations": [
+                      "read"
+                    ],
+                    "identityClaim": "sub"
                   }
                 ]
               }
