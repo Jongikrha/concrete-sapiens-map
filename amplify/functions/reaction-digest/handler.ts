@@ -75,7 +75,7 @@ function snippet(content = ''): string {
 }
 
 function buildMail(entries: { story: Story; people: number }[], totalPeople: number, unsubscribeUrl: string) {
-  const subject = `어제 ${totalPeople}명이 회원님의 기억을 떠올렸어요`;
+  const subject = `오늘 ${totalPeople}명이 회원님의 기억을 떠올렸어요`;
   const shown = entries.slice(0, MAX_STORIES_IN_MAIL);
   const rest = entries.length - shown.length;
   const itemsHtml = shown

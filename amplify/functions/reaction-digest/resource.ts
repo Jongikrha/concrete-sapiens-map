@@ -1,6 +1,6 @@
 import { defineFunction, secret } from '@aws-amplify/backend';
 
-// "떠올랐어요" 이메일 알림(2026-10-08) — 매일 아침 9시(KST)에 지난 24시간
+// "떠올랐어요" 이메일 알림(2026-10-08) — 매일 저녁 8시(KST)에 지난 24시간
 // 동안 생긴 StoryReaction을 글쓴이(StoryAuthor)별로 묶어 Resend로 한 통씩
 // 보낸다. 반응마다 보내면 스팸처럼 느껴져 하루 1회 묶음으로 정했고, 누가
 // 반응했는지는 밝히지 않는다([[project_avatar_notification_badge]]와 같은 원칙).
@@ -12,7 +12,7 @@ import { defineFunction, secret } from '@aws-amplify/backend';
 export const reactionDigestFn = defineFunction({
   name: 'reaction-digest',
   entry: './handler.ts',
-  schedule: { cron: '0 9 * * ? *', timezone: 'Asia/Seoul' },
+  schedule: { cron: '0 20 * * ? *', timezone: 'Asia/Seoul' },
   timeoutSeconds: 120,
   environment: {
     RESEND_API_KEY: secret('RESEND_API_KEY'),
