@@ -124,6 +124,16 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // "떠올랐어요" 알림 메일 수신 거부(2026-10-08) — 레코드가 있으면 거부.
+  // 메일의 수신 거부 링크(amplify/functions/reaction-digest/unsubscribe.ts)가
+  // DynamoDB에 직접 쓰고, 화면에서는 관리자만 읽는다.
+  EmailOptOut: a
+    .model({
+      userId: a.string().required(),
+    })
+    .identifier(['userId'])
+    .authorization((allow) => [allow.group('Admins').to(['read'])]),
+
   // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
   BannedWord: a
     .model({

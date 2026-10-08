@@ -1,16 +1,20 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { storage } from './storage/resource';
 import { adminUsersFn } from './functions/admin-users/resource';
+import { reactionDigestFn, emailUnsubscribeFn } from './functions/reaction-digest/resource';
 
 const backend = defineBackend({
   auth,
   data,
   storage,
   adminUsersFn,
+  reactionDigestFn,
+  emailUnsubscribeFn,
 });
 
 // 어드민 회원관리(adminListUsers 등)가 쓰는 Lambda — Cognito Admin API 호출용
@@ -31,6 +35,28 @@ backend.adminUsersFn.resources.lambda.role?.addToPrincipalPolicy(
     resources: [backend.auth.resources.userPool.userPoolArn],
   })
 );
+
+// "떠올랐어요" 이메일 알림(2026-10-08, amplify/functions/reaction-digest) —
+// AppSync를 거치지 않고 DynamoDB를 직접 읽고 쓴다(owner 기반 모델을 서버에서
+// 전부 훑어야 해서). 필요한 테이블에만 읽기/쓰기 권한을 준다.
+const tables = backend.data.resources.tables;
+const digestLambda = backend.reactionDigestFn.resources.lambda;
+for (const [env, model] of [
+  ['STORY_REACTION_TABLE', 'StoryReaction'],
+  ['STORY_AUTHOR_TABLE', 'StoryAuthor'],
+  ['STORY_TABLE', 'Story'],
+  ['EMAIL_OPT_OUT_TABLE', 'EmailOptOut'],
+] as const) {
+  tables[model].grantReadData(digestLambda);
+  backend.reactionDigestFn.addEnvironment(env, tables[model].tableName);
+}
+const unsubscribeLambda = backend.emailUnsubscribeFn.resources.lambda;
+tables['EmailOptOut'].grantWriteData(unsubscribeLambda);
+backend.emailUnsubscribeFn.addEnvironment('EMAIL_OPT_OUT_TABLE', tables['EmailOptOut'].tableName);
+// 메일 속 수신 거부 링크는 로그인 없이 눌려야 해서 공개 URL로 연다 —
+// 링크에 서명이 있어(token.ts) 남의 수신을 끌 수는 없다.
+const unsubscribeUrl = unsubscribeLambda.addFunctionUrl({ authType: FunctionUrlAuthType.NONE });
+backend.reactionDigestFn.addEnvironment('UNSUBSCRIBE_URL', unsubscribeUrl.url);
 
 // groups: ['Admins']를 쓰면 Identity Pool의 역할 매핑이 자동으로 "Token" 방식이
 // 된다 — 로그인 토큰에 그룹 역할이 실려 있으면 IAM 인증(js/backend.js의 기본
