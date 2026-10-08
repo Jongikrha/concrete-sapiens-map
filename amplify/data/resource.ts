@@ -95,6 +95,35 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // "떠올랐어요" 반응 기록(2026-10-08) — 예전엔 "내가 눌렀는지"를 브라우저
+  // localStorage에만 둬서, 같은 브라우저에서 계정을 바꿔 로그인하면 이전
+  // 계정의 반응이 "이미 했음"으로 보이고 다시 누르면 남의 반응이 취소됐다.
+  // 로그인 계정 단위로 기록하고 본인 것만 owner 기반으로 읽고/지운다
+  // ([[feedback_identity_never_device_based]]). StoryAuthor와 같은 이유로
+  // create/read/delete 모두 userPool authMode로 호출해야 owner가 채워진다.
+  // 화면에 보이는 숫자는 여전히 Story.reactionCount가 진실이다.
+  StoryReaction: a
+    .model({
+      storyId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'delete']),
+      allow.group('Admins').to(['read']),
+    ]),
+
+  // "전달한 기억" 기록(2026-10-08) — StoryReaction과 같은 이유로 브라우저
+  // localStorage에서 로그인 계정 단위로 옮겼다. 공유 자체는 비로그인도
+  // 할 수 있고(Story.shareCount는 그대로 오름), 이 기록은 로그인 상태에서만
+  // 남는다. 취소 개념이 없어 delete는 열지 않는다.
+  StoryShare: a
+    .model({
+      storyId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read']),
+      allow.group('Admins').to(['read']),
+    ]),
+
   // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
   BannedWord: a
     .model({
