@@ -585,6 +585,28 @@ const Storage = {
   },
 
   /**
+   * 로그인한 본인이 "떠올랐어요" 알림 메일을 수신 거부했는지. EmailOptOut은
+   * userId(=sub) 기준 본인 읽기만 열려 있어 userPool authMode로 부른다.
+   * 조회가 실패하면(권한 미배포, 네트워크 등) 거부 안 한 걸로 본다 — 안내
+   * 문구 하나 더 보이는 쪽이 덜 해롭다. GraphQL 에러는 reject가 아니라
+   * errors 배열로 오므로 따로 확인한다.
+   */
+  async isEmailOptedOut(userId) {
+    if (!client || !userId) return false;
+    try {
+      const { data, errors } = await client.models.EmailOptOut.get({ userId }, { authMode: "userPool" });
+      if (errors?.length) {
+        console.error("수신 거부 여부 조회 실패", errors);
+        return false;
+      }
+      return !!data;
+    } catch (e) {
+      console.error("수신 거부 여부 조회 실패", e);
+      return false;
+    }
+  },
+
+  /**
    * 관리자 전용 — storyId별 작성자 계정 전체 조회. PageView와 같은 이유로
    * refresh()에는 안 끼워넣고 admin.js가 로그인 후 명시적으로 부른다.
    */

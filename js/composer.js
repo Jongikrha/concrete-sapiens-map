@@ -1314,6 +1314,43 @@ function openComposerWizard(pin) {
     `;
   }
 
+  // 수신 거부한 사람에겐 완료 화면 메일 안내를 숨긴다. 게시 버튼을 누를 때
+  // 조회를 시작해 게시 요청과 같이 날아가게 하고, 완료 화면이 먼저 떠버렸으면
+  // 응답이 온 뒤 카드만 걷어낸다.
+  let mailOptedOut = false;
+
+  function prefetchMailOptOut() {
+    const userId = Auth.getCurrentUser()?.userId;
+    mailOptedOut = false;
+    Storage.isEmailOptedOut(userId).then((optedOut) => {
+      mailOptedOut = optedOut;
+      if (optedOut) document.querySelector("#composer-panel .wizard-done-mail")?.remove();
+    });
+  }
+
+  // 완료 화면 하단 안내 — 누군가 "떠올랐어요"를 누르면 저녁 8시에 묶어서
+  // 메일이 간다(amplify/functions/reaction-digest). 반응이 없으면 메일도
+  // 없으니 "매일 간다"처럼 읽히지 않게 조건부로 쓴다. 카카오 로그인은
+  // 이메일을 못 받았으면 username("kakao_...")이 대신 들어 있어 주소 줄을
+  // 숨기고, Gmail 탭 안내는 Gmail 주소일 때만 보여준다.
+  function renderDoneMailNotice() {
+    if (mailOptedOut) return "";
+    const email = Auth.getCurrentUser()?.email || "";
+    const hasEmail = email.includes("@");
+    const isGmail = /@(gmail|googlemail)\.com$/i.test(email);
+    return `
+      <div class="wizard-done-mail">
+        <svg class="wizard-done-mail-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M3.8 7l8.2 6 8.2-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        <p class="wizard-done-mail-text">누군가 이 기억을 떠올리면<br><b>저녁 8시</b>에 메일로 알려드릴게요.</p>
+        ${hasEmail ? `<p class="wizard-done-mail-addr">${escapeHtml(email)}</p>` : ""}
+        ${isGmail ? `<p class="wizard-done-mail-hint">Gmail은 <b>'업데이트'</b> 탭을 확인해 주세요</p>` : ""}
+      </div>
+    `;
+  }
+
   function renderWizardStep() {
     const panel = document.getElementById("composer-panel");
 
@@ -1324,7 +1361,7 @@ function openComposerWizard(pin) {
           <div class="wizard-done">
             <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
             <h3 class="wizard-step-title">잘했어요~! 💕</h3>
-            <p class="field-desc"><b>태그</b>나 그때 들었던 <b>음악</b>을 더 남기면<br>다른 사람들이 <b>이 기억에 공감</b>할 수 있어요.</p>
+            ${renderDoneMailNotice()}
           </div>
         </div>
         <div class="wizard-nav">
@@ -1449,6 +1486,7 @@ function openComposerWizard(pin) {
   }
 
   function publishStory() {
+    prefetchMailOptOut();
     const sharedFields = buildSharedFieldsFromState();
     postedStory = {
       id: crypto.randomUUID(),

@@ -2991,22 +2991,67 @@ button.story-place-line:hover {
 /* 3단계(WHERE~MEMORY) 완료 화면 — "잘했어요~!" */
 .wizard-done {
   text-align: center;
-  padding: 32px 0 4px;
+  padding: 12px 0 4px;
 }
 
 .wizard-done-illustration {
   display: block;
   width: 100%;
   max-width: 200px;
-  margin: 0 auto 24px;
+  margin: 0 auto 16px;
 }
 
 .wizard-done .wizard-step-title {
   margin-bottom: 8px;
 }
 
-.wizard-done .field-desc {
-  margin: 0 0 4px;
+/* 완료 화면 메일 알림 안내 — 종이색 패널 위에 흰 편지지처럼 띄운 카드. 488px 패널
+   min-height를 넘지 않게 일러스트 아래 여백을 줄이고 카드도 촘촘하게 둔다. */
+.wizard-done-mail {
+  margin: 12px auto 0;
+  max-width: 280px;
+  padding: 12px 16px 12px;
+  background: #fff;
+  border: 1px dashed var(--cs-gray);
+  border-radius: 14px;
+}
+
+.wizard-done-mail-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 6px;
+  color: var(--cs-orange);
+}
+
+.wizard-done-mail-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--cs-text-main);
+}
+
+.wizard-done-mail-text b {
+  color: var(--cs-orange);
+}
+
+.wizard-done-mail-addr {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wizard-done-mail-hint {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  color: var(--cs-text-muted);
+  background: var(--cs-paper);
+  border-radius: var(--cs-radius-chip);
 }
 
 /* 기억 카드 안 첨부 사진(js/storySheet.js renderStoryItem) — URL을
