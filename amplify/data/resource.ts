@@ -126,13 +126,19 @@ const schema = a.schema({
 
   // "떠올랐어요" 알림 메일 수신 거부(2026-10-08) — 레코드가 있으면 거부.
   // 메일의 수신 거부 링크(amplify/functions/reaction-digest/unsubscribe.ts)가
-  // DynamoDB에 직접 쓰고, 화면에서는 관리자만 읽는다.
+  // DynamoDB에 직접 쓰고, 화면에서는 관리자 + 본인만 읽는다. 본인 읽기는
+  // 기억 남기기 완료 화면이 수신 거부한 사람에게 "8시에 메일로 알려드릴게요"
+  // 안내를 숨기려고 쓴다(2026-10-09). userId가 Cognito sub라 owner 필드를
+  // 따로 두지 않고 userId 자체를 sub 클레임과 맞춘다.
   EmailOptOut: a
     .model({
       userId: a.string().required(),
     })
     .identifier(['userId'])
-    .authorization((allow) => [allow.group('Admins').to(['read'])]),
+    .authorization((allow) => [
+      allow.group('Admins').to(['read']),
+      allow.ownerDefinedIn('userId').identityClaim('sub').to(['read']),
+    ]),
 
   // 금칙어 목록 — 게스트는 작성 화면에서 체크할 수 있게 읽기만, 편집은 관리자만.
   BannedWord: a
