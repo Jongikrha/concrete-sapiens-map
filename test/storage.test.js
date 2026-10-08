@@ -17,7 +17,7 @@ function createLocalStorageMock() {
   };
 }
 
-function createFakeClient(storyAuthorRecords = [], storyReactionRecords = []) {
+function createFakeClient(storyAuthorRecords = [], storyReactionRecords = [], storyShareRecords = []) {
   return {
     models: {
       Story: {
@@ -42,6 +42,10 @@ function createFakeClient(storyAuthorRecords = [], storyReactionRecords = []) {
         create: async ({ storyId }) => ({ data: { id: `r-${storyId}`, storyId } }),
         delete: async () => ({}),
         list: async () => ({ data: storyReactionRecords, nextToken: null }),
+      },
+      StoryShare: {
+        create: async ({ storyId }) => ({ data: { id: `sh-${storyId}`, storyId } }),
+        list: async () => ({ data: storyShareRecords, nextToken: null }),
       },
     },
   };
@@ -85,6 +89,7 @@ beforeEach(() => {
   Storage._setBannedWords([]);
   Storage.clearMyStoryIds();
   Storage.clearMyReactions();
+  Storage.clearMySharedIds();
 });
 
 test("generatePublicId는 허용된 문자로 8자리 문자열을 생성한다", () => {
@@ -409,6 +414,21 @@ test("refreshMyReactions는 서버에 기록된 내 반응을 불러오고 예�
   assert.equal(Storage.hasReacted("s1"), true);
   assert.equal(Storage.hasReacted("s2"), false);
   assert.equal(localStorage.getItem("concrete_sapiens_reacted_v1"), null);
+});
+
+test("markShared는 비로그인이면 기록하지 않고, 로그인 계정 기준으로만 hasShared가 참이다", async () => {
+  Storage.markShared("s1");
+  assert.equal(Storage.hasShared("s1"), false);
+
+  await Storage.refreshMySharedIds();
+  Storage.markShared("s1");
+  assert.equal(Storage.hasShared("s1"), true);
+
+  Storage.clearMySharedIds();
+  Storage._setClient(createFakeClient([], [], [{ id: "sh1", storyId: "s2" }]));
+  await Storage.refreshMySharedIds();
+  assert.equal(Storage.hasShared("s1"), false);
+  assert.equal(Storage.hasShared("s2"), true);
 });
 
 test("toggleReaction은 자기 글(isMyStory)에는 반응 수를 늘리지 않는다", async () => {

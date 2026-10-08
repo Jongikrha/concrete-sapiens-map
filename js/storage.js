@@ -21,7 +21,7 @@
 
 // 예전(2026-10-08 이전) 브라우저 단위 반응 기록 — 정리(삭제) 용도로만 남김.
 const LEGACY_REACTED_KEY = "concrete_sapiens_reacted_v1";
-const SHARED_KEY = "concrete_sapiens_shared_v1";
+const LEGACY_SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
 const READ_STORIES_KEY = "concrete_sapiens_read_stories_v1";
@@ -148,6 +148,8 @@ let _myStoryIds = null;
 // _myStoryIds와 같은 이유로 미리 캐싱하고, null이면 비로그인(=반응 없음).
 // auth.js가 로그인/로그아웃 시점에 refreshMyReactions()/clearMyReactions()로 갱신한다.
 let _myReactions = null;
+// 로그인 계정이 "전달한" 기억 id 집합(StoryShare) — 위와 같은 패턴.
+let _mySharedIds = null;
 
 async function fetchAll(modelName) {
   const items = [];
@@ -428,29 +430,53 @@ const Storage = {
   },
 
   hasShared(storyId) {
-    return this._getSharedSet().has(storyId);
+    return !!_mySharedIds && _mySharedIds.has(storyId);
   },
 
-  // "내가 전달했는지"도 반응과 같은 이유로 브라우저 로컬에만 둔다 —
-  // shareCount는 이미 서버의 공유 진실이고, "누가" 전달했는지 목록은
-  // MY MEMORY(GNB)의 "전달한 기억"에서만 개인 참고용으로 쓴다.
+  // "내가 전달했는지"도 반응과 같은 이유로 로그인 계정 기준이다(2026-10-08,
+  // 예전엔 브라우저 localStorage라 같은 브라우저의 다른 계정과 섞였다).
+  // shareCount는 비로그인 공유도 계속 세고, 이 기록은 MY MEMORY(GNB)의
+  // "전달한 기억"에서만 개인 참고용으로 쓰여 로그인 상태에서만 남긴다.
   markShared(storyId) {
-    const set = this._getSharedSet();
-    set.add(storyId);
-    this._saveSharedSet(set);
+    if (!_mySharedIds || _mySharedIds.has(storyId)) return;
+    _mySharedIds.add(storyId);
+    if (!client) return;
+    client.models.StoryShare.create({ storyId }, { authMode: "userPool" })
+      .then(({ errors }) => errors && console.error("전달 기록 실패", storyId, errors))
+      .catch((e) => console.error("전달 기록 실패", storyId, e));
   },
 
-  _getSharedSet() {
-    const raw = localStorage.getItem(SHARED_KEY);
+  /** 로그인 직후(auth.js) 호출 — refreshMyReactions와 같은 패턴. */
+  async refreshMySharedIds() {
     try {
-      return new Set(raw ? JSON.parse(raw) : []);
-    } catch (e) {
-      return new Set();
+      localStorage.removeItem(LEGACY_SHARED_KEY);
+    } catch (_) {}
+    const ids = new Set();
+    if (client) {
+      let nextToken = null;
+      try {
+        do {
+          const { data, nextToken: token, errors } = await client.models.StoryShare.list({
+            limit: 1000,
+            nextToken,
+            authMode: "userPool",
+          });
+          if (errors) {
+            console.error("내 전달 기록 조회 실패", errors);
+            break;
+          }
+          data.forEach((r) => ids.add(r.storyId));
+          nextToken = token;
+        } while (nextToken);
+      } catch (e) {
+        console.error("내 전달 기록 조회 실패", e);
+      }
     }
+    _mySharedIds = ids;
   },
 
-  _saveSharedSet(set) {
-    localStorage.setItem(SHARED_KEY, JSON.stringify([...set]));
+  clearMySharedIds() {
+    _mySharedIds = null;
   },
 
   /**
