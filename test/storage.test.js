@@ -17,7 +17,7 @@ function createLocalStorageMock() {
   };
 }
 
-function createFakeClient(storyAuthorRecords = []) {
+function createFakeClient(storyAuthorRecords = [], storyReactionRecords = []) {
   return {
     models: {
       Story: {
@@ -37,6 +37,11 @@ function createFakeClient(storyAuthorRecords = []) {
       StoryAuthor: {
         create: async () => ({}),
         list: async () => ({ data: storyAuthorRecords, nextToken: null }),
+      },
+      StoryReaction: {
+        create: async ({ storyId }) => ({ data: { id: `r-${storyId}`, storyId } }),
+        delete: async () => ({}),
+        list: async () => ({ data: storyReactionRecords, nextToken: null }),
       },
     },
   };
@@ -79,6 +84,7 @@ beforeEach(() => {
   Storage._setCache([]);
   Storage._setBannedWords([]);
   Storage.clearMyStoryIds();
+  Storage.clearMyReactions();
 });
 
 test("generatePublicId는 허용된 문자로 8자리 문자열을 생성한다", () => {
@@ -360,25 +366,56 @@ test("reportStory는 임계치 미만이면 status를 바꾸지 않는다", () =
   assert.equal(updated.status, "ACTIVE");
 });
 
-test("toggleReaction은 처음 호출 시 반응 수를 늘리고 hasReacted를 true로 만든다", () => {
+test("toggleReaction은 처음 호출 시 반응 수를 늘리고 hasReacted를 true로 만든다", async () => {
   Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
+  await Storage.refreshMyReactions();
   const updated = Storage.toggleReaction("s1");
   assert.equal(updated.reactionCount, 1);
   assert.equal(Storage.hasReacted("s1"), true);
 });
 
-test("toggleReaction은 두 번째 호출(같은 사람이 다시 누름) 시 반응을 취소한다", () => {
+test("toggleReaction은 두 번째 호출(같은 사람이 다시 누름) 시 반응을 취소한다", async () => {
   Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
+  await Storage.refreshMyReactions();
   Storage.toggleReaction("s1");
   const reverted = Storage.toggleReaction("s1");
   assert.equal(reverted.reactionCount, 0);
   assert.equal(Storage.hasReacted("s1"), false);
 });
 
+test("toggleReaction은 비로그인(반응 캐시 없음) 상태에선 아무것도 바꾸지 않는다", () => {
+  Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
+  const result = Storage.toggleReaction("s1");
+  assert.equal(result.reactionCount, 0);
+  assert.equal(Storage.hasReacted("s1"), false);
+});
+
+test("반응 여부는 계정 기준이라 로그아웃 후 다른 계정으로 로그인하면 이전 계정의 반응이 안 보인다", async () => {
+  Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
+  await Storage.refreshMyReactions();
+  Storage.toggleReaction("s1");
+  Storage.clearMyReactions();
+  assert.equal(Storage.hasReacted("s1"), false);
+
+  Storage._setClient(createFakeClient([], []));
+  await Storage.refreshMyReactions();
+  assert.equal(Storage.hasReacted("s1"), false);
+});
+
+test("refreshMyReactions는 서버에 기록된 내 반응을 불러오고 예전 브라우저 기록은 무시한다", async () => {
+  localStorage.setItem("concrete_sapiens_reacted_v1", JSON.stringify(["s2"]));
+  Storage._setClient(createFakeClient([], [{ id: "r1", storyId: "s1" }]));
+  await Storage.refreshMyReactions();
+  assert.equal(Storage.hasReacted("s1"), true);
+  assert.equal(Storage.hasReacted("s2"), false);
+  assert.equal(localStorage.getItem("concrete_sapiens_reacted_v1"), null);
+});
+
 test("toggleReaction은 자기 글(isMyStory)에는 반응 수를 늘리지 않는다", async () => {
   Storage._setClient(createFakeClient([{ storyId: "s1" }]));
   Storage._setCache([createStory({ id: "s1", reactionCount: 0 })]);
   await Storage.refreshMyStoryIds();
+  await Storage.refreshMyReactions();
   const result = Storage.toggleReaction("s1");
   assert.equal(result.reactionCount, 0);
   assert.equal(Storage.hasReacted("s1"), false);

@@ -62,8 +62,14 @@ const Auth = {
     // 카드 렌더링 중 동기로 참조)를 로그인 상태와 같이 갱신한다. 오직
     // 계정 연결만 보고 브라우저 기기ID는 절대 안 쓴다(2026-08-14) —
     // await로 완료를 기다려야 그 직후 그려지는 카드들이 최신 상태를 본다.
-    if (this._currentUser) await Storage.refreshMyStoryIds();
-    else Storage.clearMyStoryIds();
+    // "떠올랐어요" 반응(storage.js hasReacted)도 같은 이유로 계정 기준으로
+    // 같이 갱신한다(2026-10-08).
+    if (this._currentUser) {
+      await Promise.all([Storage.refreshMyStoryIds(), Storage.refreshMyReactions()]);
+    } else {
+      Storage.clearMyStoryIds();
+      Storage.clearMyReactions();
+    }
     // GNB 아바타(js/mymemory.js)에 로그인 상태 변화를 알려준다. 이 상태가
     // 바뀌는 지점은 init/signIn/confirmSignUp뿐이라 여기 한 곳에서만
     // 갱신하면 충분하다(signOut은 별도로 직접 호출).
@@ -117,6 +123,7 @@ const Auth = {
     await this._sdk.signOut();
     this._currentUser = null;
     Storage.clearMyStoryIds();
+    Storage.clearMyReactions();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
@@ -157,6 +164,7 @@ const Auth = {
     await this._sdk.deleteUser();
     this._currentUser = null;
     Storage.clearMyStoryIds();
+    Storage.clearMyReactions();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 

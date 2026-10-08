@@ -19,7 +19,8 @@
 // Node(node:test)에서도 그대로 require해 테스트할 수 있게 한다.
 // ============================================================
 
-const REACTED_KEY = "concrete_sapiens_reacted_v1";
+// 예전(2026-10-08 이전) 브라우저 단위 반응 기록 — 정리(삭제) 용도로만 남김.
+const LEGACY_REACTED_KEY = "concrete_sapiens_reacted_v1";
 const SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
 const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
@@ -143,6 +144,10 @@ let _bannedWords = [];
 // null이면 아직 로드 전(=isMyStory는 항상 false). auth.js가 로그인/로그아웃
 // 시점에 refreshMyStoryIds()/clearMyStoryIds()로 갱신한다.
 let _myStoryIds = null;
+// 로그인 계정의 "떠올랐어요" 반응 — storyId → StoryReaction 레코드 id(Promise).
+// _myStoryIds와 같은 이유로 미리 캐싱하고, null이면 비로그인(=반응 없음).
+// auth.js가 로그인/로그아웃 시점에 refreshMyReactions()/clearMyReactions()로 갱신한다.
+let _myReactions = null;
 
 async function fetchAll(modelName) {
   const items = [];
@@ -329,19 +334,42 @@ const Storage = {
     // 버튼을 disabled로 막아두지만, 클라이언트 상태만으로 판단하는 낙관적
     // 업데이트 계층이라 여기서도 한 번 더 막아 데이터 정합성을 지킨다.
     if (this.isMyStory(storyId)) return target;
+    // 반응은 로그인 계정 단위로만 기록한다(2026-10-08) — 비로그인이면
+    // 호출부(handleReactionTap)가 먼저 로그인을 요구하므로 여기선 무시.
+    if (!_myReactions) return target;
 
-    const reactedSet = this._getReactedSet();
     target.reactionCount = target.reactionCount || 0;
 
-    if (reactedSet.has(storyId)) {
+    if (_myReactions.has(storyId)) {
       target.reactionCount = Math.max(0, target.reactionCount - 1);
-      reactedSet.delete(storyId);
+      const recordIdPromise = _myReactions.get(storyId);
+      _myReactions.delete(storyId);
+      if (client) {
+        // 방금 누른 반응을 바로 취소하는 경우 create 응답(레코드 id)을
+        // 기다렸다가 지운다.
+        recordIdPromise
+          .then((id) => id && client.models.StoryReaction.delete({ id }, { authMode: "userPool" }))
+          .then((res) => res?.errors && console.error("반응 기록 삭제 실패", storyId, res.errors))
+          .catch((e) => console.error("반응 기록 삭제 실패", storyId, e));
+      }
     } else {
       target.reactionCount += 1;
-      reactedSet.add(storyId);
+      // Amplify Data는 GraphQL 에러를 reject가 아니라 errors 배열로
+      // resolve하므로 따로 확인한다([[project_amplify_data_silent_errors]]).
+      const recordIdPromise = client
+        ? client.models.StoryReaction.create({ storyId }, { authMode: "userPool" })
+          .then(({ data, errors }) => {
+            if (errors) console.error("반응 기록 실패", storyId, errors);
+            return data?.id || null;
+          })
+          .catch((e) => {
+            console.error("반응 기록 실패", storyId, e);
+            return null;
+          })
+        : Promise.resolve(null);
+      _myReactions.set(storyId, recordIdPromise);
     }
 
-    this._saveReactedSet(reactedSet);
     if (client) {
       client.models.Story.update({ id: storyId, reactionCount: target.reactionCount })
         .catch((e) => console.error("반응 반영 실패(백그라운드)", storyId, e));
@@ -349,24 +377,54 @@ const Storage = {
     return target;
   },
 
+  /**
+   * "내가 떠올랐어요를 눌렀는지"는 오직 로그인 계정 기준이다(2026-10-08).
+   * 예전엔 브라우저 localStorage에만 둬서 같은 브라우저에서 다른 계정으로
+   * 로그인해도 이전 계정의 반응이 그대로 보였다. 비로그인이면 항상 false.
+   */
   hasReacted(storyId) {
-    return this._getReactedSet().has(storyId);
+    return !!_myReactions && _myReactions.has(storyId);
   },
 
-  // "내가 반응했는지" 표시는 의도적으로 브라우저 로컬에만 둔다 — 서버의
-  // reactionCount가 이미 공유 진실이고, "누가" 반응했는지는 사용자 계정
-  // 개념이 필요한 나중 단계(로그인/어드민)의 몫이다.
-  _getReactedSet() {
-    const raw = localStorage.getItem(REACTED_KEY);
+  /**
+   * 로그인 직후(auth.js)에 한 번 호출해 내 반응 캐시를 채운다 —
+   * refreshMyStoryIds와 같은 패턴(owner 기반 읽기라 userPool authMode).
+   */
+  async refreshMyReactions() {
+    // 예전 브라우저 단위 기록은 누구 반응인지 알 수 없어 그냥 버린다.
     try {
-      return new Set(raw ? JSON.parse(raw) : []);
-    } catch (e) {
-      return new Set();
+      localStorage.removeItem(LEGACY_REACTED_KEY);
+    } catch (_) {}
+    const reactions = new Map();
+    if (client) {
+      let nextToken = null;
+      try {
+        do {
+          const { data, nextToken: token, errors } = await client.models.StoryReaction.list({
+            limit: 1000,
+            nextToken,
+            authMode: "userPool",
+          });
+          if (errors) {
+            console.error("내 반응 기록 조회 실패", errors);
+            break;
+          }
+          data.forEach((r) => reactions.set(r.storyId, Promise.resolve(r.id)));
+          nextToken = token;
+        } while (nextToken);
+      } catch (e) {
+        console.error("내 반응 기록 조회 실패", e);
+      }
     }
+    _myReactions = reactions;
   },
 
-  _saveReactedSet(set) {
-    localStorage.setItem(REACTED_KEY, JSON.stringify([...set]));
+  /**
+   * 로그아웃/탈퇴(auth.js) 시 비운다 — 남아있으면 다음 계정에 이전
+   * 계정의 반응이 "이미 했음"으로 보인다.
+   */
+  clearMyReactions() {
+    _myReactions = null;
   },
 
   hasShared(storyId) {

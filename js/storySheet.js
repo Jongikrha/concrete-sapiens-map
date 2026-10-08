@@ -571,7 +571,7 @@ function bindStoryItemEvents(content, { onChange, onRemove }) {
   });
 
   content.querySelectorAll(".reaction-btn").forEach((btn) => {
-    btn.onclick = () => { Storage.toggleReaction(btn.dataset.id); onChange(); };
+    btn.onclick = () => handleReactionTap(btn.dataset.id, onChange);
   });
 
   content.querySelectorAll(".share-btn").forEach((btn) => {
@@ -844,6 +844,22 @@ function formatReactionDisplay(count) {
   if (!count) return null;
   const tier = CONFIG.REACTION_DISPLAY_TIERS.find((t) => count >= t.min);
   return tier ? tier.label : null;
+}
+
+// "떠올랐어요" 탭 — 반응은 로그인 계정 단위로만 기록하므로(2026-10-08,
+// storage.js hasReacted 주석 참고) 비로그인이면 로그인부터 받는다. 로그인
+// 직후엔 그 계정이 이미 반응한 글일 수 있어, 토글로 취소하지 않고 "반응
+// 상태"만 보장한다. 회상 카드의 하트(recall.js)도 같은 함수를 쓴다.
+function handleReactionTap(storyId, onDone) {
+  if (Auth.isLoggedIn()) {
+    Storage.toggleReaction(storyId);
+    onDone();
+    return;
+  }
+  requireLogin(() => {
+    if (!Storage.hasReacted(storyId)) Storage.toggleReaction(storyId);
+    onDone();
+  });
 }
 
 function renderStoryItem(story, options = {}) {

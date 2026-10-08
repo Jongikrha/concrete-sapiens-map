@@ -914,10 +914,7 @@ function refreshRecallSongCard() {
     };
     const likeBtn = document.getElementById("recall-song-like");
     likeBtn.classList.toggle("hidden", Storage.isMyStory(story.id));
-    likeBtn.onclick = () => {
-      Storage.toggleReaction(story.id);
-      refreshRecallSongCard();
-    };
+    likeBtn.onclick = () => handleReactionTap(story.id, refreshRecallSongCard);
   }
 
   box.classList.toggle("recall-song--active", isThisSong);
