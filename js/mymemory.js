@@ -239,14 +239,17 @@ function markNotificationsSeen() {
 
 function renderAccountAvatar() {
   const wrap = document.getElementById("account-menu-wrap");
+  const loginBtn = document.getElementById("account-login-btn");
   const user = Auth.getCurrentUser();
 
   if (!user) {
     wrap.classList.add("hidden");
+    loginBtn.classList.remove("hidden");
     closeAccountMenu();
     return;
   }
 
+  loginBtn.classList.add("hidden");
   wrap.classList.remove("hidden");
   document.getElementById("account-menu-email").textContent = user.email || "";
   refreshNotificationBadge();
@@ -412,6 +415,11 @@ function bindAccountMenuEvents() {
   document.getElementById("account-avatar").onclick = (e) => {
     e.stopPropagation();
     toggleAccountMenu();
+  };
+  // 버튼 이름이 "로그인"이라 가입 화면이 아니라 로그인 화면부터 연다 —
+  // 처음인 사람은 카카오 버튼이나 하단 "계정 만들기"로 바로 넘어간다.
+  document.getElementById("account-login-btn").onclick = () => {
+    openAuthOverlay(null, { mode: "login" });
   };
   document.getElementById("menu-posted").onclick = () => openMyMemoryList("posted");
   document.getElementById("menu-recalled").onclick = () => openMyMemoryList("recalled");

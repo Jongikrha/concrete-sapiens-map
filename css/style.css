@@ -390,6 +390,54 @@ body {
   flex-shrink: 0;
 }
 
+/* 비로그인 상태의 로그인 입구 — 하단 "기억 남기기"/"기억 라디오"와
+   시선을 다투지 않게 "?" 버튼과 같은 옅은 배경 + 테두리로만 둔다. */
+.account-login-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--cs-gray);
+  background: rgba(244, 243, 239, 0.88);
+  color: var(--cs-text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-login-btn svg {
+  display: none;
+}
+
+.account-login-btn:hover {
+  background: var(--cs-paper);
+  border-color: var(--cs-orange);
+  color: var(--cs-orange);
+}
+
+/* 좁은 화면에선 글자 버튼이 검색창을 placeholder가 안 보일 만큼 좁혀서
+   (360px 확인) "?" 버튼과 같은 32px 원 + 사람 아이콘으로 줄인다. 로그인
+   후 아바타는 오렌지 틴트라 회색인 이 버튼과 구분된다. */
+@media (max-width: 600px) {
+  .account-login-btn {
+    width: 32px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .account-login-btn svg {
+    display: block;
+  }
+  .account-login-label {
+    display: none;
+  }
+}
+
 /* 이메일 첫 글자를 담은 어두운 원 대신, 사람 아이콘 + 연한 오렌지
    틴트 배경으로 바꿨다(2026-08-21 디자인 레퍼런스 반영). 전용 핑크
    변수가 없어 기존 --cs-orange를 옅게 탄 색을 그대로 쓴다. */

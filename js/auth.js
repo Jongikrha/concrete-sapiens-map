@@ -241,7 +241,7 @@ function openAuthOverlay(onSuccess, options) {
   // 보려는 목적. 이벤트 이름 규칙은 아래 cancelAuthOverlay 참고.
   Storage.logEvent("auth_shown");
   pendingAuthSuccess = onSuccess || null;
-  authMode = "signup";
+  authMode = options?.mode === "login" ? "login" : "signup";
   authError = "";
   authBusy = false;
   authEmailValue = "";

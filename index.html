@@ -104,6 +104,14 @@
           </button>
           <span class="account-notif-dot hidden" id="account-notif-dot" aria-hidden="true"></span>
         </div>
+        <!-- 비로그인 상태에서 아바타 자리를 대신하는 로그인 입구(2026-10-12) —
+             계정이 있다는 것 자체를 알 방법이 없어서 추가. 가입 유도로
+             보이면 비로그인 이용이 위축될 수 있어 "회원가입" 대신 "로그인"
+             하나만, 검색창처럼 옅게 둔다(가입은 열리는 화면 안에서). -->
+        <button class="account-login-btn hidden" id="account-login-btn" aria-label="로그인">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+          <span class="account-login-label">로그인</span>
+        </button>
         <div class="overlay hidden" id="account-menu">
           <div class="composer-card account-menu-card">
             <div class="composer-card-inner">
