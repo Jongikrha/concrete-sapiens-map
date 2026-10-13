@@ -121,6 +121,13 @@ const COURSES_COMING_SOON = [
   { description: "한 사람이 지나온 길을 따라 걷는 발자취를 준비하고 있어요.", kind: "person" },
 ];
 
+// 코스 제목 옆 작은 안내(예: 출간 예정일) — 어드민에서 입력하는 칸은 아직
+// 고민 중이라(2026-10-13) 우선 코스 제목 기준으로 여기에 적어둔다. 어드민
+// 칸을 만들면 Course 필드로 옮기고 이 표는 지운다.
+const COURSE_RELEASE_NOTES = {
+  "콘크리트 사피엔스": "2026년 11월 출간 예정",
+};
+
 const COURSE_LIST_BOOKS_ICON = `
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
     <rect x="3" y="4" width="4" height="16" rx="1" /><rect x="8.5" y="6" width="4" height="14" rx="1" />
@@ -152,7 +159,10 @@ function openCourseChoice() {
           </span>
           <span class="course-choice-text">
             ${i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
-            <span class="course-choice-title">${escapeHtml(c.title)}</span>
+            <span class="course-choice-title-row">
+              <span class="course-choice-title">${escapeHtml(c.title)}</span>
+              ${COURSE_RELEASE_NOTES[c.title] ? `<span class="course-choice-release">${escapeHtml(COURSE_RELEASE_NOTES[c.title])}</span>` : ""}
+            </span>
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳</span>
           </span>
