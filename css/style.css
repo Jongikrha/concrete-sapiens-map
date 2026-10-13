@@ -5278,42 +5278,167 @@ button.story-place-line:hover {
   cursor: pointer;
 }
 
-/* "근처에 남겨진 기억 N개" + 기억 남기기 — 코스가 기억을 모으는 장치가
-   되게 하는 줄이라 본문과 구분해 한 칸 띄운다. */
-/* 공개 코스가 여럿일 때 고르는 목록 */
+/* ------------------------------------------------------------
+   발자취 목록(js/course.js openCourseChoice) — 시안(2026-10-13): 큰 제목 +
+   "N개의 발자취" 배지, 코스 카드(표지·제목·부제·종류/장소 수·둘러보기).
+   맨 앞 코스는 연한 주황 바탕과 "지금 둘러보세요"로 강조하고, 준비 중
+   예고 카드는 흐리게.
+------------------------------------------------------------ */
+.course-list-card {
+  max-width: 640px;
+}
+
+.course-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.course-list-title {
+  margin: 0;
+  font-family: var(--font-maruburi);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--cs-black);
+}
+
+.course-list-subrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 6px;
+}
+
+.course-list-subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: var(--cs-text-muted);
+}
+
+.course-list-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 90, 54, 0.1);
+  color: var(--cs-orange);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .course-choice-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin-top: 16px;
 }
 
 .course-choice-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 20px;
+  padding: 16px 20px 16px 16px;
   border: 1px solid var(--cs-map-gray);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   text-align: left;
   cursor: pointer;
 }
 
-.course-choice-item:hover {
-  border-color: var(--cs-orange);
+.course-choice-item--featured {
+  background: #fff4ef;
+  border-color: #ffc9b8;
+}
+
+.course-choice-item--soon {
+  cursor: default;
+}
+
+.course-choice-cover {
+  position: relative;
+  display: block;
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #2f3031;
+  box-shadow: 0 4px 12px rgba(47, 48, 49, 0.22);
+}
+
+.course-choice-cover-img {
+  position: absolute;
+  inset: 0;
+}
+
+.course-choice-cover-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 책등+앞표지 이미지면 왼쪽 책등이 잘려 나가고 앞표지만 보이게 */
+  object-position: right center;
+}
+
+/* 표지가 없을 때(준비 중 예고 포함) — 색 바탕에 제목을 세로 표지처럼 */
+.course-choice-cover-text {
+  position: absolute;
+  inset: 0;
+  padding: 12px 10px;
+  font-family: var(--font-maruburi);
+  font-size: 14px;
+  line-height: 1.3;
+  color: #fff;
+  word-break: keep-all;
+}
+
+.course-choice-cover--soon-0 {
+  background: linear-gradient(170deg, #9fb7c9 0%, #6f8aa3 55%, #3f5468 100%);
+}
+
+.course-choice-cover--soon-1 {
+  background: linear-gradient(170deg, #c79a6b 0%, #8f5f3d 55%, #5b3a26 100%);
+}
+
+.course-choice-item--soon .course-choice-cover {
+  opacity: 0.75;
+}
+
+.course-choice-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.course-choice-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cs-orange);
 }
 
 .course-choice-title {
   font-family: var(--font-maruburi);
-  font-size: 17px;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--cs-black);
 }
 
-/* 소개 글이 길어져도(소개 화면용) 목록에선 두 줄까지만 */
-.course-choice-desc {
-  font-size: 13px;
+.course-choice-item--soon .course-choice-title {
   color: var(--cs-text-muted);
+}
+
+.course-choice-desc {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--cs-text-muted);
+  word-break: keep-all;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -5321,36 +5446,80 @@ button.story-place-line:hover {
 }
 
 .course-choice-meta {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
   color: var(--cs-orange);
 }
 
-.course-choice-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
+.course-choice-item--soon .course-choice-meta {
+  color: var(--cs-text-muted);
 }
 
-/* 목록의 작은 표지 */
-.course-choice-cover {
-  flex-shrink: 0;
-  width: 44px;
-  aspect-ratio: 2 / 3;
-  border-radius: 2px;
-  overflow: hidden;
-  background: var(--cs-gray);
-  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.18);
+.course-choice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cs-black);
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.course-choice-cover img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* 책등+앞표지 이미지면 왼쪽 책등이 잘려 나가고 앞표지만 보이게 */
-  object-position: right center;
+.course-choice-item--featured .course-choice-btn {
+  border-color: var(--cs-orange);
+  background: var(--cs-orange);
+  color: #fff;
+}
+
+.course-choice-btn--soon {
+  border-style: dashed;
+  color: var(--cs-text-muted);
+  cursor: default;
+}
+
+.course-list-footnote {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  color: var(--cs-text-muted);
+  text-align: center;
+  word-break: keep-all;
+}
+
+/* 폰: 버튼을 글 아래로 내리고 표지를 줄인다 */
+@media (max-width: 600px) {
+  .course-list-title {
+    font-size: 26px;
+  }
+
+  .course-choice-item {
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    padding: 14px;
+  }
+
+  .course-choice-cover {
+    width: 68px;
+    grid-row: span 2;
+    align-self: start;
+  }
+
+  .course-choice-title {
+    font-size: 17px;
+  }
+
+  .course-choice-btn {
+    justify-self: start;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
 }
 
 /* ------------------------------------------------------------

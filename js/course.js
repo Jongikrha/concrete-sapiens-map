@@ -109,37 +109,86 @@ function buildCourseChip() {
   return chip;
 }
 
+// 코스 목록(2026-10-13 시안) — 큰 제목 + "N개의 발자취" 배지, 코스마다
+// 표지·제목·부제·종류/장소 수·"둘러보기" 카드. 맨 앞 코스는 "지금
+// 둘러보세요"로 강조한다. 공개 코스가 아직 하나뿐이라 다음 콘텐츠 예고
+// (COURSES_COMING_SOON)를 "준비 중"으로 아래에 붙인다 — 실제 코스가
+// 아니라 코드에 적어둔 안내이므로, 공개되거나 계획이 바뀌면 여기서 지운다.
+const COURSES_COMING_SOON = [
+  { title: "서울의 시간들", description: "익숙한 도시의 오늘과 어제를 발견하는 서울 산책 에세이.", kind: "book" },
+  { title: "골목의 온도", description: "작은 골목마다 숨은 이야기를 따라 도시의 또 다른 얼굴을 만나보세요.", kind: "book" },
+];
+
+const COURSE_LIST_BOOKS_ICON = `
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
+    <rect x="3" y="4" width="4" height="16" rx="1" /><rect x="8.5" y="6" width="4" height="14" rx="1" />
+    <rect x="14" y="5" width="4" height="15" rx="1" transform="rotate(-12 16 12.5)" />
+  </svg>`;
+
+const COURSE_LIST_PIN_ICON = `
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor">
+    <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+  </svg>`;
+
 function openCourseChoice() {
   const panel = document.getElementById("course-choice-panel");
+  const kindName = (c) => COURSE_KIND_LABELS[c.kind] || "발자취";
   panel.innerHTML = `
-    <div class="composer-header">
-      <div class="composer-header-text">
-        <h2 class="composer-title">발자취</h2>
-        <p class="composer-subtitle">정해진 장소들을 순서대로 따라 걸어보세요.</p>
-      </div>
+    <div class="course-list-header">
+      <h2 class="course-list-title">발자취</h2>
       <button class="composer-close-btn" id="course-choice-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="course-list-subrow">
+      <p class="course-list-subtitle">책과 장소를 따라 도시를 걸어보세요.</p>
+      <span class="course-list-badge">${COURSE_LIST_BOOKS_ICON}${publishedCourses.length}개의 발자취</span>
     </div>
     <div class="course-choice-list">
       ${publishedCourses.map((c, i) => `
-        <button type="button" class="course-choice-item" data-course-index="${i}">
-          ${c.coverKey ? `<span class="course-choice-cover" data-photo-key="${escapeHtml(c.coverKey)}"></span>` : ""}
+        <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
+          <span class="course-choice-cover">
+            ${c.coverKey ? `<span class="course-choice-cover-img" data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${c.coverSpineRatio || 0}"></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
+          </span>
           <span class="course-choice-text">
+            ${i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
             <span class="course-choice-title">${escapeHtml(c.title)}</span>
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-            <span class="course-choice-meta">${escapeHtml(courseKindLabel(c))}장소 ${c.places.length}곳</span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳</span>
           </span>
-        </button>
+          <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
+        </div>
+      `).join("")}
+      ${COURSES_COMING_SOON.map((c, i) => `
+        <div class="course-choice-item course-choice-item--soon">
+          <span class="course-choice-cover course-choice-cover--soon course-choice-cover--soon-${i % 2}">
+            <span class="course-choice-cover-text">${escapeHtml(c.title)}</span>
+          </span>
+          <span class="course-choice-text">
+            <span class="course-choice-title">${escapeHtml(c.title)}</span>
+            <span class="course-choice-desc">${escapeHtml(c.description)}</span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 준비 중</span>
+          </span>
+          <span class="course-choice-btn course-choice-btn--soon">준비 중</span>
+        </div>
       `).join("")}
     </div>
+    <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 알려주세요.</p>
   `;
   document.getElementById("course-choice-close").onclick = closeCourseChoice;
-  panel.querySelectorAll(".course-choice-item").forEach((btn) => {
+  panel.querySelectorAll(".course-choice-btn[data-course-index]").forEach((btn) => {
     btn.onclick = () => {
       closeCourseChoice();
       openCourseDetail(publishedCourses[Number(btn.dataset.courseIndex)], { fromList: true });
     };
   });
-  panel.querySelectorAll(".course-choice-cover").forEach(fillCoverSlot);
+  // 카드 어디를 눌러도 둘러보기와 같게(버튼만 누르기엔 폰에서 작다)
+  panel.querySelectorAll(".course-choice-item:not(.course-choice-item--soon)").forEach((item) => {
+    const btn = item.querySelector(".course-choice-btn");
+    item.onclick = (e) => {
+      if (e.target !== btn && !btn.contains(e.target)) btn.click();
+    };
+  });
+  panel.querySelectorAll(".course-choice-cover-img").forEach(fillCoverSlot);
+  panel.scrollTop = 0;
   document.getElementById("course-choice-overlay").classList.remove("hidden");
 }
 
@@ -152,7 +201,10 @@ function courseKindLabel(course) {
 }
 
 // data-photo-key를 가진 표지 슬롯에 이미지를 채운다(못 받으면 슬롯 제거).
+// 책등+앞표지 이미지(data-spine-ratio > 0)면 이미지를 그만큼 넓게 그리고
+// 왼쪽으로 밀어 책등 부분을 슬롯 밖으로 빼낸다 — 작은 썸네일엔 앞표지만.
 function fillCoverSlot(slot) {
+  const r = Math.min(0.5, Math.max(0, Number(slot.dataset.spineRatio) || 0));
   resolveStoryPhotoUrl(slot.dataset.photoKey).then((url) => {
     if (!slot.isConnected) return;
     if (!url) {
@@ -162,6 +214,11 @@ function fillCoverSlot(slot) {
     const img = document.createElement("img");
     img.alt = "";
     img.src = url;
+    if (r > 0) {
+      img.style.width = `${100 / (1 - r)}%`;
+      img.style.maxWidth = "none";
+      img.style.marginLeft = `${(-100 * r) / (1 - r)}%`;
+    }
     slot.replaceChildren(img);
   });
 }
@@ -182,7 +239,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
   panel.innerHTML = `
     <div class="course-detail-scroll">
       <div class="course-detail-top">
-        ${fromList && publishedCourses.length > 1 ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
+        ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
         <div class="course-detail-top-actions">
           ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
           <button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>
@@ -261,7 +318,7 @@ function buildArchiveCourseRowHtml() {
       <div class="archive-course-items">
         ${publishedCourses.map((c, i) => `
           <button type="button" class="archive-course-item" data-course-index="${i}" aria-label="${escapeHtml(c.title)}">
-            ${c.coverKey ? `<span class="archive-course-cover" data-photo-key="${escapeHtml(c.coverKey)}"></span>` : ""}
+            ${c.coverKey ? `<span class="archive-course-cover" data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${c.coverSpineRatio || 0}"></span>` : ""}
             <span class="archive-course-title">${escapeHtml(c.title)}</span>
           </button>
         `).join("")}
@@ -571,7 +628,7 @@ function renderCourseCard() {
           <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
           ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
         </div>
-        ${activeCourse.coverKey ? `<div class="course-intro-cover" data-photo-key="${escapeHtml(activeCourse.coverKey)}"></div>` : ""}
+        ${activeCourse.coverKey ? `<div class="course-intro-cover" data-photo-key="${escapeHtml(activeCourse.coverKey)}" data-spine-ratio="${activeCourse.coverSpineRatio || 0}"></div>` : ""}
       </div>
       <div class="course-card-links">
         ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
