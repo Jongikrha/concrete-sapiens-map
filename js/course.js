@@ -25,10 +25,10 @@ let activeCourse = null;
 let courseIndex = -1;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 let coursePolyline = null;
-// 이번 따라 걷기에서 튼 곡들(코스 배경음악 + 장소 노래)의 videoId — 끝낼 때
-// 미니 플레이어가 여전히 이 중 하나면 멈춘다(사용자가 중간에 다른 곡으로
-// 바꿨으면 그대로 둔다).
-let courseVideoIds = new Set();
+// 이번 따라 걷기의 플레이리스트 — 노래가 있는 장소들을 코스 순서대로
+// (같은 곡은 한 번만). 끝낼 때 미니 플레이어가 여전히 이 중 하나면 멈춘다
+// (사용자가 중간에 다른 곡으로 바꿨으면 그대로 둔다).
+let courseSongs = [];
 
 async function loadPublishedCourses() {
   try {
@@ -114,29 +114,41 @@ function startCourseWalk(course) {
   drawCoursePath();
   document.getElementById("course-session").classList.remove("hidden");
   Storage.logEvent(`course_started:${course.slug}`);
-  playCourseSong();
+  courseSongs = buildCourseSongs(course);
   showCourseStep(-1);
+  // 위 enterRecallImmersiveChrome이 미니 플레이어를 #app 아래로 옮기면서
+  // 유튜브 iframe이 새로 로드된다 — 같은 틱에 재생을 걸면 그 명령이 로딩
+  // 중인 프레임에 묻혀 모바일에선 소리가 안 났다(2026-10-13, 데스크톱은
+  // 다시 로드된 뒤 onReady가 재생해줘서 멀쩡해 보였음). 기억 라디오
+  // (showRecallStory의 500ms 뒤 openRecallCard)와 같은 간격을 두고 튼다.
+  setTimeout(() => {
+    if (courseModeOpen && activeCourse === course && courseSongs.length) playCourseSongAt(0);
+  }, 500);
 }
 
-// 음악은 섞는 방식이다 — 코스 배경음악이 처음부터 깔리고, 노래를 따로 넣은
-// 장소에 오면 그 곡으로 바뀐다. 노래가 없는 장소에선 흐르던 곡이 끊기지
-// 않고 이어진다(장소마다 무조건 바꾸면 넘길 때마다 끊겨 산만하다). 둘 다
-// 칩/핀/다음 버튼을 누른 탭 이벤트 안에서 바로 틀어야 모바일 자동재생
-// 제한에 안 걸린다(playMiniPlayerVideo 주석 참고).
-function playCourseSong() {
-  playCourseVideo(activeCourse);
+// 음악은 기억 라디오처럼 내용과 따로 흐른다(2026-10-13) — 처음엔 코스
+// 배경음악 한 곡 + 장소 노래로 갈아끼우는 방식이었는데, 카드를 넘길 때마다
+// 노래가 바뀌거나 끊겨 산만하다는 피드백으로 바꿨다. 노래 있는 장소들을
+// 코스 순서대로 한 곡씩 끝까지 틀고, 카드를 넘겨도 노래는 그대로 둔다.
+// 코스 배경음악(Course.youtubeUrl)은 더 쓰지 않는다(필드는 DB에 남아 있음).
+function buildCourseSongs(course) {
+  const seen = new Set();
+  return course.places
+    .map((p) => ({ videoId: Storage.extractYoutubeVideoId(p.youtubeUrl), title: p.musicTitle, artist: p.musicArtist }))
+    .filter((s) => s.videoId && !seen.has(s.videoId) && seen.add(s.videoId));
 }
 
-function playPlaceSong(place) {
-  playCourseVideo(place);
+function playCourseSongAt(i) {
+  const song = courseSongs[i];
+  playMiniPlayerVideo(song.videoId, { title: song.title, artist: song.artist });
 }
 
-// item: Course 또는 CoursePlace — 둘 다 youtubeUrl/musicTitle/musicArtist를 가진다.
-function playCourseVideo(item) {
-  const videoId = Storage.extractYoutubeVideoId(item.youtubeUrl);
-  if (!videoId || videoId === activeMiniPlayerVideoId) return;
-  courseVideoIds.add(videoId);
-  playMiniPlayerVideo(videoId, { title: item.musicTitle, artist: item.musicArtist });
+// 곡이 끝나면 다음 곡으로(마지막 곡 뒤엔 처음으로) — js/recall.js
+// bindRecallEvents의 미니 플레이어 종료 콜백이 발자취 중일 때 부른다.
+function handleCourseSongEnded() {
+  const i = courseSongs.findIndex((s) => s.videoId === activeMiniPlayerVideoId);
+  if (i < 0) return; // 사용자가 다른 곡으로 바꿔 들은 경우 — 손대지 않는다
+  playCourseSongAt((i + 1) % courseSongs.length);
 }
 
 function drawCoursePath() {
@@ -226,10 +238,7 @@ function showCourseStep(index) {
     o.setZIndex(i === index ? 30 : 20);
   });
 
-  // 미니 플레이어가 나타나면 아래 지도 위치 계산(topEdge)이 달라지므로
-  // 카드/지도 이동보다 먼저 튼다.
   const total = activeCourse.places.length;
-  if (index >= 0 && index < total) playPlaceSong(activeCourse.places[index]);
   renderCourseCard();
   if (index < 0 || index >= total) {
     fitCourseBounds();
@@ -239,7 +248,7 @@ function showCourseStep(index) {
     map.setCenter(new kakao.maps.LatLng(place.lat, place.lng));
     // 지도 정중앙에 두면 아래 카드에 가려지므로(특히 모바일), 카드 위로
     // 남는 영역의 가운데에 장소가 오도록 지도 중심을 그만큼 아래로 민다.
-    // 코스 배경음악이 나오면 위쪽 미니 플레이어 아래부터를 남는 영역으로 본다.
+    // 노래가 나오는 중이면 위쪽 미니 플레이어 아래부터를 남는 영역으로 본다.
     const mapHeight = document.getElementById("map").clientHeight;
     const cardTop = document.getElementById("course-card").getBoundingClientRect().top;
     const miniPlayer = document.getElementById("mini-player");
@@ -336,8 +345,8 @@ function writeMemoryAfterCourse() {
 
 function endCourseWalk() {
   if (!courseModeOpen) return;
-  if (courseVideoIds.has(activeMiniPlayerVideoId)) stopMiniPlayer();
-  courseVideoIds = new Set();
+  if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId)) stopMiniPlayer();
+  courseSongs = [];
   courseOverlays.forEach((o) => o.setMap(null));
   courseOverlays = [];
   if (coursePolyline) {

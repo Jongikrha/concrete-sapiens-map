@@ -1138,6 +1138,7 @@ function bindRecallEvents() {
   // 콜백 안에서 매번 지금이 정말 플레이리스트 세션인지 확인한다).
   setMiniPlayerEndedCallback(() => {
     if (recallSessionOpen && recallScope === "songs") handleRadioSongEnded();
+    else if (courseModeOpen) handleCourseSongEnded(); // 발자취 플레이리스트(js/course.js)
   });
   // 미니 플레이어 ✕/일시정지로 노래를 바꾸면 카드의 노래 카드도 바로
   // 따라가야 한다. app.js가 onclick을 이보다 먼저 등록하므로 이 리스너는
