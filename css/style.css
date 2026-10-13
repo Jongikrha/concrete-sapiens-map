@@ -3611,6 +3611,10 @@ button.story-place-line:hover {
   gap: 12px;
   margin-top: 12px;
   overflow-x: auto;
+  /* overflow-x만 auto면 세로도 auto로 계산돼, 표지 그림자 몇 px 때문에
+     오른쪽에 세로 스크롤바가 생겼다 */
+  overflow-y: hidden;
+  padding-bottom: 4px;
 }
 
 .archive-course-item {
@@ -3644,6 +3648,31 @@ button.story-place-line:hover {
   object-fit: cover;
   /* 책등+앞표지 이미지면 왼쪽 책등이 잘려 나가고 앞표지만 보이게 */
   object-position: right center;
+}
+
+/* 준비 중 예고 — 목록(.course-choice-cover--soon-N)과 같은 색 표지에 "준비 중" */
+.archive-course-item--soon {
+  cursor: default;
+}
+
+.archive-course-item--soon .archive-course-cover {
+  position: relative;
+  opacity: 0.75;
+}
+
+.archive-course-cover-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-maruburi);
+  font-size: 11.5px;
+  color: #fff;
+}
+
+.archive-course-item--soon .archive-course-title {
+  color: var(--cs-text-muted);
 }
 
 .archive-course-title {

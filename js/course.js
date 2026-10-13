@@ -308,7 +308,8 @@ function closeCourseDetail() {
 // 이미 둘러볼 거리를 찾는 중이라 칩보다 발자취를 발견하기 좋다. 기억
 // 목록 사이에 코스 장소를 섞지는 않는다(아카이브는 사람들이 직접 남긴
 // 기억만 모인 곳이라는 성격을 지키려고). 표지를 누르면 그 코스 소개 화면,
-// "발자취 ›"를 누르면 코스 목록.
+// "발자취 ›"를 누르면 코스 목록. 목록과 같이 준비 중 예고(COURSES_COMING_SOON)도
+// "준비 중" 표지로 옆에 세워둔다(눌리지 않음).
 // ------------------------------------------------------------
 function buildArchiveCourseRowHtml() {
   if (publishedCourses.length === 0) return "";
@@ -323,6 +324,12 @@ function buildArchiveCourseRowHtml() {
             ${c.coverKey ? `<span class="archive-course-cover" data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${c.coverSpineRatio || 0}"></span>` : ""}
             <span class="archive-course-title">${escapeHtml(c.title)}</span>
           </button>
+        `).join("")}
+        ${COURSES_COMING_SOON.map((c, i) => `
+          <span class="archive-course-item archive-course-item--soon">
+            <span class="archive-course-cover course-choice-cover--soon-${i % 2}"><span class="archive-course-cover-text">준비 중</span></span>
+            <span class="archive-course-title">준비 중</span>
+          </span>
         `).join("")}
       </div>
     </div>`;
