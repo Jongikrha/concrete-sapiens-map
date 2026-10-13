@@ -745,6 +745,17 @@ body {
   border-color: var(--cs-memory-core);
 }
 
+/* 모바일에선 "발자취" 칩(2026-10-13)까지 한 줄에 들어가면서 티커가 다음
+   줄로 밀려 줄이 하나 늘었다 — 이 줄은 지도 가림을 줄이려고 한 줄로
+   묶어둔 곳이라(index.html .today-row 주석), 티커가 고정 폭 대신 남는
+   자리만큼만 차지하게 한다(최소 80px보다 좁아질 때만 다음 줄로). */
+@media (max-width: 600px) {
+  .fade-chip {
+    flex: 1 1 0;
+    min-width: 80px;
+  }
+}
+
 .live-dot {
   flex-shrink: 0;
   width: 6px;
@@ -4973,6 +4984,161 @@ button.story-place-line:hover {
   right: 18px;
   top: 50%;
   transform: translateY(-50%);
+}
+
+/* ------------------------------------------------------------
+   발자취(코스) 따라 걷기 (js/course.js, 2026-10-13) — 셸/카드/이전·다음
+   버튼은 기억산책(.recall-session/.recall-card)을 그대로 쓰고, 여기엔
+   코스에만 있는 것(칩, 번호 핀, 카드 내용, 코스 목록)만 둔다.
+   ------------------------------------------------------------ */
+
+/* "기억 아카이브"(주황 채움)보다 한 단계 조용하게 — 테두리만 주황 */
+.course-entry {
+  color: var(--cs-orange);
+  border-color: var(--cs-orange);
+  font-weight: 500;
+}
+
+/* 번호 핀 — kakao CustomOverlay로 지도 위에 올린다 */
+.course-pin {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--cs-orange);
+  background: var(--cs-paper);
+  color: var(--cs-orange);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.25);
+  cursor: pointer;
+  transition: transform var(--cs-transition-fast), background var(--cs-transition-fast);
+}
+
+.course-pin--active {
+  background: var(--cs-orange);
+  color: #fff;
+  transform: scale(1.25);
+  box-shadow: 0 0 0 6px rgba(255, 90, 54, 0.2), 0 2px 8px rgba(47, 48, 49, 0.3);
+}
+
+.course-card-kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
+.course-card-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cs-orange);
+}
+
+.course-card-title {
+  margin: 0 0 12px;
+  font-family: var(--font-maruburi);
+  font-weight: 400;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  color: var(--cs-black);
+}
+
+.course-card-quote {
+  margin: 14px 0 0;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--cs-orange);
+  font-family: var(--font-maruburi);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--cs-text-main);
+}
+
+.course-card-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--cs-orange);
+  text-decoration: none;
+}
+
+/* "근처에 남겨진 기억 N개" + 기억 남기기 — 코스가 기억을 모으는 장치가
+   되게 하는 줄이라 본문과 구분해 한 칸 띄운다. */
+.course-card-nearby {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-card-nearby b {
+  color: var(--cs-orange);
+}
+
+.course-card-write {
+  padding: 6px 12px;
+  border: 1px solid var(--cs-orange);
+  border-radius: var(--cs-radius-chip);
+  background: transparent;
+  color: var(--cs-orange);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.course-card-write:hover {
+  background: rgba(255, 90, 54, 0.08);
+}
+
+/* 공개 코스가 여럿일 때 고르는 목록 */
+.course-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.course-choice-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.course-choice-item:hover {
+  border-color: var(--cs-orange);
+}
+
+.course-choice-title {
+  font-family: var(--font-maruburi);
+  font-size: 17px;
+  color: var(--cs-black);
+}
+
+.course-choice-desc {
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-choice-meta {
+  font-size: 12px;
+  color: var(--cs-orange);
 }
 
 /* ------------------------------------------------------------

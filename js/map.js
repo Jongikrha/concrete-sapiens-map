@@ -285,7 +285,7 @@ function initMap() {
   geocoderService = new kakao.maps.services.Geocoder();
 
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
-    if (recallSessionOpen) return;
+    if (recallSessionOpen || courseModeOpen) return;
     clearSearchPin();
     if (sheetOpen) {
       closeSheetToUnfiltered();
@@ -471,6 +471,9 @@ function renderMarkers() {
   markers.forEach((m) => kakao.maps.event.removeListener(m.marker, "click"));
   markers = [];
   highlightedMarker = null;
+  // 발자취 따라 걷기 중엔 기억 점을 걷어둔다(js/course.js startCourseWalk) —
+  // 그사이 다른 흐름이 다시 그려도 번호 핀 위로 점이 섞여 올라오지 않게.
+  if (courseModeOpen) return;
 
   let groups = Storage.getGroupedByPlace();
 

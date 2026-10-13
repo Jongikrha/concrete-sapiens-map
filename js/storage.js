@@ -863,6 +863,26 @@ const Storage = {
    * "이 동네에는 몇 개의 기억이, 몇 년부터 몇 년까지 있는지" 배너와
    * 지도 마커 밝히기에 쓴다(js/search.js, js/map.js).
    */
+  /**
+   * 공개된 발자취(코스) 목록 — 장소가 하나 이상인 코스만, 장소는 따라 걷기
+   * 순서(seq)대로 붙여서 돌려준다(js/course.js). 스토리 목록과 달리 부팅
+   * 크리티컬 경로가 아니라서 캐시 없이 지도가 뜬 뒤에 따로 부른다.
+   * 비공개 코스도 API로는 읽히지만(amplify/data/resource.ts Course 주석)
+   * 화면에서는 여기서 걸러 숨긴다.
+   */
+  async fetchPublishedCourses() {
+    if (!client) return [];
+    const [courses, places] = await Promise.all([fetchAll("Course"), fetchAll("CoursePlace")]);
+    const placesByCourse = {};
+    places.forEach((p) => {
+      (placesByCourse[p.courseId] ||= []).push(p);
+    });
+    return courses
+      .filter((c) => c.isPublished && placesByCourse[c.id]?.length)
+      .map((c) => ({ ...c, places: placesByCourse[c.id].sort((a, b) => a.seq - b.seq) }))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  },
+
   getStoriesNear(lat, lng, radiusMeters) {
     return this.getVisibleStories().filter((s) => this._distanceMeters(lat, lng, s.lat, s.lng) <= radiusMeters);
   },

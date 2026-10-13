@@ -52,6 +52,9 @@ async function initApp() {
   renderHashtagChips();
   renderMarkers();
   renderMemoryArchiveEntry();
+  // 발자취(코스)는 첫 화면에 꼭 필요한 데이터가 아니라 기다리지 않는다 —
+  // 받아오면 그때 상단 "발자취" 칩만 나타난다(js/course.js).
+  loadPublishedCourses();
   if (!landedFromCache) handleInitialEntry();
   maybeShowWelcomeOverlay();
   resumeAfterKakaoLogin();
@@ -171,6 +174,8 @@ function logVisitKind() {
 function renderMemoryArchiveEntry() {
   const el = document.getElementById("memory-archive-entry");
   if (!el) return;
+  // 바로 옆 "발자취" 칩도 같은 시점에 숨김/표시가 바뀌어야 해서 같이 부른다.
+  renderCourseEntry();
 
   // searchAreaActive는 마커를 걸러내지 않고 반짝임 효과만 주는 상태라
   // 여기서는 제외한다 — 예전엔 여기 포함돼 있었는데, 검색 결과 카드에서
@@ -548,6 +553,7 @@ function bindUIEvents() {
   // 버튼이나 ESC를 눌러야 닫힌다).
   bindAccountMenuEvents();
   bindRecallEvents();
+  bindCourseEvents();
 
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-write").onclick = handleWriteFabClick;

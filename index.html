@@ -184,6 +184,8 @@
            3종 토글은 그대로 유지). -->
       <div class="today-row" id="today-row">
         <button type="button" class="chip memory-archive-entry hidden" id="memory-archive-entry">기억 아카이브</button>
+        <!-- 발자취(코스) 따라 걷기 진입점 — 공개 코스가 있을 때만 뜬다(js/course.js) -->
+        <button type="button" class="chip course-entry hidden" id="course-entry">발자취</button>
         <div class="hashtag-bar" id="today-mission-chips"></div>
         <!-- 최근 7일 기억을 타이틀 카드와 같은 리듬(3.2초)으로 조용히
              돌려 보여주는 칩 — 새 줄을 쓰지 않고 이 줄 안에서만 자리를
@@ -388,6 +390,17 @@
       <div class="composer-card"><div class="composer-card-inner" id="recall-choice-panel"></div></div>
     </div>
 
+    <!-- 발자취(코스) — 공개 코스가 여럿일 때 고르는 목록과, 따라 걷기 화면.
+         따라 걷기는 기억산책과 같은 셸 스타일(.recall-session/.recall-card)을
+         재사용한다(js/course.js). -->
+    <div class="overlay hidden" id="course-choice-overlay">
+      <div class="composer-card"><div class="composer-card-inner" id="course-choice-panel"></div></div>
+    </div>
+    <div class="recall-session course-session hidden" id="course-session">
+      <button type="button" class="recall-exit-btn" id="course-exit-btn" aria-label="따라 걷기 종료">✕</button>
+      <div class="recall-card course-card" id="course-card"></div>
+    </div>
+
     <!-- 기억산책 / 회상 모드 세션 — 진입하면 검색창/해시태그/툴바 등 평소
          UI를 지우고(#app.recall-chrome-hidden) 이 셸 안에서 별자리 개요 →
          몰입 리빌(점 하나 + 카드)까지 이어진다. -->
@@ -534,6 +547,7 @@
   <script src="js/search.js"></script>
   <script src="js/mymemory.js"></script>
   <script src="js/recall.js"></script>
+  <script src="js/course.js"></script>
   <script src="js/scrollFade.js"></script>
   <script src="js/helpTour.js"></script>
   <script src="js/fontWarmup.js"></script>
