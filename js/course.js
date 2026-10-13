@@ -24,9 +24,10 @@ let activeCourse = null;
 let courseIndex = -1;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 let coursePolyline = null;
-// 코스 배경음악의 videoId — 끝낼 때 미니 플레이어가 여전히 이 곡이면 멈춘다
-// (사용자가 중간에 다른 곡으로 바꿨으면 그대로 둔다).
-let courseVideoId = null;
+// 이번 따라 걷기에서 튼 곡들(코스 배경음악 + 장소 노래)의 videoId — 끝낼 때
+// 미니 플레이어가 여전히 이 중 하나면 멈춘다(사용자가 중간에 다른 곡으로
+// 바꿨으면 그대로 둔다).
+let courseVideoIds = new Set();
 
 async function loadPublishedCourses() {
   try {
@@ -111,13 +112,25 @@ function startCourseWalk(course) {
   showCourseStep(-1);
 }
 
-// 코스 배경음악 — 칩/코스 목록을 누른 탭 이벤트 안에서 바로 틀어야 모바일
-// 자동재생 제한에 안 걸린다(playMiniPlayerVideo 주석 참고). 장소를 넘겨도
-// 같은 곡이 이어진다.
+// 음악은 섞는 방식이다 — 코스 배경음악이 처음부터 깔리고, 노래를 따로 넣은
+// 장소에 오면 그 곡으로 바뀐다. 노래가 없는 장소에선 흐르던 곡이 끊기지
+// 않고 이어진다(장소마다 무조건 바꾸면 넘길 때마다 끊겨 산만하다). 둘 다
+// 칩/핀/다음 버튼을 누른 탭 이벤트 안에서 바로 틀어야 모바일 자동재생
+// 제한에 안 걸린다(playMiniPlayerVideo 주석 참고).
 function playCourseSong() {
-  courseVideoId = Storage.extractYoutubeVideoId(activeCourse.youtubeUrl);
-  if (!courseVideoId) return;
-  playMiniPlayerVideo(courseVideoId, { title: activeCourse.musicTitle, artist: activeCourse.musicArtist });
+  playCourseVideo(activeCourse);
+}
+
+function playPlaceSong(place) {
+  playCourseVideo(place);
+}
+
+// item: Course 또는 CoursePlace — 둘 다 youtubeUrl/musicTitle/musicArtist를 가진다.
+function playCourseVideo(item) {
+  const videoId = Storage.extractYoutubeVideoId(item.youtubeUrl);
+  if (!videoId || videoId === activeMiniPlayerVideoId) return;
+  courseVideoIds.add(videoId);
+  playMiniPlayerVideo(videoId, { title: item.musicTitle, artist: item.musicArtist });
 }
 
 function drawCoursePath() {
@@ -172,6 +185,9 @@ function showCourseStep(index) {
     o.setZIndex(i === index ? 30 : 20);
   });
 
+  // 미니 플레이어가 나타나면 아래 지도 위치 계산(topEdge)이 달라지므로
+  // 카드/지도 이동보다 먼저 튼다.
+  if (index >= 0) playPlaceSong(activeCourse.places[index]);
   renderCourseCard();
   if (index < 0) {
     fitCourseBounds();
@@ -277,8 +293,8 @@ function writeMemoryAtCoursePlace() {
 
 function endCourseWalk() {
   if (!courseModeOpen) return;
-  if (courseVideoId && activeMiniPlayerVideoId === courseVideoId) stopMiniPlayer();
-  courseVideoId = null;
+  if (courseVideoIds.has(activeMiniPlayerVideoId)) stopMiniPlayer();
+  courseVideoIds = new Set();
   courseOverlays.forEach((o) => o.setMap(null));
   courseOverlays = [];
   if (coursePolyline) {

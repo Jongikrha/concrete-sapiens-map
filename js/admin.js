@@ -1072,6 +1072,7 @@ function placeRowHtml(place, index, total) {
         </div>
         ${place.description ? `<p class="field-hint">${escapeHtml(place.description)}</p>` : ""}
         ${place.quote ? `<p class="course-place-quote">“${escapeHtml(place.quote)}”</p>` : ""}
+        ${place.youtubeUrl ? `<p class="field-hint">♪ ${escapeHtml([place.musicArtist, place.musicTitle].filter(Boolean).join(" - ") || "이 장소의 노래")}</p>` : ""}
         ${place.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(place.photoKey)}"></div>` : ""}
         <div class="admin-card-actions">
           <button class="btn-restore" data-place-action="up" data-place-id="${place.id}"${index === 0 ? " disabled" : ""}>↑</button>
@@ -1105,6 +1106,11 @@ function placeFormHtml() {
       <label>설명(선택)<textarea name="description" rows="2">${v("description")}</textarea></label>
       <label>인용(선택)<textarea name="quote" rows="2" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
       ${placePhotoFieldHtml(p)}
+      <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="비워두면 흐르던 곡이 그대로 이어져요" /></label>
+      <div class="course-music-row">
+        <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
+        <label>곡 제목<input type="text" name="musicTitle" value="${v("musicTitle")}" /></label>
+      </div>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${p ? "수정 저장" : "장소 추가"}</button>
         ${p ? `<button type="button" class="btn-delete" data-place-action="cancel-edit">취소</button>` : ""}
@@ -1186,7 +1192,7 @@ async function renderCoursesTab() {
 // 폼을 다시 그려도 적어둔 이름/꼬리표/설명/인용은 남게 한다.
 function keepPlaceFormFields(rerender) {
   const form = document.getElementById("place-form");
-  const kept = Object.fromEntries(["name", "label", "description", "quote"].map((k) => [k, form.elements[k].value]));
+  const kept = Object.fromEntries(["name", "label", "description", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
   rerender();
   const newForm = document.getElementById("place-form");
   Object.entries(kept).forEach(([k, val]) => {
@@ -1301,7 +1307,7 @@ function pickSearchResult(index) {
   if (!d) return;
   // 고르기 전에 폼에 적어둔 꼬리표/설명/인용은 다시 그려도 남게 한다.
   const form = document.getElementById("place-form");
-  const kept = Object.fromEntries(["label", "description", "quote"].map((k) => [k, form.elements[k].value]));
+  const kept = Object.fromEntries(["label", "description", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
   placeDraft = {
     name: d.place_name,
     address: d.road_address_name || d.address_name || null,
@@ -1326,6 +1332,11 @@ async function handlePlaceSubmit(e) {
     alert("장소를 먼저 검색해서 골라주세요.");
     return;
   }
+  const youtubeUrl = f.get("youtubeUrl").trim() || null;
+  if (youtubeUrl && !Storage.extractYoutubeVideoId(youtubeUrl)) {
+    alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
+    return;
+  }
   let photoKey = existing?.photoKey || null;
   if (f.get("removePhoto")) photoKey = null;
   if (placePhotoFile) {
@@ -1348,6 +1359,9 @@ async function handlePlaceSubmit(e) {
     label: f.get("label").trim() || null,
     description: f.get("description").trim() || null,
     quote: f.get("quote").trim() || null,
+    youtubeUrl,
+    musicArtist: f.get("musicArtist").trim() || null,
+    musicTitle: f.get("musicTitle").trim() || null,
   };
   if (existing) {
     const updated = await runCourseMutation(client.models.CoursePlace.update({ id: existing.id, ...fields }), "장소 수정 실패");
