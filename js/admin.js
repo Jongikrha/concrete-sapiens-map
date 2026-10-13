@@ -18,6 +18,7 @@ import {
   getCurrentUser,
   generateClient,
   getUrl,
+  uploadData,
 } from "/js/vendor/aws-amplify.bundle.js";
 
 const isLocalDev = ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -933,6 +934,9 @@ let selectedCourseId = null; // 장소 관리 중인 코스
 let editingCourseId = null; // null이면 "새 코스" 폼
 let editingPlaceId = null; // null이면 "장소 추가" 폼
 let placeDraft = null; // 카카오 검색에서 고른 { name, address, lat, lng }
+// 장소 폼에서 고른 사진 File — 검색 결과를 고르면 폼을 다시 그리는데
+// <input type=file> 값은 되살릴 수 없어서 여기 들고 있는다.
+let placePhotoFile = null;
 
 // list()는 한 번에 최대 100건이라 nextToken을 끝까지 따라간다. GraphQL
 // 에러는 reject가 아니라 errors 배열로 오므로 직접 확인해서 던진다.
@@ -1013,6 +1017,7 @@ function courseCardHtml(course) {
         <span>장소 ${places.length}곳</span>
         <span>${course.isPublished ? "공개" : "비공개"}</span>
         <span>정렬 ${course.sortOrder ?? 0}</span>
+        ${course.youtubeUrl ? `<span>♪ ${escapeHtml([course.musicArtist, course.musicTitle].filter(Boolean).join(" - ") || "배경음악")}</span>` : ""}
       </div>
       ${course.description ? `<p class="field-hint">${escapeHtml(course.description)}</p>` : ""}
       <div class="admin-card-actions">
@@ -1040,6 +1045,11 @@ function courseFormHtml() {
       </label>
       <label>소개<textarea name="description" rows="2" placeholder="코스 목록에 보일 한두 문장">${v("description")}</textarea></label>
       <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
+      <label>배경음악 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 흐를 한 곡" /></label>
+      <div class="course-music-row">
+        <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
+        <label>곡 제목<input type="text" name="musicTitle" value="${v("musicTitle")}" /></label>
+      </div>
       <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1062,6 +1072,7 @@ function placeRowHtml(place, index, total) {
         </div>
         ${place.description ? `<p class="field-hint">${escapeHtml(place.description)}</p>` : ""}
         ${place.quote ? `<p class="course-place-quote">“${escapeHtml(place.quote)}”</p>` : ""}
+        ${place.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(place.photoKey)}"></div>` : ""}
         <div class="admin-card-actions">
           <button class="btn-restore" data-place-action="up" data-place-id="${place.id}"${index === 0 ? " disabled" : ""}>↑</button>
           <button class="btn-restore" data-place-action="down" data-place-id="${place.id}"${index === total - 1 ? " disabled" : ""}>↓</button>
@@ -1093,11 +1104,29 @@ function placeFormHtml() {
       <label>꼬리표(선택)<input type="text" name="label" value="${v("label")}" placeholder='예: "3장", "1443년"' /></label>
       <label>설명(선택)<textarea name="description" rows="2">${v("description")}</textarea></label>
       <label>인용(선택)<textarea name="quote" rows="2" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
+      ${placePhotoFieldHtml(p)}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${p ? "수정 저장" : "장소 추가"}</button>
         ${p ? `<button type="button" class="btn-delete" data-place-action="cancel-edit">취소</button>` : ""}
       </div>
     </form>
+  `;
+}
+
+// 장소 사진(선택, 1장) — 카드에 16:9로 잘려 보이므로 가로 사진이 좋다.
+// 직접 찍었거나 사용 허락을 받은 사진만 올린다.
+function placePhotoFieldHtml(p) {
+  let preview = "";
+  if (placePhotoFile) {
+    preview = `<div class="admin-card-photo"><img src="${URL.createObjectURL(placePhotoFile)}" alt="" /></div>`;
+  } else if (p?.photoKey) {
+    preview = `<div class="admin-card-photo" data-photo-key="${escapeHtml(p.photoKey)}"></div>
+      <label class="course-photo-remove"><input type="checkbox" name="removePhoto" /> 사진 빼기</label>`;
+  }
+  return `
+    <label>사진(선택)<input type="file" name="photo" id="place-photo-input" accept="image/*" /></label>
+    ${preview}
+    <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보여요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
   `;
 }
 
@@ -1144,7 +1173,25 @@ async function renderCoursesTab() {
         handlePlaceSearch();
       }
     });
+    document.getElementById("place-photo-input").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      placePhotoFile = file;
+      keepPlaceFormFields(renderCoursesTab);
+    });
   }
+  hydrateAdminPhotos();
+}
+
+// 폼을 다시 그려도 적어둔 이름/꼬리표/설명/인용은 남게 한다.
+function keepPlaceFormFields(rerender) {
+  const form = document.getElementById("place-form");
+  const kept = Object.fromEntries(["name", "label", "description", "quote"].map((k) => [k, form.elements[k].value]));
+  rerender();
+  const newForm = document.getElementById("place-form");
+  Object.entries(kept).forEach(([k, val]) => {
+    newForm.elements[k].value = val;
+  });
 }
 
 async function handleCourseSubmit(e) {
@@ -1156,8 +1203,15 @@ async function handleCourseSubmit(e) {
     kind: f.get("kind"),
     description: f.get("description").trim() || null,
     linkUrl: f.get("linkUrl").trim() || null,
+    youtubeUrl: f.get("youtubeUrl").trim() || null,
+    musicArtist: f.get("musicArtist").trim() || null,
+    musicTitle: f.get("musicTitle").trim() || null,
     sortOrder: parseInt(f.get("sortOrder"), 10) || 0,
   };
+  if (fields.youtubeUrl && !Storage.extractYoutubeVideoId(fields.youtubeUrl)) {
+    alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
+    return;
+  }
   if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;
@@ -1183,6 +1237,7 @@ async function handleCourseAction(action, courseId) {
     selectedCourseId = selectedCourseId === courseId ? null : courseId;
     editingPlaceId = null;
     placeDraft = null;
+    placePhotoFile = null;
   } else if (action === "edit") {
     editingCourseId = courseId;
     renderCoursesTab();
@@ -1271,7 +1326,21 @@ async function handlePlaceSubmit(e) {
     alert("장소를 먼저 검색해서 골라주세요.");
     return;
   }
+  let photoKey = existing?.photoKey || null;
+  if (f.get("removePhoto")) photoKey = null;
+  if (placePhotoFile) {
+    try {
+      const blob = await PhotoUpload.resizeImageFile(placePhotoFile);
+      photoKey = `story-photos/course-${selectedCourseId}-${Date.now()}.jpg`;
+      await uploadData({ path: photoKey, data: blob, options: { contentType: "image/jpeg" } }).result;
+    } catch (err) {
+      console.error("장소 사진 업로드 실패", err);
+      alert(`사진을 올리지 못했어요. ${err.message || ""}`);
+      return;
+    }
+  }
   const fields = {
+    photoKey,
     name: f.get("name").trim() || location.name,
     lat: location.lat,
     lng: location.lng,
@@ -1295,6 +1364,7 @@ async function handlePlaceSubmit(e) {
     coursePlacesById[selectedCourseId] = [...list, created];
   }
   placeDraft = null;
+  placePhotoFile = null;
   renderCoursesTab();
 }
 
@@ -1309,12 +1379,14 @@ async function handlePlaceAction(action, placeId) {
   if (action === "edit") {
     editingPlaceId = placeId;
     placeDraft = null;
+    placePhotoFile = null;
     renderCoursesTab();
     document.getElementById("place-form").scrollIntoView({ behavior: "smooth" });
     return;
   } else if (action === "cancel-edit") {
     editingPlaceId = null;
     placeDraft = null;
+    placePhotoFile = null;
   } else if (action === "up" || action === "down") {
     const other = list[action === "up" ? index - 1 : index + 1];
     if (!other) return;

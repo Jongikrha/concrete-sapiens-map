@@ -24,6 +24,9 @@ let activeCourse = null;
 let courseIndex = -1;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 let coursePolyline = null;
+// 코스 배경음악의 videoId — 끝낼 때 미니 플레이어가 여전히 이 곡이면 멈춘다
+// (사용자가 중간에 다른 곡으로 바꿨으면 그대로 둔다).
+let courseVideoId = null;
 
 async function loadPublishedCourses() {
   try {
@@ -104,7 +107,17 @@ function startCourseWalk(course) {
   drawCoursePath();
   document.getElementById("course-session").classList.remove("hidden");
   Storage.logEvent(`course_started:${course.slug}`);
+  playCourseSong();
   showCourseStep(-1);
+}
+
+// 코스 배경음악 — 칩/코스 목록을 누른 탭 이벤트 안에서 바로 틀어야 모바일
+// 자동재생 제한에 안 걸린다(playMiniPlayerVideo 주석 참고). 장소를 넘겨도
+// 같은 곡이 이어진다.
+function playCourseSong() {
+  courseVideoId = Storage.extractYoutubeVideoId(activeCourse.youtubeUrl);
+  if (!courseVideoId) return;
+  playMiniPlayerVideo(courseVideoId, { title: activeCourse.musicTitle, artist: activeCourse.musicArtist });
 }
 
 function drawCoursePath() {
@@ -168,9 +181,12 @@ function showCourseStep(index) {
     map.setCenter(new kakao.maps.LatLng(place.lat, place.lng));
     // 지도 정중앙에 두면 아래 카드에 가려지므로(특히 모바일), 카드 위로
     // 남는 영역의 가운데에 장소가 오도록 지도 중심을 그만큼 아래로 민다.
+    // 코스 배경음악이 나오면 위쪽 미니 플레이어 아래부터를 남는 영역으로 본다.
     const mapHeight = document.getElementById("map").clientHeight;
     const cardTop = document.getElementById("course-card").getBoundingClientRect().top;
-    const offset = Math.max(0, mapHeight / 2 - cardTop / 2);
+    const miniPlayer = document.getElementById("mini-player");
+    const topEdge = miniPlayer.classList.contains("hidden") ? 0 : miniPlayer.getBoundingClientRect().bottom;
+    const offset = Math.max(0, mapHeight / 2 - (topEdge + cardTop) / 2);
     if (offset > 0) map.panBy(0, offset);
   }
   if (index === activeCourse.places.length - 1) Storage.logEvent(`course_completed:${activeCourse.slug}`);
@@ -194,6 +210,7 @@ function renderCourseCard() {
     const place = activeCourse.places[courseIndex];
     const nearbyCount = Storage.getStoriesNear(place.lat, place.lng, COURSE_NEARBY_RADIUS_METERS).length;
     body = `
+      ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
       <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · ${courseIndex + 1} / ${total}</p>
       ${place.label ? `<p class="course-card-label">${escapeHtml(place.label)}</p>` : ""}
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
@@ -226,6 +243,27 @@ function renderCourseCard() {
   document.getElementById("course-card-next-btn").onclick = () => showCourseStep(isLast ? -1 : courseIndex + 1);
   const writeBtn = document.getElementById("course-card-write");
   if (writeBtn) writeBtn.onclick = writeMemoryAtCoursePlace;
+  if (!isIntro) renderCoursePlacePhoto(activeCourse.places[courseIndex]);
+}
+
+// 장소 사진 — 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
+// 4:3 슬롯과 presigned URL 캐시를 쓴다. URL이 늦게 오면 이미 다른 장소로
+// 넘어갔을 수 있어 그 장소가 아직 보이는 중일 때만 꽂는다.
+function renderCoursePlacePhoto(place) {
+  const slot = document.getElementById("course-card-photo");
+  if (!slot) return;
+  resolveStoryPhotoUrl(place.photoKey).then((url) => {
+    if (!courseModeOpen || activeCourse.places[courseIndex] !== place) return;
+    if (!url) {
+      slot.remove();
+      return;
+    }
+    const img = document.createElement("img");
+    img.className = "recall-card-photo-img";
+    img.alt = "";
+    img.src = url;
+    slot.replaceChildren(img);
+  });
 }
 
 // 작성 폼(.overlay, z-index 100)이 이 화면(.recall-session, 110) 아래에
@@ -239,6 +277,8 @@ function writeMemoryAtCoursePlace() {
 
 function endCourseWalk() {
   if (!courseModeOpen) return;
+  if (courseVideoId && activeMiniPlayerVideoId === courseVideoId) stopMiniPlayer();
+  courseVideoId = null;
   courseOverlays.forEach((o) => o.setMap(null));
   courseOverlays = [];
   if (coursePolyline) {

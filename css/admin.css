@@ -586,3 +586,24 @@ body {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* 코스 배경음악 — 아티스트/곡 제목 두 칸을 한 줄에 */
+.course-music-row {
+  display: flex;
+  gap: 10px;
+}
+
+.course-music-row label {
+  flex: 1;
+  min-width: 0;
+}
+
+.course-form .course-photo-remove {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.course-form .course-photo-remove input {
+  padding: 0;
+}

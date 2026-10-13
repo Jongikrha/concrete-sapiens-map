@@ -5026,6 +5026,15 @@ button.story-place-line:hover {
   box-shadow: 0 0 0 6px rgba(255, 90, 54, 0.2), 0 2px 8px rgba(47, 48, 49, 0.3);
 }
 
+/* 장소 사진 — 기억산책 카드 사진(.recall-card-photo)보다 납작하게. 장소
+   카드엔 설명·인용·근처 기억·버튼까지 붙어서 4:3이면 모바일에서 카드가
+   스크롤되고 지도 위 핀 자리도 좁아진다. */
+.course-card .recall-card-photo {
+  aspect-ratio: 16 / 9;
+  max-height: 22vh;
+  margin-bottom: 14px;
+}
+
 .course-card-kicker {
   margin: 0 0 10px;
   font-size: 12px;
