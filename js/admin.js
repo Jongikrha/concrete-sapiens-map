@@ -1018,6 +1018,7 @@ function courseCardHtml(course) {
         <span>${course.isPublished ? "공개" : "비공개"}</span>
         <span>정렬 ${course.sortOrder ?? 0}</span>
         ${course.logoKey ? `<span>로고 있음</span>` : ""}
+        ${course.coverKey ? `<span>표지 있음</span>` : ""}
       </div>
       ${course.description ? `<p class="field-hint">${escapeHtml(course.description)}</p>` : ""}
       <div class="admin-card-actions">
@@ -1050,6 +1051,10 @@ function courseFormHtml() {
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
       <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.</p>
+      <label>표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
+      <div class="course-cover-preview" id="course-cover-preview"${c?.coverKey ? ` data-photo-key="${escapeHtml(c.coverKey)}"` : ""}></div>
+      ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
+      <p class="field-hint">책 표지·포스터처럼 세로로 긴 이미지. 코스 소개 카드 오른쪽에 들어가요.</p>
       <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1239,12 +1244,18 @@ async function renderCoursesTab() {
     const preview = document.getElementById("course-logo-preview");
     preview.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" />`;
   });
-  const logoPreview = document.getElementById("course-logo-preview");
-  if (logoPreview.dataset.photoKey) {
-    resolveAdminPhotoUrl(logoPreview.dataset.photoKey).then((url) => {
-      if (url && !logoPreview.firstChild) logoPreview.innerHTML = `<img src="${url}" alt="" />`;
+  document.getElementById("course-cover-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById("course-cover-preview").innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" />`;
+  });
+  ["course-logo-preview", "course-cover-preview"].forEach((id) => {
+    const preview = document.getElementById(id);
+    if (!preview.dataset.photoKey) return;
+    resolveAdminPhotoUrl(preview.dataset.photoKey).then((url) => {
+      if (url && !preview.firstChild) preview.innerHTML = `<img src="${url}" alt="" />`;
     });
-  }
+  });
   const placeForm = document.getElementById("place-form");
   if (placeForm) {
     placeForm.addEventListener("submit", handlePlaceSubmit);
@@ -1303,6 +1314,23 @@ async function handleCourseSubmit(e) {
     }
   }
   fields.logoKey = logoKey;
+  // 표지는 사진과 같은 방식(JPEG로 줄여서)으로 올린다 — 로고처럼 투명
+  // 배경이 필요 없다.
+  let coverKey = editing?.coverKey || null;
+  if (f.get("removeCover")) coverKey = null;
+  const coverFile = f.get("cover");
+  if (coverFile && coverFile.size) {
+    try {
+      const blob = await PhotoUpload.resizeImageFile(coverFile);
+      coverKey = `story-photos/course-cover-${Date.now()}.jpg`;
+      await uploadData({ path: coverKey, data: blob, options: { contentType: "image/jpeg" } }).result;
+    } catch (err) {
+      console.error("코스 표지 업로드 실패", err);
+      alert(`표지를 올리지 못했어요. ${err.message || ""}`);
+      return;
+    }
+  }
+  fields.coverKey = coverKey;
   if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;

@@ -628,3 +628,16 @@ body {
   object-fit: contain;
   display: block;
 }
+
+/* 코스 표지 미리보기 — 소개 카드처럼 세로 직사각형 */
+.course-cover-preview:empty {
+  display: none;
+}
+
+.course-cover-preview img {
+  display: block;
+  width: 80px;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}

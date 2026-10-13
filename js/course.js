@@ -399,10 +399,16 @@ function renderCourseCard() {
 
   let body;
   if (isIntro) {
+    // 표지(책 표지 등)가 있으면 글 오른쪽에 세로로 세운다.
     body = `
-      <p class="course-card-kicker">발자취 · 장소 ${total}곳</p>
-      <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
-      ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
+      <div class="course-intro">
+        <div class="course-intro-text">
+          <p class="course-card-kicker">발자취 · 장소 ${total}곳</p>
+          <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
+          ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
+        </div>
+        ${activeCourse.coverKey ? `<div class="course-intro-cover" id="course-intro-cover"></div>` : ""}
+      </div>
       <div class="course-card-links">
         ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
         <button type="button" class="course-card-link course-card-share" id="course-card-share">공유하기</button>
@@ -445,7 +451,10 @@ function renderCourseCard() {
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
   document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
-  if (isIntro) document.getElementById("course-card-share").onclick = (e) => shareCourseLink(e.currentTarget);
+  if (isIntro) {
+    document.getElementById("course-card-share").onclick = (e) => shareCourseLink(e.currentTarget);
+    renderCourseCover();
+  }
   if (!isIntro && !isOutro) {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
@@ -466,6 +475,24 @@ function renderCoursePlacePhoto(place) {
     }
     const img = document.createElement("img");
     img.className = "recall-card-photo-img";
+    img.alt = "";
+    img.src = url;
+    slot.replaceChildren(img);
+  });
+}
+
+// 코스 표지 — URL이 늦게 오면 이미 소개 카드를 지나갔을 수 있어 슬롯이
+// 아직 있을 때만 꽂고, 못 받으면 슬롯을 지워 글이 카드 폭을 다 쓰게 한다.
+function renderCourseCover() {
+  const slot = document.getElementById("course-intro-cover");
+  if (!slot) return;
+  resolveStoryPhotoUrl(activeCourse.coverKey).then((url) => {
+    if (!slot.isConnected) return;
+    if (!url) {
+      slot.remove();
+      return;
+    }
+    const img = document.createElement("img");
     img.alt = "";
     img.src = url;
     slot.replaceChildren(img);
