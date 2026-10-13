@@ -44,13 +44,41 @@ async function loadPublishedCourses() {
 // 새로 그릴 때마다 부른다). 해시태그/연도/곡 필터가 걸려 있으면 그쪽에서
 // 먼저 return해 칩이 안 생기고, 시간여행/내 기억 모드에선 해시태그 칩과
 // 똑같이 남아 있다(누르면 startCourseWalk가 그 모드들을 닫는다).
+//
+// 칩 문구는 "발자취"만으로는 눌렀을 때 뭐가 나올지 짐작이 안 돼서
+// (2026-10-13), 공개 코스가 하나면 "<코스 이름> 따라 걷기"로 무엇을
+// 따라가는지 보여준다. 코스 로고가 있으면 앞에 작게 붙이고, 없으면 종류별
+// 이모지(책이면 📖). 코스가 여럿이면 목록부터 고르니 "발자취 N".
+const COURSE_KIND_EMOJI = { book: "📖", person: "👣", drama: "🎬", org: "👣", etc: "👣" };
+
 function buildCourseChip() {
   if (publishedCourses.length === 0) return null;
   const chip = document.createElement("button");
   chip.type = "button";
   chip.className = "chip course-entry";
-  chip.textContent = "발자취";
   chip.onclick = handleCourseEntryClick;
+  if (publishedCourses.length > 1) {
+    chip.textContent = `발자취 ${publishedCourses.length}`;
+    return chip;
+  }
+  const course = publishedCourses[0];
+  const icon = document.createElement("span");
+  icon.className = "course-entry-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = course.logoKey ? "" : COURSE_KIND_EMOJI[course.kind] || "👣";
+  chip.append(icon, `${course.title} 따라 걷기`);
+  if (course.logoKey) {
+    resolveStoryPhotoUrl(course.logoKey).then((url) => {
+      if (!url) {
+        icon.textContent = COURSE_KIND_EMOJI[course.kind] || "👣";
+        return;
+      }
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = url;
+      icon.replaceChildren(img);
+    });
+  }
   return chip;
 }
 

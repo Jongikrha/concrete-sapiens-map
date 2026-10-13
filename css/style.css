@@ -4980,11 +4980,28 @@ button.story-place-line:hover {
    코스에만 있는 것(칩, 번호 핀, 카드 내용, 코스 목록)만 둔다.
    ------------------------------------------------------------ */
 
-/* "기억 아카이브"(주황 채움)보다 한 단계 조용하게 — 테두리만 주황 */
+/* "기억 아카이브"(주황 채움)보다 한 단계 조용하게 — 테두리만 주황.
+   앞에 코스 로고(없으면 종류별 이모지)가 붙는다 — js/course.js buildCourseChip */
 .course-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--cs-orange);
   border-color: var(--cs-orange);
   font-weight: 500;
+}
+
+.course-entry-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.course-entry-icon img {
+  display: block;
+  height: 14px;
+  width: auto;
 }
 
 /* 번호 핀 — kakao CustomOverlay로 지도 위에 올린다 */
