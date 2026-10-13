@@ -1372,8 +1372,9 @@ async function handlePlaceSearch() {
     resultsEl.innerHTML = `<li class="field-hint">카카오 장소 검색을 불러오지 못했어요. 이 도메인이 카카오 콘솔에 등록돼 있는지 확인해주세요.</li>`;
     return;
   }
-  new kakao.maps.services.Places().keywordSearch(query, (data, status) => {
-    if (status !== kakao.maps.services.Status.OK || !data.length) {
+  // 장소 이름뿐 아니라 지번/도로명 주소로도 찾는다(js/kakaoSearch.js).
+  searchKakaoPlacesAndAddresses(query, (data) => {
+    if (!data.length) {
       resultsEl.innerHTML = `<li class="field-hint">검색 결과가 없어요.</li>`;
       return;
     }

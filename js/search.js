@@ -132,10 +132,11 @@ function renderSearchAreaModal() {
     document.getElementById("search-area-overlay").classList.add("hidden");
     openComposer({
       lat, lng,
-      officialPlaceName: placeName,
+      officialPlaceName: placeId ? placeName : null,
       placeId,
       address: address || null,
-      isFreePin: false,
+      // 주소로 찾은 결과(placeId 없음)는 자유 핀 — 이름은 사용자가 붙인다.
+      isFreePin: !placeId,
     });
   };
 }
@@ -217,8 +218,9 @@ function bindSearchEvents() {
     const keyword = searchInput.value.trim();
     if (!keyword) return;
 
-    placesService.keywordSearch(keyword, (data, status) => {
-      if (status !== kakao.maps.services.Status.OK) {
+    // 장소 이름뿐 아니라 지번/도로명 주소로도 찾는다(js/kakaoSearch.js).
+    searchKakaoPlacesAndAddresses(keyword, (data) => {
+      if (!data.length) {
         searchResults.innerHTML = `<li class="search-empty">검색 결과가 없습니다.</li>`;
         searchResults.classList.remove("hidden");
         return;
@@ -227,7 +229,7 @@ function bindSearchEvents() {
       searchResults.innerHTML = data.slice(0, 6).map((place) => {
         const rawAddress = place.road_address_name || place.address_name || "";
         return `
-        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id}" data-address="${escapeHtml(rawAddress)}">
+        <li class="search-result-item" data-lat="${place.y}" data-lng="${place.x}" data-name="${escapeHtml(place.place_name)}" data-id="${place.id || ""}" data-address="${escapeHtml(rawAddress)}">
           <strong>${escapeHtml(place.place_name)}</strong>
           <span>${escapeHtml(Storage.abbreviateAddress(rawAddress))}</span>
         </li>
@@ -240,7 +242,8 @@ function bindSearchEvents() {
           const lat = parseFloat(item.dataset.lat);
           const lng = parseFloat(item.dataset.lng);
           const placeName = item.dataset.name;
-          const placeId = item.dataset.id;
+          // 주소로 찾은 결과는 카카오 장소 id가 없다 — 자유 핀으로 남긴다.
+          const placeId = item.dataset.id || null;
           const address = item.dataset.address || null;
           map.setCenter(new kakao.maps.LatLng(lat, lng));
           map.setLevel(4);
@@ -251,10 +254,10 @@ function bindSearchEvents() {
           if (promptPrefill) {
             openComposer({
               lat, lng,
-              officialPlaceName: placeName,
+              officialPlaceName: placeId ? placeName : null,
               placeId,
               address,
-              isFreePin: false,
+              isFreePin: !placeId,
               prefillContent: promptPrefill,
             });
             return;
