@@ -1232,6 +1232,20 @@
               "isRequired": false,
               "attributes": []
             },
+            "photoFocusX": {
+              "name": "photoFocusX",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "photoFocusY": {
+              "name": "photoFocusY",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
             "youtubeUrl": {
               "name": "youtubeUrl",
               "isArray": false,
