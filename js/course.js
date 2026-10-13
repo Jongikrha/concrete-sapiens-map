@@ -701,6 +701,8 @@ function renderCoursePlacePhoto(place) {
     img.className = "recall-card-photo-img";
     img.alt = "";
     img.src = url;
+    // 어드민에서 끌어서 정한 보일 부분(CoursePlace.photoFocusX/Y)
+    img.style.objectPosition = `${place.photoFocusX ?? 50}% ${place.photoFocusY ?? 50}%`;
     slot.replaceChildren(img);
   });
 }

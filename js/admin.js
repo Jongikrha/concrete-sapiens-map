@@ -937,6 +937,9 @@ let placeDraft = null; // 카카오 검색에서 고른 { name, address, lat, ln
 // 장소 폼에서 고른 사진 File — 검색 결과를 고르면 폼을 다시 그리는데
 // <input type=file> 값은 되살릴 수 없어서 여기 들고 있는다.
 let placePhotoFile = null;
+// 장소 사진 크롭 기준점 { x, y }(0~100%) — 끌어서 바꾼 값. null이면 수정 중인
+// 장소의 저장값(없으면 가운데). 새 사진을 고르면 가운데로 다시 시작한다.
+let placePhotoFocus = null;
 
 // list()는 한 번에 최대 100건이라 nextToken을 끝까지 따라간다. GraphQL
 // 에러는 reject가 아니라 errors 배열로 오므로 직접 확인해서 던진다.
@@ -1276,19 +1279,63 @@ function resizeLogoFile(file) {
 
 // 장소 사진(선택, 1장) — 카드에 16:9로 잘려 보이므로 가로 사진이 좋다.
 // 직접 찍었거나 사용 허락을 받은 사진만 올린다.
+function getPlacePhotoFocus(p) {
+  return placePhotoFocus || { x: p?.photoFocusX ?? 50, y: p?.photoFocusY ?? 50 };
+}
+
+// 미리보기 칸은 장소 카드 사진 칸과 같은 16:9 — 기억 카드 사진(js/composer.js
+// 사진 미리보기)처럼 사진을 끌어 보일 부분을 고른다(WYSIWYG).
 function placePhotoFieldHtml(p) {
+  const focus = getPlacePhotoFocus(p);
+  const focusAttrs = `data-focus-x="${focus.x}" data-focus-y="${focus.y}"`;
   let preview = "";
   if (placePhotoFile) {
-    preview = `<div class="admin-card-photo"><img src="${URL.createObjectURL(placePhotoFile)}" alt="" /></div>`;
+    preview = `<div class="admin-card-photo course-place-photo-crop" id="place-photo-crop" ${focusAttrs}><img src="${URL.createObjectURL(placePhotoFile)}" alt="" style="object-position:${focus.x}% ${focus.y}%" /></div>`;
   } else if (p?.photoKey) {
-    preview = `<div class="admin-card-photo" data-photo-key="${escapeHtml(p.photoKey)}"></div>
+    preview = `<div class="admin-card-photo course-place-photo-crop" id="place-photo-crop" data-photo-key="${escapeHtml(p.photoKey)}" ${focusAttrs}></div>
       <label class="course-photo-remove"><input type="checkbox" name="removePhoto" /> 사진 빼기</label>`;
   }
   return `
     <label>사진(선택)<input type="file" name="photo" id="place-photo-input" accept="image/*" /></label>
     ${preview}
-    <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보여요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+    <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보여요. ${preview ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
   `;
+}
+
+// 미리보기 사진 끌기 — js/composer.js 사진 미리보기와 같은 계산(넘치는 만큼을
+// 0~100%로 환산). 기존 사진은 hydrateAdminPhotos가 img를 나중에 넣으므로
+// 칸에 이벤트를 걸고 누를 때 img를 찾는다.
+function bindPlacePhotoCrop() {
+  const box = document.getElementById("place-photo-crop");
+  if (!box) return;
+  const p = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((x) => x.id === editingPlaceId) : null;
+  let drag = null;
+  box.addEventListener("pointerdown", (e) => {
+    const img = box.querySelector("img");
+    if (!img || !img.naturalWidth) return;
+    const scale = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
+    const overflowX = img.naturalWidth * scale - box.clientWidth;
+    const overflowY = img.naturalHeight * scale - box.clientHeight;
+    if (overflowX <= 0 && overflowY <= 0) return;
+    e.preventDefault();
+    box.setPointerCapture(e.pointerId);
+    drag = { img, overflowX, overflowY, startX: e.clientX, startY: e.clientY, start: { ...getPlacePhotoFocus(p) } };
+    box.classList.add("dragging");
+  });
+  box.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const focus = { ...drag.start };
+    if (drag.overflowX > 0) focus.x = Math.min(100, Math.max(0, drag.start.x - ((e.clientX - drag.startX) / drag.overflowX) * 100));
+    if (drag.overflowY > 0) focus.y = Math.min(100, Math.max(0, drag.start.y - ((e.clientY - drag.startY) / drag.overflowY) * 100));
+    placePhotoFocus = focus;
+    drag.img.style.objectPosition = `${focus.x}% ${focus.y}%`;
+  });
+  ["pointerup", "pointercancel"].forEach((evt) => {
+    box.addEventListener(evt, () => {
+      drag = null;
+      box.classList.remove("dragging");
+    });
+  });
 }
 
 async function renderCoursesTab() {
@@ -1353,10 +1400,12 @@ async function renderCoursesTab() {
       const file = e.target.files[0];
       if (!file) return;
       placePhotoFile = file;
+      placePhotoFocus = { x: 50, y: 50 };
       keepPlaceFormFields(renderCoursesTab);
     });
   }
   hydrateAdminPhotos();
+  bindPlacePhotoCrop();
 }
 
 // 폼을 다시 그려도 적어둔 이름/꼬리표/사진 제목/인용은 남게 한다.
@@ -1481,6 +1530,7 @@ async function handleCourseAction(action, courseId) {
     editingPlaceId = null;
     placeDraft = null;
     placePhotoFile = null;
+    placePhotoFocus = null;
   } else if (action === "edit") {
     editingCourseId = courseId;
     renderCoursesTab();
@@ -1589,8 +1639,11 @@ async function handlePlaceSubmit(e) {
       return;
     }
   }
+  const focus = getPlacePhotoFocus(existing);
   const fields = {
     photoKey,
+    photoFocusX: photoKey ? Math.round(focus.x) : null,
+    photoFocusY: photoKey ? Math.round(focus.y) : null,
     name: f.get("name").trim() || location.name,
     lat: location.lat,
     lng: location.lng,
@@ -1618,6 +1671,7 @@ async function handlePlaceSubmit(e) {
   }
   placeDraft = null;
   placePhotoFile = null;
+  placePhotoFocus = null;
   renderCoursesTab();
 }
 
@@ -1633,6 +1687,7 @@ async function handlePlaceAction(action, placeId) {
     editingPlaceId = placeId;
     placeDraft = null;
     placePhotoFile = null;
+    placePhotoFocus = null;
     renderCoursesTab();
     document.getElementById("place-form").scrollIntoView({ behavior: "smooth" });
     return;
@@ -1640,6 +1695,7 @@ async function handlePlaceAction(action, placeId) {
     editingPlaceId = null;
     placeDraft = null;
     placePhotoFile = null;
+    placePhotoFocus = null;
   } else if (action === "up" || action === "down") {
     const other = list[action === "up" ? index - 1 : index + 1];
     if (!other) return;

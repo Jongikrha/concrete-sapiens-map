@@ -695,3 +695,22 @@ body {
   text-align: right;
   margin-top: -4px;
 }
+
+/* 장소 사진 크롭 미리보기 — 장소 카드 사진 칸과 같은 16:9, 끌어서 위치 조절 */
+.course-place-photo-crop {
+  width: 280px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.course-place-photo-crop.dragging {
+  cursor: grabbing;
+}
+
+.course-place-photo-crop img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
