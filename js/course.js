@@ -113,10 +113,12 @@ function buildCourseChip() {
 // 표지·제목·부제·종류/장소 수·"둘러보기" 카드. 맨 앞 코스는 "지금
 // 둘러보세요"로 강조한다. 공개 코스가 아직 하나뿐이라 다음 콘텐츠 예고
 // (COURSES_COMING_SOON)를 "준비 중"으로 아래에 붙인다 — 실제 코스가
-// 아니라 코드에 적어둔 안내이므로, 공개되거나 계획이 바뀌면 여기서 지운다.
+// 아니라 코드에 적어둔 안내라 작품 이름은 밝히지 않고(표지 "준비 중",
+// 제목 "새로운 콘텐츠 준비 중") 어떤 종류가 올지만 소개 글로 귀띔한다.
+// 실제 코스가 공개되면 여기서 하나씩 지운다.
 const COURSES_COMING_SOON = [
-  { title: "서울의 시간들", description: "익숙한 도시의 오늘과 어제를 발견하는 서울 산책 에세이.", kind: "book" },
-  { title: "골목의 온도", description: "작은 골목마다 숨은 이야기를 따라 도시의 또 다른 얼굴을 만나보세요.", kind: "book" },
+  { description: "또 다른 책 속 장소를 따라 걷는 길을 준비하고 있어요.", kind: "book" },
+  { description: "드라마와 영화 속 그 장면의 장소를 따라 걷는 길을 준비하고 있어요.", kind: "drama" },
 ];
 
 const COURSE_LIST_BOOKS_ICON = `
@@ -160,10 +162,10 @@ function openCourseChoice() {
       ${COURSES_COMING_SOON.map((c, i) => `
         <div class="course-choice-item course-choice-item--soon">
           <span class="course-choice-cover course-choice-cover--soon course-choice-cover--soon-${i % 2}">
-            <span class="course-choice-cover-text">${escapeHtml(c.title)}</span>
+            <span class="course-choice-cover-text">준비 중</span>
           </span>
           <span class="course-choice-text">
-            <span class="course-choice-title">${escapeHtml(c.title)}</span>
+            <span class="course-choice-title">새로운 콘텐츠 준비 중</span>
             <span class="course-choice-desc">${escapeHtml(c.description)}</span>
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 준비 중</span>
           </span>
