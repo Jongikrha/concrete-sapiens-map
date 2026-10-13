@@ -5131,6 +5131,7 @@ button.story-place-line:hover {
   font-size: 24px;
   letter-spacing: -0.5px;
   color: var(--cs-black);
+  word-break: keep-all; /* "있나/요?"처럼 글자 단위로 끊기지 않게 */
 }
 
 .course-card-quote {
@@ -5153,38 +5154,6 @@ button.story-place-line:hover {
 
 /* "근처에 남겨진 기억 N개" + 기억 남기기 — 코스가 기억을 모으는 장치가
    되게 하는 줄이라 본문과 구분해 한 칸 띄운다. */
-.course-card-nearby {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  font-size: 13px;
-  color: var(--cs-text-muted);
-}
-
-.course-card-nearby b {
-  color: var(--cs-orange);
-}
-
-.course-card-write {
-  padding: 6px 12px;
-  border: 1px solid var(--cs-orange);
-  border-radius: var(--cs-radius-chip);
-  background: transparent;
-  color: var(--cs-orange);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.course-card-write:hover {
-  background: rgba(255, 90, 54, 0.08);
-}
-
 /* 공개 코스가 여럿일 때 고르는 목록 */
 .course-choice-list {
   display: flex;

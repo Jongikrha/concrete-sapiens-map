@@ -11,16 +11,17 @@
 // 화면 구성은 기억산책(js/recall.js)과 같은 리듬: 평소 UI를 옅게 지우고
 // (enterRecallImmersiveChrome 재사용), 아래 카드로 한 곳씩 넘겨본다.
 // 기억산책과 다른 점은 장소가 정해진 순서로 이어진다는 것 — 번호 핀과
-// 옅은 점선으로 길을 보여준다. 장소마다 "근처에 남겨진 기억 N개"와
-// "여기에 내 기억 남기기"를 붙여, 코스가 관광 안내가 아니라 기억을 모으는
-// 장치가 되게 한다.
-
-const COURSE_NEARBY_RADIUS_METERS = 300; // "근처의 기억"과 같은 기준
+// 옅은 점선으로 길을 보여준다. 코스가 관광 안내가 아니라 기억을 모으는
+// 장치가 되도록 마지막 장소 뒤에 마무리 카드를 두고 거기서 한 번만 "당신의
+// 기억도 남겨보세요"라고 묻는다 — 처음엔 장소 카드마다 "여기에 내 기억
+// 남기기"와 근처 기억 수를 붙였는데, 누르면 따라 걷기가 끊기고 둘러보는
+// 흐름 중간에 끼어든다는 피드백으로 옮겼다(2026-10-13).
 
 let publishedCourses = [];
 let courseModeOpen = false;
 let activeCourse = null;
-// -1은 코스 소개 카드(전체 경로를 한눈에), 0부터는 장소 순서
+// -1은 코스 소개 카드(전체 경로를 한눈에), 0부터는 장소 순서,
+// places.length는 마무리 카드(다시 전체 경로)
 let courseIndex = -1;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 let coursePolyline = null;
@@ -227,9 +228,10 @@ function showCourseStep(index) {
 
   // 미니 플레이어가 나타나면 아래 지도 위치 계산(topEdge)이 달라지므로
   // 카드/지도 이동보다 먼저 튼다.
-  if (index >= 0) playPlaceSong(activeCourse.places[index]);
+  const total = activeCourse.places.length;
+  if (index >= 0 && index < total) playPlaceSong(activeCourse.places[index]);
   renderCourseCard();
-  if (index < 0) {
+  if (index < 0 || index >= total) {
     fitCourseBounds();
   } else {
     const place = activeCourse.places[index];
@@ -253,6 +255,7 @@ function renderCourseCard() {
   const total = activeCourse.places.length;
   const isIntro = courseIndex < 0;
   const isLast = courseIndex === total - 1;
+  const isOutro = courseIndex >= total;
 
   let body;
   if (isIntro) {
@@ -262,9 +265,14 @@ function renderCourseCard() {
       ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
       ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
     `;
+  } else if (isOutro) {
+    body = `
+      <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · 장소 ${total}곳을 모두 둘러봤어요</p>
+      <h2 class="course-card-title">이 길 위에 당신의 기억도 있나요?</h2>
+      <p class="story-content">지나온 곳 어딘가에 얽힌 기억이 있다면 지도에 남겨주세요.</p>
+    `;
   } else {
     const place = activeCourse.places[courseIndex];
-    const nearbyCount = Storage.getStoriesNear(place.lat, place.lng, COURSE_NEARBY_RADIUS_METERS).length;
     body = `
       ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
       <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · ${courseIndex + 1} / ${total}</p>
@@ -272,14 +280,10 @@ function renderCourseCard() {
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
       ${place.description ? `<p class="story-content">${escapeHtml(place.description)}</p>` : ""}
       ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(place.quote)}</blockquote>` : ""}
-      <div class="course-card-nearby">
-        <span>${nearbyCount > 0 ? `이 근처에 남겨진 기억 <b>${nearbyCount}개</b>` : "아직 이 근처에 남겨진 기억이 없어요"}</span>
-        <button type="button" class="course-card-write" id="course-card-write">여기에 내 기억 남기기</button>
-      </div>
     `;
   }
 
-  const nextLabel = isIntro ? "따라 걷기 시작" : isLast ? "처음으로" : "다음 장소로";
+  const nextLabel = isIntro ? "따라 걷기 시작" : isOutro ? "내 기억 남기기" : isLast ? "다 둘러봤어요" : "다음 장소로";
   card.innerHTML = `
     ${body}
     <div class="recall-card-nav">
@@ -296,10 +300,8 @@ function renderCourseCard() {
   card.classList.add("recall-card--visible");
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
-  document.getElementById("course-card-next-btn").onclick = () => showCourseStep(isLast ? -1 : courseIndex + 1);
-  const writeBtn = document.getElementById("course-card-write");
-  if (writeBtn) writeBtn.onclick = writeMemoryAtCoursePlace;
-  if (!isIntro) renderCoursePlacePhoto(activeCourse.places[courseIndex]);
+  document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
+  if (!isIntro && !isOutro) renderCoursePlacePhoto(activeCourse.places[courseIndex]);
 }
 
 // 장소 사진 — 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
@@ -323,9 +325,10 @@ function renderCoursePlacePhoto(place) {
 }
 
 // 작성 폼(.overlay, z-index 100)이 이 화면(.recall-session, 110) 아래에
-// 깔리므로 따라 걷기를 마치고 그 자리에서 작성 폼을 연다.
-function writeMemoryAtCoursePlace() {
-  const place = activeCourse.places[courseIndex];
+// 깔리므로 따라 걷기를 마치고 작성 폼을 연다. 이미 코스를 다 본 뒤라 끊길
+// 흐름이 없다. 위치는 마지막 장소로 시작하고, 마법사 첫 단계에서 바꿀 수 있다.
+function writeMemoryAfterCourse() {
+  const place = activeCourse.places[activeCourse.places.length - 1];
   Storage.logEvent(`course_write:${activeCourse.slug}`);
   endCourseWalk();
   startFreePinComposer(place.lat, place.lng);
