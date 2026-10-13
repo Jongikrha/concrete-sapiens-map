@@ -647,10 +647,11 @@ function renderCourseCard() {
     const place = activeCourse.places[courseIndex];
     body = `
       ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
+      ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(place.description)}</p>` : ""}
       <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · ${courseIndex + 1} / ${total}</p>
       ${place.label ? `<p class="course-card-label">${escapeHtml(place.label)}</p>` : ""}
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
-      ${place.description ? `<p class="story-content">${escapeHtml(place.description)}</p>` : ""}
+      ${!place.photoKey && place.description ? `<p class="story-content">${escapeHtml(place.description)}</p>` : ""}
       ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(place.quote)}</blockquote>` : ""}
       ${courseSongCardHtml(place)}
     `;

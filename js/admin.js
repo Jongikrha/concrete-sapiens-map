@@ -1190,10 +1190,13 @@ function placeFormHtml() {
       <ul class="course-place-results" id="place-search-results"></ul>
       ${picked}
       <label>지도에 보일 이름<input type="text" name="name" value="${escapeHtml(p?.name ?? placeDraft?.name ?? "")}" placeholder="검색 결과 이름을 바꾸고 싶을 때만 수정" /></label>
-      <label>꼬리표(선택)<input type="text" name="label" value="${v("label")}" placeholder='예: "3장", "1443년"' /></label>
-      <label>설명(선택)<textarea name="description" rows="2">${v("description")}</textarea></label>
-      <label>인용(선택)<textarea name="quote" rows="2" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
+      <label>꼬리표(선택)<input type="text" name="label" value="${v("label")}" data-max-nonspace="${PLACE_LABEL_MAX}" placeholder='예: "3장", "1443년"' /></label>
+      <p class="field-hint field-count" data-count-for="label"></p>
+      <label>인용(선택)<textarea name="quote" rows="3" data-max-nonspace="${PLACE_QUOTE_MAX}" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
+      <p class="field-hint field-count" data-count-for="quote"></p>
       ${placePhotoFieldHtml(p)}
+      <label>사진 제목(선택)<input type="text" name="description" value="${v("description")}" data-max-nonspace="${PLACE_PHOTO_TITLE_MAX}" placeholder="사진 바로 아래에 작게 보여요" /></label>
+      <p class="field-hint field-count" data-count-for="description"></p>
       <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 장소 노래들이 차례로 흘러요" /></label>
       <div class="course-music-row">
         <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
@@ -1338,6 +1341,7 @@ async function renderCoursesTab() {
   const placeForm = document.getElementById("place-form");
   if (placeForm) {
     placeForm.addEventListener("submit", handlePlaceSubmit);
+    bindNonSpaceLimits(placeForm);
     const searchInput = document.getElementById("place-search-input");
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -1355,7 +1359,7 @@ async function renderCoursesTab() {
   hydrateAdminPhotos();
 }
 
-// 폼을 다시 그려도 적어둔 이름/꼬리표/설명/인용은 남게 한다.
+// 폼을 다시 그려도 적어둔 이름/꼬리표/사진 제목/인용은 남게 한다.
 function keepPlaceFormFields(rerender) {
   const form = document.getElementById("place-form");
   const kept = Object.fromEntries(["name", "label", "description", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
@@ -1363,6 +1367,33 @@ function keepPlaceFormFields(rerender) {
   const newForm = document.getElementById("place-form");
   Object.entries(kept).forEach(([k, val]) => {
     newForm.elements[k].value = val;
+  });
+  bindNonSpaceLimits(newForm);
+}
+
+// 장소 글자 수 제한(2026-10-13, 공백 제외) — 장소 카드가 폰에서 한 화면에
+// 들어오게. 사진 제목(description 필드)은 사진 바로 아래 한 줄 캡션이다.
+const PLACE_LABEL_MAX = 25;
+const PLACE_PHOTO_TITLE_MAX = 20;
+const PLACE_QUOTE_MAX = 80;
+
+const countNonSpace = (text) => text.replace(/\s/g, "").length;
+
+// data-max-nonspace가 붙은 칸은 공백을 뺀 글자 수가 한도를 넘으면 마지막
+// 입력을 되돌리고, 바로 아래 .field-count에 "n / 한도자(공백 제외)"를 띄운다.
+// 폼을 다시 그린 뒤(값을 코드로 채운 뒤)에도 다시 불러 숫자를 맞춘다.
+function bindNonSpaceLimits(form) {
+  form.querySelectorAll("[data-max-nonspace]").forEach((input) => {
+    const max = Number(input.dataset.maxNonspace);
+    const counter = form.querySelector(`.field-count[data-count-for="${input.name}"]`);
+    let lastValid = input.value;
+    const update = () => {
+      if (countNonSpace(input.value) > max) input.value = lastValid;
+      lastValid = input.value;
+      if (counter) counter.textContent = `${countNonSpace(input.value)} / ${max}자(공백 제외)`;
+    };
+    input.oninput = update;
+    update();
   });
 }
 
@@ -1527,6 +1558,7 @@ function pickSearchResult(index) {
   Object.entries(kept).forEach(([k, val]) => {
     newForm.elements[k].value = val;
   });
+  bindNonSpaceLimits(newForm);
 }
 
 async function handlePlaceSubmit(e) {
