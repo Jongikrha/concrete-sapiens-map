@@ -1058,6 +1058,20 @@
               "isRequired": false,
               "attributes": []
             },
+            "coverSpineRatio": {
+              "name": "coverSpineRatio",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "intro": {
+              "name": "intro",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "sortOrder": {
               "name": "sortOrder",
               "isArray": false,
