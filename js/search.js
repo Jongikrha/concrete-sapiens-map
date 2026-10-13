@@ -214,9 +214,22 @@ function bindSearchEvents() {
   document.getElementById("search-btn").onclick = () => runSearch();
   searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });
 
+  // 결과 목록(특히 "검색 결과가 없습니다")이 한 번 뜨면 닫을 방법이 없어
+  // 화면이 그대로 막혀 있었다(2026-10-13) — 검색창 바깥 어디를 누르거나,
+  // 검색어를 고치거나, 빈 검색어로 검색을 누르면 닫는다. 지도는 드래그를
+  // 위해 이벤트 전파를 막을 수 있어 캡처 단계에서 듣는다.
+  const hideSearchResults = () => searchResults.classList.add("hidden");
+  document.addEventListener("pointerdown", (e) => {
+    if (!e.target.closest(".search-box")) hideSearchResults();
+  }, true);
+  searchInput.addEventListener("input", hideSearchResults);
+
   function runSearch() {
     const keyword = searchInput.value.trim();
-    if (!keyword) return;
+    if (!keyword) {
+      hideSearchResults();
+      return;
+    }
 
     // 장소 이름뿐 아니라 지번/도로명 주소로도 찾는다(js/kakaoSearch.js).
     searchKakaoPlacesAndAddresses(keyword, (data) => {
