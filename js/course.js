@@ -10,8 +10,8 @@
 // 코스가 하나뿐이어도 코스 목록부터 고른다(공유 링크 ?course=는 바로 진입).
 // 화면 구성은 기억산책(js/recall.js)과 같은 리듬: 평소 UI를 옅게 지우고
 // (enterRecallImmersiveChrome 재사용), 아래 카드로 한 곳씩 넘겨본다.
-// 기억산책과 다른 점은 장소가 정해진 순서로 이어진다는 것 — 번호 핀과
-// 옅은 점선으로 길을 보여준다. 코스가 관광 안내가 아니라 기억을 모으는
+// 기억산책과 다른 점은 장소가 정해진 순서로 이어진다는 것 — 핀과 카드의
+// "1 / N"으로 순서를 보여준다. 코스가 관광 안내가 아니라 기억을 모으는
 // 장치가 되도록 마지막 장소 뒤에 마무리 카드를 두고 거기서 한 번만 "당신의
 // 기억도 남겨보세요"라고 묻는다 — 처음엔 장소 카드마다 "여기에 내 기억
 // 남기기"와 근처 기억 수를 붙였는데, 누르면 따라 걷기가 끊기고 둘러보는
@@ -24,7 +24,6 @@ let activeCourse = null;
 // places.length는 마무리 카드(다시 전체 경로)
 let courseIndex = -1;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
-let coursePolyline = null;
 // 이번 따라 걷기의 플레이리스트 — 노래가 있는 장소들을 코스 순서대로
 // (같은 곡은 한 번만). 끝낼 때 미니 플레이어가 여전히 이 중 하나면 멈춘다
 // (사용자가 중간에 다른 곡으로 바꿨으면 그대로 둔다).
@@ -290,21 +289,10 @@ function stopCourseSongTicker() {
   courseSongTicker = null;
 }
 
+// 장소 핀만 그린다 — 처음엔 장소들을 옅은 붉은 점선으로 이었는데, 로고
+// 말풍선 핀 사이를 가로지르는 선이 거슬린다는 피드백으로 뺐다(2026-10-13).
+// 순서는 카드의 "1 / N"과 다음 버튼이 보여준다.
 function drawCoursePath() {
-  const path = activeCourse.places.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
-  // 예전에 기억 점들을 선으로 이었다가 "지하철 노선도 같다"는 피드백으로
-  // 뺀 적이 있어(js/map.js renderMarkers 주석) 굵은 실선 대신 옅은 점선으로
-  // "이어지는 길"이라는 느낌만 준다.
-  if (path.length > 1) {
-    coursePolyline = new kakao.maps.Polyline({
-      map,
-      path,
-      strokeWeight: 3,
-      strokeColor: "#FF5A36",
-      strokeOpacity: 0.55,
-      strokeStyle: "shortdash",
-    });
-  }
   courseOverlays = activeCourse.places.map((p, i) => {
     const el = document.createElement("button");
     el.type = "button";
@@ -331,7 +319,7 @@ function drawCoursePath() {
 }
 
 // 코스 로고가 있으면 핀 안에 번호 대신 로고를 넣는다 — 순서는 카드의
-// "1 / 3"과 점선이 보여주므로 핀은 "이 코스의 장소" 표시만 한다. URL을 못
+// "1 / 3"이 보여주므로 핀은 "이 코스의 장소" 표시만 한다. URL을 못
 // 받으면 번호로 되돌린다.
 function numberPinHtml(n) {
   return `
@@ -501,10 +489,6 @@ function endCourseWalk() {
   courseSongs = [];
   courseOverlays.forEach((o) => o.setMap(null));
   courseOverlays = [];
-  if (coursePolyline) {
-    coursePolyline.setMap(null);
-    coursePolyline = null;
-  }
   const card = document.getElementById("course-card");
   card.classList.remove("recall-card--visible");
   document.getElementById("course-session").classList.add("hidden");
