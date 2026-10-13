@@ -221,6 +221,10 @@ const schema = a.schema({
       youtubeUrl: a.string(),
       musicArtist: a.string(),
       musicTitle: a.string(),
+      // 코스 로고(선택, 2026-10-13) — 지도 위 장소 핀에 번호 대신 들어간다.
+      // 순서는 카드("1 / 3")와 점선이 보여주므로 핀엔 "이 코스의 장소"라는
+      // 표시만 둔다. story-photos/ 경로에 투명 배경 유지를 위해 PNG로 올린다.
+      logoKey: a.string(),
       // 코스 목록 정렬용(작을수록 앞)
       sortOrder: a.integer(),
       isPublished: a.boolean().required(),
