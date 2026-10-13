@@ -38,7 +38,7 @@ async function initApp() {
   // 여전히 서버 응답을 기다려야 하므로, 파라미터 없는 기본 랜딩(오늘 올라온
   // 기억)만 캐시가 있으면 즉시 처리한다.
   const params = new URLSearchParams(window.location.search);
-  const isDeepLink = !!(params.get("story") || params.get("place"));
+  const isDeepLink = !!(params.get("story") || params.get("place") || params.get("course"));
   const landedFromCache = !isDeepLink && Storage.getAllStories().length > 0;
   if (landedFromCache) handleInitialEntry();
 
@@ -73,7 +73,8 @@ let pendingWelcomeOnSheetClose = false;
 function maybeShowWelcomeOverlay() {
   if (localStorage.getItem(WELCOME_SEEN_KEY)) return;
   const params = new URLSearchParams(window.location.search);
-  if (params.get("story") || params.get("place")) {
+  // 발자취 링크(?course=)는 따라 걷기를 나갈 때 띄운다(js/course.js endCourseWalk).
+  if (params.get("story") || params.get("place") || params.get("course")) {
     pendingWelcomeOnSheetClose = true;
     return;
   }
@@ -390,6 +391,8 @@ function handleInitialEntry() {
   const params = new URLSearchParams(window.location.search);
   const storyPublicId = params.get("story");
   const placeKey = params.get("place");
+  // 발자취 링크는 코스 목록을 받아온 뒤 js/course.js openCourseFromLink가 연다.
+  if (params.get("course")) return;
 
   if (storyPublicId) {
     const story = Storage.getStoryByPublicId(storyPublicId);

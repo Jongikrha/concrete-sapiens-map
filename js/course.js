@@ -38,6 +38,50 @@ async function loadPublishedCourses() {
     publishedCourses = [];
   }
   renderHashtagChips();
+  openCourseFromLink();
+}
+
+// 공유 링크(?course=<slug>)로 들어오면 그 코스를 바로 연다(2026-10-13) —
+// 책·SNS에 "책 속 장소를 지도로 걸어보기" 링크/QR을 걸기 위한 입구.
+// js/app.js가 이 파라미터가 있으면 기본 랜딩(오늘 올라온 기억)과 첫 방문
+// 환영 모달을 건너뛴다 — 환영 모달은 발자취를 나갈 때 띄운다(endCourseWalk).
+function openCourseFromLink() {
+  const slug = new URLSearchParams(window.location.search).get("course");
+  if (!slug) return;
+  const course = publishedCourses.find((c) => c.slug === slug);
+  if (!course) {
+    showToast("entry-toast", "이 발자취는 지금 볼 수 없어요", 3000);
+    maybeShowPendingWelcomeOverlay();
+    return;
+  }
+  Storage.logEvent(`course_link_opened:${course.slug}`);
+  startCourseWalk(course);
+}
+
+function buildCourseUrl(slug) {
+  return `${window.location.origin}${window.location.pathname}?course=${encodeURIComponent(slug)}`;
+}
+
+// 소개 카드의 "공유하기" — 폰에선 OS 공유 시트(카카오톡 등)를, 안 되는
+// 환경(대부분의 PC)에선 링크 복사. 공유 토스트(.share-toast, z-index 60)는
+// 이 화면(.recall-session, 110)에 가려서 버튼 글자로 결과를 알린다.
+async function shareCourseLink(btn) {
+  const url = buildCourseUrl(activeCourse.slug);
+  Storage.logEvent(`course_shared:${activeCourse.slug}`);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `${activeCourse.title} 따라 걷기`, url });
+    } catch (e) {
+      // 공유 시트를 닫은 경우 — 아무것도 안 한다
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    btn.textContent = "링크가 복사됐어요";
+  } catch (e) {
+    btn.textContent = url;
+  }
 }
 
 // 해시태그 줄 맨 앞의 "발자취" 칩(js/filters.js renderHashtagChips가 줄을
@@ -395,7 +439,10 @@ function renderCourseCard() {
       <p class="course-card-kicker">발자취 · 장소 ${total}곳</p>
       <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
       ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
-      ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
+      <div class="course-card-links">
+        ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
+        <button type="button" class="course-card-link course-card-share" id="course-card-share">공유하기</button>
+      </div>
     `;
   } else if (isOutro) {
     body = `
@@ -434,6 +481,7 @@ function renderCourseCard() {
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
   document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
+  if (isIntro) document.getElementById("course-card-share").onclick = (e) => shareCourseLink(e.currentTarget);
   if (!isIntro && !isOutro) {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
@@ -490,6 +538,8 @@ function endCourseWalk() {
   activeCourse = null;
   courseIndex = -1;
   renderMarkers();
+  // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)
+  maybeShowPendingWelcomeOverlay();
 }
 
 function bindCourseEvents() {

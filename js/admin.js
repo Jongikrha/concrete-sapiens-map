@@ -1024,6 +1024,7 @@ function courseCardHtml(course) {
         <button class="btn-restore" data-course-action="select" data-course-id="${course.id}">${isSelected ? "장소 관리 닫기" : "장소 관리"}</button>
         <button class="btn-restore" data-course-action="edit" data-course-id="${course.id}">수정</button>
         <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${course.isPublished ? "비공개로" : "공개하기"}</button>
+        <button class="btn-restore" data-course-action="copy-link" data-course-id="${course.id}">링크 복사</button>
         <button class="btn-delete" data-course-action="delete" data-course-id="${course.id}">삭제</button>
       </div>
     </div>
@@ -1323,6 +1324,18 @@ async function handleCourseSubmit(e) {
 
 async function handleCourseAction(action, courseId) {
   const course = courses.find((c) => c.id === courseId);
+  if (action === "copy-link") {
+    // 메인 사이트에서 이 코스를 바로 여는 공유 링크(js/course.js openCourseFromLink).
+    // 비공개 코스는 링크로도 안 열린다.
+    const url = `${window.location.origin}/?course=${encodeURIComponent(course.slug)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      alert(`링크를 복사했어요.\n${url}${course.isPublished ? "" : "\n\n아직 비공개라 공개해야 열려요."}`);
+    } catch (e) {
+      prompt("아래 링크를 복사해주세요.", url);
+    }
+    return;
+  }
   if (action === "select") {
     selectedCourseId = selectedCourseId === courseId ? null : courseId;
     editingPlaceId = null;

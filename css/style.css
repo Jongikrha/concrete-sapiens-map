@@ -5157,6 +5157,21 @@ button.story-place-line:hover {
   text-decoration: none;
 }
 
+/* 소개 카드의 "더 알아보기 ›" + "공유하기"를 한 줄에 */
+.course-card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+
+.course-card-share {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* "근처에 남겨진 기억 N개" + 기억 남기기 — 코스가 기억을 모으는 장치가
    되게 하는 줄이라 본문과 구분해 한 칸 띄운다. */
 /* 공개 코스가 여럿일 때 고르는 목록 */
