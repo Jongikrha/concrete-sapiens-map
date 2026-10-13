@@ -117,8 +117,8 @@ function buildCourseChip() {
 // 제목 "새로운 콘텐츠 준비 중") 어떤 종류가 올지만 소개 글로 귀띔한다.
 // 실제 코스가 공개되면 여기서 하나씩 지운다.
 const COURSES_COMING_SOON = [
-  { description: "또 다른 책 속 장소를 따라 걷는 길을 준비하고 있어요.", kind: "book" },
   { description: "드라마와 영화 속 그 장면의 장소를 따라 걷는 길을 준비하고 있어요.", kind: "drama" },
+  { description: "한 사람이 지나온 길을 따라 걷는 발자취를 준비하고 있어요.", kind: "person" },
 ];
 
 const COURSE_LIST_BOOKS_ICON = `
