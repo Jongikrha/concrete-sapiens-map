@@ -1017,6 +1017,7 @@ function courseCardHtml(course) {
         <span>장소 ${places.length}곳</span>
         <span>${course.isPublished ? "공개" : "비공개"}</span>
         <span>정렬 ${course.sortOrder ?? 0}</span>
+        ${course.logoKey ? `<span>로고 있음</span>` : ""}
         ${course.youtubeUrl ? `<span>♪ ${escapeHtml([course.musicArtist, course.musicTitle].filter(Boolean).join(" - ") || "배경음악")}</span>` : ""}
       </div>
       ${course.description ? `<p class="field-hint">${escapeHtml(course.description)}</p>` : ""}
@@ -1050,6 +1051,10 @@ function courseFormHtml() {
         <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
         <label>곡 제목<input type="text" name="musicTitle" value="${v("musicTitle")}" /></label>
       </div>
+      <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
+      <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
+      ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
+      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 작은 원 안에 보이니 정사각형에 가까운 단순한 로고가 좋아요. 없으면 번호로 보여요.</p>
       <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1119,6 +1124,29 @@ function placeFormHtml() {
   `;
 }
 
+// 코스 로고 — 핀 안 작은 원에만 쓰이므로 긴 변 256px로 줄이고, 투명 배경을
+// 살리려고 사진(PhotoUpload.resizeImageFile, JPEG)과 달리 PNG로 인코딩한다.
+function resizeLogoFile(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, 256 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("로고를 처리할 수 없어요."))), "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("로고를 읽을 수 없어요."));
+    };
+    img.src = objectUrl;
+  });
+}
+
 // 장소 사진(선택, 1장) — 카드에 16:9로 잘려 보이므로 가로 사진이 좋다.
 // 직접 찍었거나 사용 허락을 받은 사진만 올린다.
 function placePhotoFieldHtml(p) {
@@ -1169,6 +1197,18 @@ async function renderCoursesTab() {
   `;
 
   document.getElementById("course-form").addEventListener("submit", handleCourseSubmit);
+  document.getElementById("course-logo-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const preview = document.getElementById("course-logo-preview");
+    preview.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" />`;
+  });
+  const logoPreview = document.getElementById("course-logo-preview");
+  if (logoPreview.dataset.photoKey) {
+    resolveAdminPhotoUrl(logoPreview.dataset.photoKey).then((url) => {
+      if (url && !logoPreview.firstChild) logoPreview.innerHTML = `<img src="${url}" alt="" />`;
+    });
+  }
   const placeForm = document.getElementById("place-form");
   if (placeForm) {
     placeForm.addEventListener("submit", handlePlaceSubmit);
@@ -1214,6 +1254,22 @@ async function handleCourseSubmit(e) {
     musicTitle: f.get("musicTitle").trim() || null,
     sortOrder: parseInt(f.get("sortOrder"), 10) || 0,
   };
+  const editing = editingCourseId ? courses.find((c) => c.id === editingCourseId) : null;
+  let logoKey = editing?.logoKey || null;
+  if (f.get("removeLogo")) logoKey = null;
+  const logoFile = f.get("logo");
+  if (logoFile && logoFile.size) {
+    try {
+      const blob = await resizeLogoFile(logoFile);
+      logoKey = `story-photos/course-logo-${Date.now()}.png`;
+      await uploadData({ path: logoKey, data: blob, options: { contentType: "image/png" } }).result;
+    } catch (err) {
+      console.error("코스 로고 업로드 실패", err);
+      alert(`로고를 올리지 못했어요. ${err.message || ""}`);
+      return;
+    }
+  }
+  fields.logoKey = logoKey;
   if (fields.youtubeUrl && !Storage.extractYoutubeVideoId(fields.youtubeUrl)) {
     alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
     return;

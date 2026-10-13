@@ -160,13 +160,17 @@ function drawCoursePath() {
     // 기억 남기기 완료 화면의 핀(js/composer.js .wizard-done-pin)과 같은
     // 물방울 모양 안에 숫자를 넣는다.
     el.className = "course-pin";
+    el.dataset.seq = String(i + 1);
     el.innerHTML = `
       <svg class="course-pin-shape" viewBox="0 0 30 38" aria-hidden="true">
         <path d="M15 1C7.3 1 1 7.1 1 14.7 1 24.4 15 37 15 37s14-12.6 14-22.3C29 7.1 22.7 1 15 1z" />
       </svg>
-      <span class="course-pin-num">${i + 1}</span>`;
+      ${activeCourse.logoKey
+        ? `<span class="course-pin-logo"></span>`
+        : `<span class="course-pin-num">${i + 1}</span>`}`;
     el.setAttribute("aria-label", `${i + 1}번째 장소 ${p.name}`);
     el.onclick = () => showCourseStep(i);
+    if (activeCourse.logoKey) hydrateCoursePinLogo(el, activeCourse.logoKey);
     return new kakao.maps.CustomOverlay({
       map,
       position: new kakao.maps.LatLng(p.lat, p.lng),
@@ -174,6 +178,24 @@ function drawCoursePath() {
       yAnchor: 1, // 물방울 끝이 장소를 가리키게
       zIndex: 20,
     });
+  });
+}
+
+// 코스 로고가 있으면 핀 안에 번호 대신 로고를 넣는다 — 순서는 카드의
+// "1 / 3"과 점선이 보여주므로 핀은 "이 코스의 장소" 표시만 한다. URL을 못
+// 받으면 번호로 되돌린다.
+function hydrateCoursePinLogo(el, logoKey) {
+  resolveStoryPhotoUrl(logoKey).then((url) => {
+    const slot = el.querySelector(".course-pin-logo");
+    if (!slot) return;
+    if (!url) {
+      slot.outerHTML = `<span class="course-pin-num">${Number(el.dataset.seq)}</span>`;
+      return;
+    }
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = url;
+    slot.replaceChildren(img);
   });
 }
 

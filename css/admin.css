@@ -607,3 +607,24 @@ body {
 .course-form .course-photo-remove input {
   padding: 0;
 }
+
+/* 코스 로고 미리보기 — 지도 핀 안 원과 비슷하게 둥글게 */
+.course-logo-preview:empty {
+  display: none;
+}
+
+.course-logo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid var(--cs-orange);
+}
+
+.course-logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
