@@ -7,7 +7,7 @@
 // 늘어나도 이 화면 하나를 같이 쓴다.
 //
 // 진입은 상단 "발자취" 칩 하나(코스마다 칩을 만들면 칩 줄이 넘친다) —
-// 공개 코스가 하나뿐이면 바로 들어가고, 여럿이면 코스 목록부터 고른다.
+// 코스가 하나뿐이어도 코스 목록부터 고른다(공유 링크 ?course=는 바로 진입).
 // 화면 구성은 기억산책(js/recall.js)과 같은 리듬: 평소 UI를 옅게 지우고
 // (enterRecallImmersiveChrome 재사용), 아래 카드로 한 곳씩 넘겨본다.
 // 기억산책과 다른 점은 장소가 정해진 순서로 이어진다는 것 — 번호 핀과
@@ -89,49 +89,25 @@ async function shareCourseLink(btn) {
 // 먼저 return해 칩이 안 생기고, 시간여행/내 기억 모드에선 해시태그 칩과
 // 똑같이 남아 있다(누르면 startCourseWalk가 그 모드들을 닫는다).
 //
-// 칩 문구는 "발자취"만으로는 눌렀을 때 뭐가 나올지 짐작이 안 돼서
-// (2026-10-13), 공개 코스가 하나면 "<코스 이름> 따라 걷기"로 무엇을
-// 따라가는지 보여준다. 코스 로고가 있으면 앞에 작게 붙이고, 없으면 종류별
-// 이모지(책이면 📖). 코스가 여럿이면 목록부터 고르니 "발자취 N".
-const COURSE_KIND_EMOJI = { book: "📖", person: "👣", drama: "🎬", org: "👣", etc: "👣" };
+// 칩은 코스 이름 대신 발자국 아이콘 + "발자취" 하나로 두고, 누르면 코스가
+// 하나여도 목록부터 고른다(2026-10-13) — 잠깐 "<코스 이름> 따라 걷기"로
+// 칩에 바로 코스 이름을 띄웠는데, 다른 작품/인물 코스가 늘어나면 칩 하나가
+// 특정 작품을 대표하게 돼 어색하다는 피드백으로 되돌렸다. 아이콘은 추상
+// 도형 말고 알아볼 수 있는 맨발 발자국 두 개로 그렸다.
+const COURSE_CHIP_ICON = `
+  <svg class="course-entry-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <g transform="rotate(-10 6.5 15)"><ellipse cx="6.5" cy="16.8" rx="3.3" ry="5" /><circle cx="3.9" cy="9.6" r="1.25" /><circle cx="6.5" cy="8.9" r="1.3" /><circle cx="9.1" cy="9.7" r="1.15" /></g>
+    <g transform="rotate(10 17.5 8)"><ellipse cx="17.5" cy="10" rx="3.3" ry="5" /><circle cx="14.9" cy="2.9" r="1.15" /><circle cx="17.5" cy="2.1" r="1.3" /><circle cx="20.1" cy="2.8" r="1.25" /></g>
+  </svg>`;
 
 function buildCourseChip() {
   if (publishedCourses.length === 0) return null;
   const chip = document.createElement("button");
   chip.type = "button";
   chip.className = "chip course-entry";
-  chip.onclick = handleCourseEntryClick;
-  if (publishedCourses.length > 1) {
-    chip.textContent = `발자취 ${publishedCourses.length}`;
-    return chip;
-  }
-  const course = publishedCourses[0];
-  const icon = document.createElement("span");
-  icon.className = "course-entry-icon";
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = course.logoKey ? "" : COURSE_KIND_EMOJI[course.kind] || "👣";
-  chip.append(icon, `${course.title} 따라 걷기`);
-  if (course.logoKey) {
-    resolveStoryPhotoUrl(course.logoKey).then((url) => {
-      if (!url) {
-        icon.textContent = COURSE_KIND_EMOJI[course.kind] || "👣";
-        return;
-      }
-      const img = document.createElement("img");
-      img.alt = "";
-      img.src = url;
-      icon.replaceChildren(img);
-    });
-  }
+  chip.innerHTML = `${COURSE_CHIP_ICON}<span>발자취</span>`;
+  chip.onclick = openCourseChoice;
   return chip;
-}
-
-function handleCourseEntryClick() {
-  if (publishedCourses.length === 1) {
-    startCourseWalk(publishedCourses[0]);
-    return;
-  }
-  openCourseChoice();
 }
 
 function openCourseChoice() {

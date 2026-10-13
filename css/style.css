@@ -4981,7 +4981,7 @@ button.story-place-line:hover {
    ------------------------------------------------------------ */
 
 /* "기억 아카이브"(주황 채움)보다 한 단계 조용하게 — 테두리만 주황.
-   앞에 코스 로고(없으면 종류별 이모지)가 붙는다 — js/course.js buildCourseChip */
+   앞에 발자국 아이콘이 붙는다 — js/course.js buildCourseChip */
 .course-entry {
   display: inline-flex;
   align-items: center;
@@ -4992,16 +4992,8 @@ button.story-place-line:hover {
 }
 
 .course-entry-icon {
-  display: inline-flex;
-  align-items: center;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.course-entry-icon img {
   display: block;
-  height: 14px;
-  width: auto;
+  flex-shrink: 0;
 }
 
 /* 번호 핀 — kakao CustomOverlay로 지도 위에 올린다 */
