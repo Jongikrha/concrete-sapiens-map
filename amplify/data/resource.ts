@@ -225,6 +225,9 @@ const schema = a.schema({
       // 순서는 카드("1 / 3")와 점선이 보여주므로 핀엔 "이 코스의 장소"라는
       // 표시만 둔다. story-photos/ 경로에 투명 배경 유지를 위해 PNG로 올린다.
       logoKey: a.string(),
+      // 코스 표지(선택, 2026-10-13) — 책 표지/포스터 등. 코스 소개 카드
+      // 오른쪽에 세로로 놓인다. story-photos/course-cover-*.jpg
+      coverKey: a.string(),
       // 코스 목록 정렬용(작을수록 앞)
       sortOrder: a.integer(),
       isPublished: a.boolean().required(),
