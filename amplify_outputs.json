@@ -1044,6 +1044,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "logoKey": {
+              "name": "logoKey",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "sortOrder": {
               "name": "sortOrder",
               "isArray": false,
