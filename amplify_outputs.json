@@ -1051,6 +1051,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "coverKey": {
+              "name": "coverKey",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "sortOrder": {
               "name": "sortOrder",
               "isArray": false,
