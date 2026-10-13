@@ -36,16 +36,21 @@ async function loadPublishedCourses() {
     console.error("발자취 불러오기 실패", e);
     publishedCourses = [];
   }
-  renderCourseEntry();
+  renderHashtagChips();
 }
 
-// 상단 "발자취" 칩 — 다른 필터가 걸려 있을 땐 "기억 아카이브"와 같이
-// 숨긴다(js/app.js renderMemoryArchiveEntry가 매번 같이 부른다).
-function renderCourseEntry() {
-  const el = document.getElementById("course-entry");
-  if (!el) return;
-  const filtered = activeHashtagFilter || activeYearFilter !== null || activeSongFilter || sliderActive || myMemoryModeActive;
-  el.classList.toggle("hidden", publishedCourses.length === 0 || !!filtered);
+// 해시태그 줄 맨 앞의 "발자취" 칩(js/filters.js renderHashtagChips가 줄을
+// 새로 그릴 때마다 부른다). 해시태그/연도/곡 필터가 걸려 있으면 그쪽에서
+// 먼저 return해 칩이 안 생기고, 시간여행/내 기억 모드에선 해시태그 칩과
+// 똑같이 남아 있다(누르면 startCourseWalk가 그 모드들을 닫는다).
+function buildCourseChip() {
+  if (publishedCourses.length === 0) return null;
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "chip course-entry";
+  chip.textContent = "발자취";
+  chip.onclick = handleCourseEntryClick;
+  return chip;
 }
 
 function handleCourseEntryClick() {
@@ -320,7 +325,6 @@ function endCourseWalk() {
 }
 
 function bindCourseEvents() {
-  document.getElementById("course-entry").onclick = handleCourseEntryClick;
   document.getElementById("course-exit-btn").onclick = endCourseWalk;
   bindOverlayClickToClose("course-choice-overlay", closeCourseChoice);
 }

@@ -125,8 +125,14 @@ function renderHashtagChips() {
   // 여기로 옮기고 데스크톱은 해시태그 줄에 있었는데 요청으로 통일).
   todayWrap.appendChild(promptChip);
 
+  // "발자취" 칩은 해시태그 줄 맨 앞에 두고, 그 자리만큼 해시태그를 하나
+  // 덜 보여준다(줄 길이 유지, 2026-10-13 — 처음엔 "기억 아카이브" 옆에
+  // 있었는데 요청으로 옮김).
+  const courseChip = buildCourseChip();
+  if (courseChip) wrap.appendChild(courseChip);
+
   const allTags = Storage.getAllHashtagsWithCounts();
-  const tagLimit = isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_HASHTAG_LIMIT;
+  const tagLimit = (isMobileViewport() ? MOBILE_CHIP_LIMIT : CONFIG.TOP_HASHTAG_LIMIT) - (courseChip ? 1 : 0);
   const topTags = allTags.slice(0, tagLimit);
   topTags.forEach(({ tag }) => {
     const chip = document.createElement("button");

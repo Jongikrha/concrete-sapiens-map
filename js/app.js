@@ -174,9 +174,6 @@ function logVisitKind() {
 function renderMemoryArchiveEntry() {
   const el = document.getElementById("memory-archive-entry");
   if (!el) return;
-  // 바로 옆 "발자취" 칩도 같은 시점에 숨김/표시가 바뀌어야 해서 같이 부른다.
-  renderCourseEntry();
-
   // searchAreaActive는 마커를 걸러내지 않고 반짝임 효과만 주는 상태라
   // 여기서는 제외한다 — 예전엔 여기 포함돼 있었는데, 검색 결과 카드에서
   // "다른 기억 둘러보기"/"내 기억으로 남기기"로 넘어가면 오버레이는
