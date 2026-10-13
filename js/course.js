@@ -647,12 +647,17 @@ function renderCourseCard() {
     const place = activeCourse.places[courseIndex];
     body = `
       ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
-      ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(place.description)}</p>` : ""}
-      <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · ${courseIndex + 1} / ${total}</p>
-      ${place.label ? `<p class="course-card-label">${escapeHtml(place.label)}</p>` : ""}
+      ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
+      <p class="course-card-kicker">
+        ${courseKindIconSvg(activeCourse.kind)}
+        <span>${escapeHtml(activeCourse.title)}</span>
+        <span class="course-card-kicker-sep" aria-hidden="true">·</span>
+        <span>${courseIndex + 1} / ${total}</span>
+      </p>
+      ${place.label ? `<p class="course-card-label">${escapeHtml(smartQuotes(place.label))}</p>` : ""}
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
-      ${!place.photoKey && place.description ? `<p class="story-content">${escapeHtml(place.description)}</p>` : ""}
-      ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(place.quote)}</blockquote>` : ""}
+      ${!place.photoKey && place.description ? `<p class="story-content">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
+      ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(smartQuotes(place.quote))}</blockquote>` : ""}
       ${courseSongCardHtml(place)}
     `;
   }
@@ -683,6 +688,27 @@ function renderCourseCard() {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
   }
+}
+
+// 장소 카드 "콘크리트 사피엔스 · 1 / 5" 앞 아이콘 — 코스 종류(Course.kind)를
+// 따라 자동으로 고른다(책이면 펼친 책, 드라마·영화면 클래퍼보드, 인물이면
+// 사람, 그 외엔 칩과 같은 발자국). 글자색을 따라가는 선 아이콘.
+function courseKindIconSvg(kind) {
+  const paths = {
+    book: '<path d="M12 6.5C10.3 5.2 7.9 4.6 4 4.8v13.4c3.9-.2 6.3.4 8 1.7 1.7-1.3 4.1-1.9 8-1.7V4.8c-3.9-.2-6.3.4-8 1.7zM12 6.5v13.4" />',
+    drama: '<path d="M4 9.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5zM4 9.5 3.3 6.6a1 1 0 0 1 .7-1.2l13.6-3.3a1 1 0 0 1 1.2.7l.6 2.6L4 9.5zM8.2 4.4l2.4 3.4M13.2 3.2l2.4 3.4" />',
+    person: '<circle cx="12" cy="8" r="3.6" /><path d="M5 20c.8-3.9 3.6-6 7-6s6.2 2.1 7 6" />',
+  };
+  if (!paths[kind]) return COURSE_CHIP_ICON.replace('class="course-entry-icon"', 'class="course-card-kicker-icon"');
+  return `<svg class="course-card-kicker-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]}</svg>`;
+}
+
+// 어드민에서 곧은 따옴표('아파트')로 적어도 카드에선 둥근 따옴표(‘아파트’)로
+// 보이게 — 본문이 명조/고딕 어느 쪽이든 곧은 따옴표는 글줄에서 튄다.
+function smartQuotes(text) {
+  return String(text)
+    .replace(/'([^'\n]*)'/g, "\u2018$1\u2019")
+    .replace(/"([^"\n]*)"/g, "\u201C$1\u201D");
 }
 
 // 장소 사진 — 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
