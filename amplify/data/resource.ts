@@ -215,8 +215,8 @@ const schema = a.schema({
       kind: a.string(),
       // 책 소개/구매처 등 바깥 링크(선택)
       linkUrl: a.string(),
-      // 코스 배경음악(선택, 2026-10-13) — 장소마다 곡이 바뀌면 넘길 때마다
-      // 음악이 끊겨 산만해서 코스 전체에 한 곡만 둔다. Story.youtubeUrl/
+      // 코스 배경음악(선택, 2026-10-13) — 코스 전체에 깔리는 한 곡. 장소에
+      // 따로 노래(CoursePlace.youtubeUrl)를 넣으면 그 장소에서만 바뀐다. Story.youtubeUrl/
       // musicArtist/musicTitle과 같은 형식이라 미니 플레이어를 그대로 쓴다.
       youtubeUrl: a.string(),
       musicArtist: a.string(),
@@ -247,6 +247,12 @@ const schema = a.schema({
       // 장소 사진 1장(선택, 2026-10-13) — Story.photoKey와 같은 story-photos/
       // 경로(amplify/storage/resource.ts, Admins 쓰기 허용)에 어드민이 올린다.
       photoKey: a.string(),
+      // 장소 노래(선택, 2026-10-13) — 코스 배경음악(Course.youtubeUrl) 위에
+      // 섞는다. 노래가 있는 장소에 오면 그 곡으로 바뀌고, 없는 장소에선
+      // 흐르던 곡이 그대로 이어진다(js/course.js playPlaceSong).
+      youtubeUrl: a.string(),
+      musicArtist: a.string(),
+      musicTitle: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
