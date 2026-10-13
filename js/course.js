@@ -151,15 +151,22 @@ function drawCoursePath() {
   courseOverlays = activeCourse.places.map((p, i) => {
     const el = document.createElement("button");
     el.type = "button";
+    // 동그라미+숫자는 카카오맵의 지하철 출구 번호(①②)와 똑같아 보여서,
+    // 기억 남기기 완료 화면의 핀(js/composer.js .wizard-done-pin)과 같은
+    // 물방울 모양 안에 숫자를 넣는다.
     el.className = "course-pin";
-    el.textContent = String(i + 1);
+    el.innerHTML = `
+      <svg class="course-pin-shape" viewBox="0 0 30 38" aria-hidden="true">
+        <path d="M15 1C7.3 1 1 7.1 1 14.7 1 24.4 15 37 15 37s14-12.6 14-22.3C29 7.1 22.7 1 15 1z" />
+      </svg>
+      <span class="course-pin-num">${i + 1}</span>`;
     el.setAttribute("aria-label", `${i + 1}번째 장소 ${p.name}`);
     el.onclick = () => showCourseStep(i);
     return new kakao.maps.CustomOverlay({
       map,
       position: new kakao.maps.LatLng(p.lat, p.lng),
       content: el,
-      yAnchor: 0.5,
+      yAnchor: 1, // 물방울 끝이 장소를 가리키게
       zIndex: 20,
     });
   });
