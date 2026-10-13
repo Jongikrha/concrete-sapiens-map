@@ -9,23 +9,6 @@ let pendingPin = null;
 // 합친 최종 개수 둘 다 여기에 걸린다.
 const MAX_HASHTAGS = 7;
 
-// 완료 화면("잘했어요~!") 일러스트는 <img> 태그가 그려지는 시점에야
-// 요청되면 네트워크 fetch 지연 때문에 텍스트만 먼저 보이고 이미지가
-// 뒤늦게 팝인되는 게 보인다(2026-08-27, 영상으로 확인). 미리 받아두되,
-// 스크립트 로드 시점에 곧바로 fetch하면 부팅 크리티컬 경로(카카오맵 SDK,
-// 스토리 목록 조회 등)와 네트워크 대역폭을 다퉈서 오히려 초기 로딩을
-// 늦춘다(성능 분석, 2026-09-08) — 마법사가 완료 화면(여러 스텝 뒤)에
-// 도달하기 전까지는 여유가 있으니, 브라우저가 한가할 때(requestIdleCallback)
-// 받도록 미룬다. 미지원 브라우저(Safari)는 setTimeout으로 대체.
-const preloadDoneIllustration = () => {
-  new Image().src = "assets/composer/done-illustration.png";
-};
-if (typeof requestIdleCallback === "function") {
-  requestIdleCallback(preloadDoneIllustration, { timeout: 5000 });
-} else {
-  setTimeout(preloadDoneIllustration, 2000);
-}
-
 // getDeviceId()는 storage.js(Storage.getDeviceId)로 이동 — 어드민 화면과
 // GNB의 "내가 남긴 기억"이 같은 비식별 상관관계 ID를 공유해서 쓴다.
 
@@ -1301,10 +1284,12 @@ function openComposerWizard(pin) {
     { title: "사진도 함께 남겨볼까요?", render: renderPhotoStepHtml, wire: wirePhotoStep, navLabel: "완료" },
   ];
 
-  function renderComposerHeader() {
+  // 완료 화면은 본문에 큰 핀이 있어서 머리글 🚩 아이콘 상자를 뺀다
+  // (2026-10-13, 같은 상징이 위아래로 겹쳐 보인다는 피드백).
+  function renderComposerHeader({ showIcon = true } = {}) {
     return `
       <div class="composer-header">
-        <div class="composer-icon-box">🚩</div>
+        ${showIcon ? `<div class="composer-icon-box">🚩</div>` : ""}
         <div class="composer-header-text">
           <h2 class="composer-title">기억 남기기</h2>
           <p class="composer-subtitle">당신의 기억이 지도에 남아 빛이 됩니다.</p>
@@ -1344,9 +1329,11 @@ function openComposerWizard(pin) {
           <rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
           <path d="M3.8 7l8.2 6 8.2-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
         </svg>
-        <p class="wizard-done-mail-text">누군가 이 기억을 떠올리면<br><b>저녁 8시</b>에 메일로 알려드릴게요.</p>
-        ${hasEmail ? `<p class="wizard-done-mail-addr">${escapeHtml(email)}</p>` : ""}
-        ${isGmail ? `<p class="wizard-done-mail-hint">Gmail은 <b>'업데이트'</b> 탭을 확인해 주세요</p>` : ""}
+        <div class="wizard-done-mail-body">
+          <p class="wizard-done-mail-text">누군가 이 기억을 떠올리면<br><b>저녁 8시</b>에 메일로 알려드릴게요.</p>
+          ${hasEmail ? `<p class="wizard-done-mail-addr">${escapeHtml(email)}</p>` : ""}
+          ${isGmail ? `<p class="wizard-done-mail-hint">Gmail은 <b>'업데이트'</b> 탭을 확인해 주세요</p>` : ""}
+        </div>
       </div>
     `;
   }
@@ -1356,11 +1343,17 @@ function openComposerWizard(pin) {
 
     if (showingCompletionScreen) {
       panel.innerHTML = `
-        ${renderComposerHeader()}
+        ${renderComposerHeader({ showIcon: false })}
         <div class="wizard-step-body">
           <div class="wizard-done">
-            <img class="wizard-done-illustration" src="assets/composer/done-illustration.png" alt="" />
-            <h3 class="wizard-step-title">잘했어요~! 💕</h3>
+            <div class="wizard-done-pin" aria-hidden="true">
+              <svg viewBox="0 0 48 60" width="48" height="60">
+                <path d="M24 2C12.4 2 3 11.2 3 22.6 3 37 24 58 24 58s21-21 21-35.4C45 11.2 35.6 2 24 2z" fill="var(--cs-orange)"/>
+                <circle cx="24" cy="22" r="7.5" fill="#fff"/>
+              </svg>
+            </div>
+            <h3 class="wizard-step-title">잘했어요!</h3>
+            <p class="wizard-done-desc">당신의 기억이 지도에 남아 빛이 됩니다.</p>
             ${renderDoneMailNotice()}
           </div>
         </div>
