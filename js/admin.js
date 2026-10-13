@@ -1045,7 +1045,7 @@ function courseFormHtml() {
           ${COURSE_KINDS.map((k) => `<option value="${k.value}"${(c?.kind || "book") === k.value ? " selected" : ""}>${k.label}</option>`).join("")}
         </select>
       </label>
-      <label>소개<textarea name="description" rows="2" placeholder="코스 목록에 보일 한두 문장">${v("description")}</textarea></label>
+      <label>소개<textarea name="description" rows="6" placeholder="발자취 소개 화면에 보일 글 — 책/작품 소개. 줄바꿈으로 문단을 나눌 수 있어요(목록에선 앞부분만 보여요).">${v("description")}</textarea></label>
       <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>

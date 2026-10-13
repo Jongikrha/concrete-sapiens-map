@@ -40,7 +40,7 @@ async function loadPublishedCourses() {
   openCourseFromLink();
 }
 
-// 공유 링크(?course=<slug>)로 들어오면 그 코스를 바로 연다(2026-10-13) —
+// 공유 링크(?course=<slug>)로 들어오면 그 코스의 소개 화면을 바로 연다(2026-10-13) —
 // 책·SNS에 "책 속 장소를 지도로 걸어보기" 링크/QR을 걸기 위한 입구.
 // js/app.js가 이 파라미터가 있으면 기본 랜딩(오늘 올라온 기억)과 첫 방문
 // 환영 모달을 건너뛴다 — 환영 모달은 발자취를 나갈 때 띄운다(endCourseWalk).
@@ -54,7 +54,7 @@ function openCourseFromLink() {
     return;
   }
   Storage.logEvent(`course_link_opened:${course.slug}`);
-  startCourseWalk(course);
+  openCourseDetail(course);
 }
 
 function buildCourseUrl(slug) {
@@ -64,12 +64,12 @@ function buildCourseUrl(slug) {
 // 소개 카드의 "공유하기" — 폰에선 OS 공유 시트(카카오톡 등)를, 안 되는
 // 환경(대부분의 PC)에선 링크 복사. 공유 토스트(.share-toast, z-index 60)는
 // 이 화면(.recall-session, 110)에 가려서 버튼 글자로 결과를 알린다.
-async function shareCourseLink(btn) {
-  const url = buildCourseUrl(activeCourse.slug);
-  Storage.logEvent(`course_shared:${activeCourse.slug}`);
+async function shareCourseLink(course, btn) {
+  const url = buildCourseUrl(course.slug);
+  Storage.logEvent(`course_shared:${course.slug}`);
   if (navigator.share) {
     try {
-      await navigator.share({ title: `${activeCourse.title} 따라 걷기`, url });
+      await navigator.share({ title: `${course.title} 발자취`, url });
     } catch (e) {
       // 공유 시트를 닫은 경우 — 아무것도 안 한다
     }
@@ -122,9 +122,12 @@ function openCourseChoice() {
     <div class="course-choice-list">
       ${publishedCourses.map((c, i) => `
         <button type="button" class="course-choice-item" data-course-index="${i}">
-          <span class="course-choice-title">${escapeHtml(c.title)}</span>
-          ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-          <span class="course-choice-meta">장소 ${c.places.length}곳</span>
+          ${c.coverKey ? `<span class="course-choice-cover" data-photo-key="${escapeHtml(c.coverKey)}"></span>` : ""}
+          <span class="course-choice-text">
+            <span class="course-choice-title">${escapeHtml(c.title)}</span>
+            ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
+            <span class="course-choice-meta">${escapeHtml(courseKindLabel(c))}장소 ${c.places.length}곳</span>
+          </span>
         </button>
       `).join("")}
     </div>
@@ -133,10 +136,98 @@ function openCourseChoice() {
   panel.querySelectorAll(".course-choice-item").forEach((btn) => {
     btn.onclick = () => {
       closeCourseChoice();
-      startCourseWalk(publishedCourses[Number(btn.dataset.courseIndex)]);
+      openCourseDetail(publishedCourses[Number(btn.dataset.courseIndex)], { fromList: true });
     };
   });
+  panel.querySelectorAll(".course-choice-cover").forEach(fillCoverSlot);
   document.getElementById("course-choice-overlay").classList.remove("hidden");
+}
+
+const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", org: "단체" };
+
+// "책 · " 처럼 뒤에 붙일 구분자까지 — 종류가 없거나 "기타"면 빈 문자열.
+function courseKindLabel(course) {
+  const label = COURSE_KIND_LABELS[course.kind];
+  return label ? `${label} · ` : "";
+}
+
+// data-photo-key를 가진 표지 슬롯에 이미지를 채운다(못 받으면 슬롯 제거).
+function fillCoverSlot(slot) {
+  resolveStoryPhotoUrl(slot.dataset.photoKey).then((url) => {
+    if (!slot.isConnected) return;
+    if (!url) {
+      slot.remove();
+      return;
+    }
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = url;
+    slot.replaceChildren(img);
+  });
+}
+
+// ------------------------------------------------------------
+// 코스 소개 화면(2026-10-13) — 목록에서 코스를 고르거나 공유 링크로
+// 들어오면, 지도 위 작은 카드 대신 큰 화면으로 책/드라마 등 콘텐츠를 먼저
+// 소개하고 맨 아래 "따라 걷기 시작"으로 들어간다. 지도 위 작은 소개
+// 카드(showCourseStep(-1))는 책 소개를 담기엔 좁았다. 따라 걷기는 첫
+// 장소부터 시작하고, 첫 장소에서 "이전"을 누르면 전체 경로 카드가 나온다.
+// ------------------------------------------------------------
+function openCourseDetail(course, { fromList = false } = {}) {
+  const panel = document.getElementById("course-detail-panel");
+  panel.innerHTML = `
+    <div class="course-detail-scroll">
+      <div class="course-detail-top">
+        ${fromList && publishedCourses.length > 1 ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
+        <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">✕</button>
+      </div>
+      ${course.coverKey ? `<div class="course-detail-cover" data-photo-key="${escapeHtml(course.coverKey)}"></div>` : ""}
+      <p class="course-detail-kicker">${escapeHtml(courseKindLabel(course))}발자취 · 장소 ${course.places.length}곳</p>
+      <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
+      ${course.description ? `<p class="course-detail-desc">${escapeHtml(course.description)}</p>` : ""}
+      <div class="course-card-links course-detail-links">
+        ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
+        <button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>
+      </div>
+      <div class="course-detail-places">
+        <p class="course-detail-places-title">걷게 될 장소</p>
+        <ol>
+          ${course.places.map((p) => `
+            <li>
+              <span class="course-detail-place-name">${escapeHtml(p.name)}</span>
+              ${p.label ? `<span class="course-detail-place-label">${escapeHtml(p.label)}</span>` : ""}
+            </li>
+          `).join("")}
+        </ol>
+      </div>
+    </div>
+    <div class="course-detail-footer">
+      <button type="button" class="btn-primary course-detail-start" id="course-detail-start">따라 걷기 시작</button>
+    </div>
+  `;
+  panel.querySelectorAll(".course-detail-cover").forEach(fillCoverSlot);
+  document.getElementById("course-detail-close").onclick = () => {
+    closeCourseDetail();
+    // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)
+    maybeShowPendingWelcomeOverlay();
+  };
+  const back = document.getElementById("course-detail-back");
+  if (back) back.onclick = () => {
+    closeCourseDetail();
+    openCourseChoice();
+  };
+  document.getElementById("course-detail-share").onclick = (e) => shareCourseLink(course, e.currentTarget);
+  document.getElementById("course-detail-start").onclick = () => {
+    closeCourseDetail();
+    startCourseWalk(course);
+  };
+  panel.scrollTop = 0;
+  document.getElementById("course-detail-overlay").classList.remove("hidden");
+  Storage.logEvent(`course_detail_opened:${course.slug}`);
+}
+
+function closeCourseDetail() {
+  document.getElementById("course-detail-overlay").classList.add("hidden");
 }
 
 function closeCourseChoice() {
@@ -162,10 +253,11 @@ function startCourseWalk(course) {
   document.getElementById("course-session").classList.remove("hidden");
   Storage.logEvent(`course_started:${course.slug}`);
   courseSongs = buildCourseSongs(course);
-  // 소개 카드에선 아무 노래도 나오지 않는다 — 다른 기억 카드에서 틀어둔
-  // 노래도 여기서 끊는다(js/recall.js openRecallSessionShell과 같은 이유).
+  // 다른 기억 카드에서 틀어둔 노래는 여기서 끊는다(js/recall.js
+  // openRecallSessionShell과 같은 이유). 소개 화면에서 "따라 걷기 시작"을
+  // 누른 거라 첫 장소부터 보여준다.
   stopMiniPlayer();
-  showCourseStep(-1);
+  showCourseStep(0, { deferMusic: true });
 }
 
 // 음악은 기억 라디오처럼 내용과 따로 흐른다(2026-10-13) — 처음엔 코스
@@ -357,7 +449,11 @@ function fitCourseBounds() {
   map.setBounds(bounds, 120, 60, 320, 60);
 }
 
-function showCourseStep(index) {
+// deferMusic: 따라 걷기를 막 시작한 순간에만 쓴다 — enterRecallImmersiveChrome이
+// 미니 플레이어를 옮기면서 유튜브 iframe이 다시 로드되는데, 같은 틱에 재생을
+// 걸면 명령이 묻혀 모바일에서 소리가 안 났다(2026-10-13). 기억 라디오
+// (showRecallStory의 500ms 뒤 openRecallCard)와 같은 간격을 두고 튼다.
+function showCourseStep(index, { deferMusic = false } = {}) {
   if (!courseModeOpen) return;
   courseIndex = index;
   courseOverlays.forEach((o, i) => {
@@ -368,7 +464,16 @@ function showCourseStep(index) {
   const total = activeCourse.places.length;
   // 미니 플레이어가 나타나면 아래 지도 위치 계산(topEdge)이 달라지므로
   // 카드/지도 이동보다 먼저 튼다.
-  if (index >= 0 && index < total) startCourseMusicAt(activeCourse.places[index]);
+  if (index >= 0 && index < total) {
+    const place = activeCourse.places[index];
+    if (deferMusic) {
+      setTimeout(() => {
+        if (courseModeOpen && courseIndex === index) startCourseMusicAt(place);
+      }, 500);
+    } else {
+      startCourseMusicAt(place);
+    }
+  }
   renderCourseCard();
   if (index < 0 || index >= total) {
     fitCourseBounds();
@@ -407,7 +512,7 @@ function renderCourseCard() {
           <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
           ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
         </div>
-        ${activeCourse.coverKey ? `<div class="course-intro-cover" id="course-intro-cover"></div>` : ""}
+        ${activeCourse.coverKey ? `<div class="course-intro-cover" data-photo-key="${escapeHtml(activeCourse.coverKey)}"></div>` : ""}
       </div>
       <div class="course-card-links">
         ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
@@ -452,8 +557,8 @@ function renderCourseCard() {
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
   document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
   if (isIntro) {
-    document.getElementById("course-card-share").onclick = (e) => shareCourseLink(e.currentTarget);
-    renderCourseCover();
+    document.getElementById("course-card-share").onclick = (e) => shareCourseLink(activeCourse, e.currentTarget);
+    card.querySelectorAll(".course-intro-cover").forEach(fillCoverSlot);
   }
   if (!isIntro && !isOutro) {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
@@ -475,24 +580,6 @@ function renderCoursePlacePhoto(place) {
     }
     const img = document.createElement("img");
     img.className = "recall-card-photo-img";
-    img.alt = "";
-    img.src = url;
-    slot.replaceChildren(img);
-  });
-}
-
-// 코스 표지 — URL이 늦게 오면 이미 소개 카드를 지나갔을 수 있어 슬롯이
-// 아직 있을 때만 꽂고, 못 받으면 슬롯을 지워 글이 카드 폭을 다 쓰게 한다.
-function renderCourseCover() {
-  const slot = document.getElementById("course-intro-cover");
-  if (!slot) return;
-  resolveStoryPhotoUrl(activeCourse.coverKey).then((url) => {
-    if (!slot.isConnected) return;
-    if (!url) {
-      slot.remove();
-      return;
-    }
-    const img = document.createElement("img");
     img.alt = "";
     img.src = url;
     slot.replaceChildren(img);
@@ -532,4 +619,8 @@ function endCourseWalk() {
 function bindCourseEvents() {
   document.getElementById("course-exit-btn").onclick = endCourseWalk;
   bindOverlayClickToClose("course-choice-overlay", closeCourseChoice);
+  bindOverlayClickToClose("course-detail-overlay", () => {
+    closeCourseDetail();
+    maybeShowPendingWelcomeOverlay();
+  });
 }

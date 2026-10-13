@@ -5205,9 +5205,8 @@ button.story-place-line:hover {
 
 .course-choice-item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  gap: 14px;
   padding: 14px 16px;
   border: 1px solid var(--cs-map-gray);
   border-radius: 14px;
@@ -5226,14 +5225,188 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
+/* 소개 글이 길어져도(소개 화면용) 목록에선 두 줄까지만 */
 .course-choice-desc {
   font-size: 13px;
   color: var(--cs-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .course-choice-meta {
   font-size: 12px;
   color: var(--cs-orange);
+}
+
+.course-choice-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* 목록의 작은 표지 */
+.course-choice-cover {
+  flex-shrink: 0;
+  width: 44px;
+  aspect-ratio: 2 / 3;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--cs-gray);
+  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.18);
+}
+
+.course-choice-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------
+   발자취 소개 화면(js/course.js openCourseDetail) — 목록보다 크게, 표지를
+   가운데 크게 세우고 콘텐츠 소개를 읽게 한 뒤 맨 아래 고정 버튼으로
+   따라 걷기를 시작한다. 내용만 스크롤되고 버튼은 늘 보인다.
+------------------------------------------------------------ */
+.course-detail-card {
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  max-height: 90dvh;
+}
+
+.course-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 8px;
+}
+
+.course-detail-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.course-detail-back {
+  padding: 4px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+}
+
+.course-detail-cover {
+  width: 150px;
+  aspect-ratio: 2 / 3;
+  margin: 4px auto 22px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--cs-gray);
+  box-shadow: 0 10px 28px rgba(47, 48, 49, 0.28);
+}
+
+.course-detail-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.course-detail-kicker {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--cs-orange);
+}
+
+.course-detail-title {
+  margin: 6px 0 0;
+  text-align: center;
+  font-family: var(--font-maruburi);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--cs-black);
+}
+
+/* 어드민에서 줄바꿈으로 나눈 문단을 그대로 살린다 */
+.course-detail-desc {
+  margin: 18px 0 0;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--cs-black);
+  white-space: pre-line;
+}
+
+.course-detail-links {
+  justify-content: center;
+}
+
+.course-detail-places {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--cs-map-gray);
+}
+
+.course-detail-places-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cs-text-muted);
+}
+
+.course-detail-places ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: course-place;
+}
+
+.course-detail-places li {
+  counter-increment: course-place;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--cs-black);
+}
+
+.course-detail-places li::before {
+  content: counter(course-place);
+  flex-shrink: 0;
+  width: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cs-orange);
+}
+
+.course-detail-place-label {
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+
+.course-detail-footer {
+  flex-shrink: 0;
+  padding: 12px 22px 20px;
+  border-top: 1px solid var(--cs-map-gray);
+}
+
+.course-detail-start {
+  width: 100%;
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .course-detail-cover {
+    width: 128px;
+  }
 }
 
 /* ------------------------------------------------------------
