@@ -1023,6 +1023,27 @@
               "isRequired": false,
               "attributes": []
             },
+            "youtubeUrl": {
+              "name": "youtubeUrl",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "musicArtist": {
+              "name": "musicArtist",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "musicTitle": {
+              "name": "musicTitle",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "sortOrder": {
               "name": "sortOrder",
               "isArray": false,
@@ -1171,6 +1192,13 @@
             },
             "quote": {
               "name": "quote",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "photoKey": {
+              "name": "photoKey",
               "isArray": false,
               "type": "String",
               "isRequired": false,
