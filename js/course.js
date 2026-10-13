@@ -115,21 +115,22 @@ function startCourseWalk(course) {
   document.getElementById("course-session").classList.remove("hidden");
   Storage.logEvent(`course_started:${course.slug}`);
   courseSongs = buildCourseSongs(course);
+  // 소개 카드에선 아무 노래도 나오지 않는다 — 다른 기억 카드에서 틀어둔
+  // 노래도 여기서 끊는다(js/recall.js openRecallSessionShell과 같은 이유).
+  stopMiniPlayer();
   showCourseStep(-1);
-  // 위 enterRecallImmersiveChrome이 미니 플레이어를 #app 아래로 옮기면서
-  // 유튜브 iframe이 새로 로드된다 — 같은 틱에 재생을 걸면 그 명령이 로딩
-  // 중인 프레임에 묻혀 모바일에선 소리가 안 났다(2026-10-13, 데스크톱은
-  // 다시 로드된 뒤 onReady가 재생해줘서 멀쩡해 보였음). 기억 라디오
-  // (showRecallStory의 500ms 뒤 openRecallCard)와 같은 간격을 두고 튼다.
-  setTimeout(() => {
-    if (courseModeOpen && activeCourse === course && courseSongs.length) playCourseSongAt(0);
-  }, 500);
 }
 
 // 음악은 기억 라디오처럼 내용과 따로 흐른다(2026-10-13) — 처음엔 코스
 // 배경음악 한 곡 + 장소 노래로 갈아끼우는 방식이었는데, 카드를 넘길 때마다
 // 노래가 바뀌거나 끊겨 산만하다는 피드백으로 바꿨다. 노래 있는 장소들을
 // 코스 순서대로 한 곡씩 끝까지 틀고, 카드를 넘겨도 노래는 그대로 둔다.
+// 첫 곡은 노래가 있는 장소 카드에 처음 도착했을 때 그 장소 곡으로 시작한다
+// (소개 카드는 무음, 2026-10-13 요청) — "따라 걷기 시작"/핀 탭 이벤트
+// 안에서 트는 것이라 모바일 자동재생 제한에도 안 걸린다. 미니 플레이어
+// 재배치(enterRecallImmersiveChrome)로 iframe이 다시 로드된 직후 같은 틱에
+// 틀면 명령이 묻혀 모바일에서 소리가 안 났던 적이 있는데(2026-10-13), 이
+// 시점엔 이미 로드가 끝나 있다.
 // 코스 배경음악(Course.youtubeUrl)은 더 쓰지 않는다(필드는 DB에 남아 있음).
 function buildCourseSongs(course) {
   const seen = new Set();
@@ -141,6 +142,13 @@ function buildCourseSongs(course) {
 function playCourseSongAt(i) {
   const song = courseSongs[i];
   playMiniPlayerVideo(song.videoId, { title: song.title, artist: song.artist });
+}
+
+function startCourseMusicAt(place) {
+  if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId)) return; // 이미 흐르는 중
+  const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
+  const i = courseSongs.findIndex((s) => s.videoId === videoId);
+  if (i >= 0) playCourseSongAt(i);
 }
 
 // 곡이 끝나면 다음 곡으로(마지막 곡 뒤엔 처음으로) — js/recall.js
@@ -239,6 +247,9 @@ function showCourseStep(index) {
   });
 
   const total = activeCourse.places.length;
+  // 미니 플레이어가 나타나면 아래 지도 위치 계산(topEdge)이 달라지므로
+  // 카드/지도 이동보다 먼저 튼다.
+  if (index >= 0 && index < total) startCourseMusicAt(activeCourse.places[index]);
   renderCourseCard();
   if (index < 0 || index >= total) {
     fitCourseBounds();
