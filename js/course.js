@@ -153,10 +153,93 @@ function startCourseMusicAt(place) {
 
 // 곡이 끝나면 다음 곡으로(마지막 곡 뒤엔 처음으로) — js/recall.js
 // bindRecallEvents의 미니 플레이어 종료 콜백이 발자취 중일 때 부른다.
+// 기억 라디오(handleRadioSongEnded)처럼, 카드를 넘겨봐서 지금 보고 있는
+// 장소의 노래가 방금 끝난 곡과 다르면 그 장소 노래로 이어간다(카드와 노래를
+// 다시 맞춘다). 같거나 노래 없는 장소면 코스 순서상 다음 곡으로.
 function handleCourseSongEnded() {
   const i = courseSongs.findIndex((s) => s.videoId === activeMiniPlayerVideoId);
   if (i < 0) return; // 사용자가 다른 곡으로 바꿔 들은 경우 — 손대지 않는다
-  playCourseSongAt((i + 1) % courseSongs.length);
+  const place = activeCourse.places[courseIndex];
+  const placeSongIndex = place ? courseSongs.findIndex((s) => s.videoId === Storage.extractYoutubeVideoId(place.youtubeUrl)) : -1;
+  playCourseSongAt(placeSongIndex >= 0 && placeSongIndex !== i ? placeSongIndex : (i + 1) % courseSongs.length);
+}
+
+// ------------------------------------------------------------
+// 장소 카드 안 "이 장소의 노래" 카드 — 기억 라디오 노래 카드(js/recall.js
+// refreshRecallSongCard)와 같은 마크업/스타일(.recall-song)을 쓴다. 노래가
+// 있는 장소면 항상 보이고, 재생 버튼은 지금 흐르는 곡이 이 장소 곡이 아니면
+// 그 곡으로 바꿔 틀고(이후 플레이리스트는 그 곡부터 이어짐), 이미 이 곡이면
+// 미니 플레이어 일시정지 ⇄ 재생과 같다. 장소는 사용자 기억이 아니라서
+// 하트(떠올랐어요)는 뺐다. 실제 소리는 미니 플레이어가 낸다.
+// ------------------------------------------------------------
+let courseSongTicker = null;
+
+function courseSongCardHtml(place) {
+  const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
+  if (!videoId) return "";
+  return `
+    <div class="recall-song" id="course-song">
+      <div class="recall-song-art" aria-hidden="true">
+        <div class="recall-song-disc"></div>
+        <div class="recall-song-arm"></div>
+      </div>
+      <div class="recall-song-body">
+        <p class="recall-song-label">
+          <svg class="recall-song-label-icon" viewBox="0 0 16 12" width="16" height="12" aria-hidden="true">
+            <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <line x1="1" y1="5" x2="1" y2="7" /><line x1="4" y1="3" x2="4" y2="9" /><line x1="7" y1="1" x2="7" y2="11" />
+              <line x1="10" y1="3" x2="10" y2="9" /><line x1="13" y1="5" x2="13" y2="7" />
+            </g>
+          </svg>
+          <span id="course-song-label-text">이 장소의 노래 듣기</span>
+        </p>
+        <p class="recall-song-title">${escapeHtml(place.musicTitle || "이 장소의 노래")}</p>
+        <p class="recall-song-artist">${escapeHtml(place.musicArtist || "")}</p>
+        <div class="recall-song-controls">
+          <button type="button" class="recall-song-play" id="course-song-play" aria-label="이 장소의 노래 듣기">
+            <svg class="recall-song-icon-play" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>
+            <svg class="recall-song-icon-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /><rect x="13.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /></svg>
+          </button>
+          <div class="recall-song-wave" id="course-song-wave" aria-hidden="true">${buildSongWaveBars(videoId, RECALL_SONG_WAVE_BARS)}</div>
+          <span class="recall-song-time" id="course-song-time"></span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bindCourseSongCard(place) {
+  const btn = document.getElementById("course-song-play");
+  if (!btn) return;
+  const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
+  btn.onclick = () => {
+    if (activeMiniPlayerVideoId === videoId) toggleMiniPlayerPause();
+    else playCourseSongAt(courseSongs.findIndex((s) => s.videoId === videoId));
+    refreshCourseSongCard();
+  };
+  refreshCourseSongCard();
+  courseSongTicker = setInterval(refreshCourseSongCard, 500);
+}
+
+function refreshCourseSongCard() {
+  const box = document.getElementById("course-song");
+  const place = activeCourse && activeCourse.places[courseIndex];
+  if (!box || !place) return;
+  const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
+  const isThisSong = !!videoId && activeMiniPlayerVideoId === videoId;
+  const isPlaying = isThisSong && !miniPlayerPaused;
+  box.classList.toggle("recall-song--active", isThisSong);
+  box.classList.toggle("recall-song--playing", isPlaying);
+  document.getElementById("course-song-label-text").textContent = isThisSong ? "지금 흐르는 노래" : "이 장소의 노래 듣기";
+  document.getElementById("course-song-play").setAttribute("aria-label", isPlaying ? "일시정지" : "재생");
+  const duration = isThisSong && ytPlayer && typeof ytPlayer.getDuration === "function" ? ytPlayer.getDuration() : 0;
+  const current = duration ? ytPlayer.getCurrentTime() || 0 : 0;
+  document.getElementById("course-song-time").textContent = duration ? formatRecallSongTime(duration - current) : "";
+  markPlayedWaveBars(document.getElementById("course-song-wave"), duration ? current / duration : 0);
+}
+
+function stopCourseSongTicker() {
+  clearInterval(courseSongTicker);
+  courseSongTicker = null;
 }
 
 function drawCoursePath() {
@@ -271,6 +354,7 @@ function showCourseStep(index) {
 }
 
 function renderCourseCard() {
+  stopCourseSongTicker();
   const card = document.getElementById("course-card");
   const total = activeCourse.places.length;
   const isIntro = courseIndex < 0;
@@ -300,6 +384,7 @@ function renderCourseCard() {
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
       ${place.description ? `<p class="story-content">${escapeHtml(place.description)}</p>` : ""}
       ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(place.quote)}</blockquote>` : ""}
+      ${courseSongCardHtml(place)}
     `;
   }
 
@@ -321,7 +406,10 @@ function renderCourseCard() {
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
   document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
-  if (!isIntro && !isOutro) renderCoursePlacePhoto(activeCourse.places[courseIndex]);
+  if (!isIntro && !isOutro) {
+    renderCoursePlacePhoto(activeCourse.places[courseIndex]);
+    bindCourseSongCard(activeCourse.places[courseIndex]);
+  }
 }
 
 // 장소 사진 — 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
@@ -356,6 +444,7 @@ function writeMemoryAfterCourse() {
 
 function endCourseWalk() {
   if (!courseModeOpen) return;
+  stopCourseSongTicker();
   if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId)) stopMiniPlayer();
   courseSongs = [];
   courseOverlays.forEach((o) => o.setMap(null));
