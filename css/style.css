@@ -4690,6 +4690,21 @@ button.story-place-line:hover {
   .recall-radio-night--late .recall-exit-btn:hover {
     color: #fff;
   }
+
+  /* 발자취 따라 걷기도 모바일에선 라디오처럼 반투명 원 + 얇은 ✕(2026-10-13
+     요청). 밝은 지도 위라 낮 라디오와 같은 어두운 ✕, 원은 지도 글씨에
+     묻히지 않게 조금 더 진하게. */
+  .course-session .recall-exit-btn {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 15.5px, transparent 16px);
+    box-shadow: none;
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 16px;
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+  }
+
+  .course-session .recall-exit-btn:hover {
+    color: #000;
+  }
 }
 
 /* 별자리 개요 — 실제 카카오 지도가 아니라 별도의 "밤하늘" 캔버스에
