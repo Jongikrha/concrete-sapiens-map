@@ -185,18 +185,6 @@ body {
   margin: 0 auto;
 }
 
-/* 시안처럼 로고와 폭을 맞추려고 영문 때보다 자간을 줄이고 가운데로 둔다
-   (영문 로고 시절 0.14em 그대로면 한글 로고보다 1.5배 넓어진다). */
-.wordmark small {
-  display: block;
-  font-weight: 400;
-  font-size: 6.5px;
-  letter-spacing: 0.06em;
-  text-align: center;
-  color: var(--cs-orange);
-  margin-top: 1px;
-}
-
 .search-box {
   flex: 1;
   /* flex item의 기본 min-width는 auto(=콘텐츠 기준 최소 크기)라 flex:1이
