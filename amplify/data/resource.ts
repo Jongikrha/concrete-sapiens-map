@@ -262,6 +262,11 @@ const schema = a.schema({
       // 장소 사진 1장(선택, 2026-10-13) — Story.photoKey와 같은 story-photos/
       // 경로(amplify/storage/resource.ts, Admins 쓰기 허용)에 어드민이 올린다.
       photoKey: a.string(),
+      // 장소 사진 크롭 기준점(0~100%, 2026-10-13) — Story.photoFocusX/Y와 같다.
+      // 장소 카드 사진 칸이 가로로 납작해서(16:9) 세로로 긴 사진은 어느
+      // 높이를 보여줄지 어드민에서 끌어서 정한다(object-position).
+      photoFocusX: a.float(),
+      photoFocusY: a.float(),
       // 장소 노래(선택, 2026-10-13) — 코스 배경음악(Course.youtubeUrl) 위에
       // 섞는다. 노래가 있는 장소에 오면 그 곡으로 바뀌고, 없는 장소에선
       // 흐르던 곡이 그대로 이어진다(js/course.js playPlaceSong).
