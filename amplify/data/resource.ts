@@ -195,6 +195,56 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 발자취(코스) — 여러 장소를 순서대로 묶은 큐레이션(2026-10-13). 첫
+  // 코스는 책 『콘크리트 사피엔스』 속 장소, 이후 인물 발자취/드라마
+  // 촬영지 등으로 넓힐 수 있게 책 전용 필드 대신 일반적인 틀로 둔다.
+  // 사용자 기억(Story)과 분리한 이유: 한 장소가 여러 코스에 들어갈 수
+  // 있고, 코스 장소는 누군가의 기억이 아니라 운영자가 정한 곳이라
+  // 기억이 없어도 존재해야 한다. 편집은 관리자만, 읽기는 누구나 —
+  // 비공개(isPublished=false) 코스도 API로는 읽히므로 숨기는 건 화면
+  // 쪽 필터일 뿐이다(초안이 새어도 문제없는 공개 콘텐츠 전제).
+  Course: a
+    .model({
+      // URL용 짧은 영문 식별자(예: "concrete-sapiens") — 나중에 ?course=로
+      // 코스를 바로 여는 공유 링크에 쓴다.
+      slug: a.string().required(),
+      title: a.string().required(),
+      description: a.string(),
+      // "book" | "person" | "drama" | "org" 등 자유 문자열 — 종류가 늘어도
+      // 스키마 변경 없이 대응한다(AppEvent.type과 같은 방식).
+      kind: a.string(),
+      // 책 소개/구매처 등 바깥 링크(선택)
+      linkUrl: a.string(),
+      // 코스 목록 정렬용(작을수록 앞)
+      sortOrder: a.integer(),
+      isPublished: a.boolean().required(),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated('identityPool').to(['read']),
+      allow.group('Admins'),
+    ]),
+
+  CoursePlace: a
+    .model({
+      courseId: a.string().required(),
+      // 따라 걷기 순서(작을수록 앞). 순서 변경은 이웃과 값을 맞바꾼다.
+      seq: a.integer().required(),
+      name: a.string().required(),
+      lat: a.float().required(),
+      lng: a.float().required(),
+      address: a.string(),
+      // 짧은 꼬리표(예: 책이면 "3장", 인물이면 "1443년")
+      label: a.string(),
+      description: a.string(),
+      quote: a.string(),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated('identityPool').to(['read']),
+      allow.group('Admins'),
+    ]),
+
   // 회원 깃발(어드민 전용 메모/표시) — userId를 기본키로 써서 회원 한 명당
   // 레코드 하나(있으면 깃발 켜짐, 없으면 꺼짐)로 단순하게 다룬다. Cognito
   // 커스텀 속성으로는 못 만든다 — UserPool Schema는 생성 후 CDK로 업데이트가
