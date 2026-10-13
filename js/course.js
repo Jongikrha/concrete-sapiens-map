@@ -175,37 +175,51 @@ function fillCoverSlot(slot) {
 // ------------------------------------------------------------
 function openCourseDetail(course, { fromList = false } = {}) {
   const panel = document.getElementById("course-detail-panel");
+  // 시안(2026-10-13): 왼쪽 입체 책 표지, 오른쪽에 제목·부제(description)·
+  // 소개 글(intro)·고정 문구, 아래 "따라 걷기 시작". 장소 목록은 뺐다
+  // (걷기 시작하면 바로 보이니 여기선 콘텐츠 소개에 집중). 아래 주황
+  // 문구는 코스마다 바꾸지 않는 고정 문구다.
   panel.innerHTML = `
     <div class="course-detail-scroll">
       <div class="course-detail-top">
         ${fromList && publishedCourses.length > 1 ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
-        <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">✕</button>
+        <div class="course-detail-top-actions">
+          ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
+          <button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>
+          <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">✕</button>
+        </div>
       </div>
-      ${course.coverKey ? `<div class="course-detail-cover" data-photo-key="${escapeHtml(course.coverKey)}"></div>` : ""}
-      <p class="course-detail-kicker">${escapeHtml(courseKindLabel(course))}발자취 · 장소 ${course.places.length}곳</p>
-      <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
-      ${course.description ? `<p class="course-detail-desc">${escapeHtml(course.description)}</p>` : ""}
-      <div class="course-card-links course-detail-links">
-        ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
-        <button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>
-      </div>
-      <div class="course-detail-places">
-        <p class="course-detail-places-title">걷게 될 장소</p>
-        <ol>
-          ${course.places.map((p) => `
-            <li>
-              <span class="course-detail-place-name">${escapeHtml(p.name)}</span>
-              ${p.label ? `<span class="course-detail-place-label">${escapeHtml(p.label)}</span>` : ""}
-            </li>
-          `).join("")}
-        </ol>
+      <div class="course-detail-body${course.coverKey ? "" : " course-detail-body--no-cover"}">
+        ${course.coverKey ? `<div class="course-detail-book" id="course-detail-book"></div>` : ""}
+        <div class="course-detail-text">
+          <p class="course-detail-kicker">발자취 · 장소 ${course.places.length}곳</p>
+          <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
+          ${course.description ? `<p class="course-detail-subtitle">${escapeHtml(course.description)}</p>` : ""}
+          ${course.intro ? `<p class="course-detail-intro">${escapeHtml(course.intro)}</p>` : ""}
+          <p class="course-detail-tagline">콘텐츠 속 장소를 따라 걸으며, 지역의 서사를 직접 만나보세요.</p>
+        </div>
       </div>
     </div>
     <div class="course-detail-footer">
-      <button type="button" class="btn-primary course-detail-start" id="course-detail-start">따라 걷기 시작</button>
+      <button type="button" class="btn-primary course-detail-start" id="course-detail-start">
+        <span>따라 걷기 시작</span>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
     </div>
   `;
-  panel.querySelectorAll(".course-detail-cover").forEach(fillCoverSlot);
+  const book = document.getElementById("course-detail-book");
+  if (book) {
+    resolveStoryPhotoUrl(course.coverKey).then((url) => {
+      if (!book.isConnected) return;
+      if (!url) {
+        book.remove();
+        return;
+      }
+      renderBook3d(book, url, course.coverSpineRatio).then((ok) => {
+        if (!ok && book.isConnected) book.remove();
+      });
+    });
+  }
   document.getElementById("course-detail-close").onclick = () => {
     closeCourseDetail();
     // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)

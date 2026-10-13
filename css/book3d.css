@@ -1,0 +1,75 @@
+/* ============================================================
+   입체 책 표지 (js/book3d.js renderBook3d) — 발자취 소개 화면과
+   어드민 표지 미리보기가 같이 쓴다. 컨테이너에서 --book-w(앞표지 폭)만
+   정하면 높이(--book-aspect)와 책등 두께(--spine-k)는 JS가 이미지 비율로
+   넣어준다. 책을 오른쪽으로 살짝 돌려 왼쪽 책등이 보이게 세운다.
+   ============================================================ */
+.book3d {
+  --book-w: 170px;
+  --book-h: calc(var(--book-w) * var(--book-aspect, 1.45));
+  --spine-w: calc(var(--book-w) * var(--spine-k, 0.08));
+  perspective: 1400px;
+  /* 돌린 뒤 책등이 왼쪽으로 튀어나오는 만큼 자리를 비워둔다 */
+  padding-left: calc(var(--spine-w) * 0.55);
+  width: fit-content;
+}
+
+.book3d-body {
+  position: relative;
+  width: var(--book-w);
+  height: var(--book-h);
+  transform-style: preserve-3d;
+  transform: rotateY(34deg);
+}
+
+.book3d-front,
+.book3d-spine {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-color: #2f3031;
+}
+
+.book3d-front {
+  left: 0;
+  width: 100%;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 14px 18px 28px rgba(47, 48, 49, 0.32);
+}
+
+/* 앞표지의 접히는 쪽(책등 옆)에 생기는 홈과 빛 반사 */
+.book3d-front::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.32) 0%,
+    rgba(0, 0, 0, 0.05) 2.5%,
+    rgba(255, 255, 255, 0.14) 4%,
+    rgba(255, 255, 255, 0) 9%
+  );
+  pointer-events: none;
+}
+
+/* 앞표지 왼쪽 모서리를 축으로 뒤로 90° 접어 왼쪽 측면이 되게 한다 */
+.book3d-spine {
+  left: calc(var(--spine-w) * -1);
+  width: var(--spine-w);
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+}
+
+/* 측면은 정면보다 빛을 덜 받는다 */
+.book3d-spine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.12));
+}
+
+.book3d-spine--fake {
+  filter: brightness(0.7);
+}

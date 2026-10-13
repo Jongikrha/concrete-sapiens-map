@@ -5267,12 +5267,13 @@ button.story-place-line:hover {
 }
 
 /* ------------------------------------------------------------
-   발자취 소개 화면(js/course.js openCourseDetail) — 목록보다 크게, 표지를
-   가운데 크게 세우고 콘텐츠 소개를 읽게 한 뒤 맨 아래 고정 버튼으로
-   따라 걷기를 시작한다. 내용만 스크롤되고 버튼은 늘 보인다.
+   발자취 소개 화면(js/course.js openCourseDetail) — 시안(2026-10-13):
+   넓은 카드에 왼쪽 입체 책(css/book3d.css), 오른쪽 제목·부제·소개 글·고정
+   문구, 아래 꽉 찬 "따라 걷기 시작". 좁은 화면에선 책을 위로 올려 한 줄로
+   쌓는다. 내용만 스크롤되고 버튼은 늘 보인다.
 ------------------------------------------------------------ */
 .course-detail-card {
-  max-width: 460px;
+  max-width: 760px;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -5283,13 +5284,23 @@ button.story-place-line:hover {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px 22px 8px;
+  padding: 16px 28px 4px;
 }
 
 .course-detail-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.course-detail-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.course-detail-top-actions .course-card-link {
+  margin-top: 0;
 }
 
 .course-detail-back {
@@ -5302,110 +5313,111 @@ button.story-place-line:hover {
   cursor: pointer;
 }
 
-.course-detail-cover {
-  width: 150px;
-  aspect-ratio: 2 / 3;
-  margin: 4px auto 22px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--cs-gray);
-  box-shadow: 0 10px 28px rgba(47, 48, 49, 0.28);
+.course-detail-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 36px;
+  padding: 8px 8px 12px 12px;
 }
 
-.course-detail-cover img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.course-detail-body--no-cover {
+  grid-template-columns: 1fr;
+}
+
+.course-detail-book .book3d {
+  --book-w: 190px;
+}
+
+.course-detail-text {
+  min-width: 0;
 }
 
 .course-detail-kicker {
   margin: 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--cs-orange);
+  font-size: 13px;
+  color: var(--cs-text-muted);
 }
 
 .course-detail-title {
-  margin: 6px 0 0;
-  text-align: center;
+  margin: 8px 0 0;
   font-family: var(--font-maruburi);
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 600;
+  line-height: 1.25;
   color: var(--cs-black);
 }
 
-/* 어드민에서 줄바꿈으로 나눈 문단을 그대로 살린다 */
-.course-detail-desc {
+.course-detail-subtitle {
+  margin: 8px 0 0;
+  font-family: var(--font-maruburi);
+  font-size: 16px;
+  color: var(--cs-text-muted);
+}
+
+/* 소개 글 — 위아래 가는 선으로 제목/고정 문구와 나눈다. 어드민에서
+   최대 116자(시안 글 길이)로 제한해 네 줄 남짓에 들어온다. */
+.course-detail-intro {
   margin: 18px 0 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--cs-map-gray);
+  border-bottom: 1px solid var(--cs-map-gray);
+  font-family: var(--font-maruburi);
   font-size: 14.5px;
-  line-height: 1.75;
+  line-height: 1.85;
   color: var(--cs-black);
   white-space: pre-line;
+  word-break: keep-all;
 }
 
-.course-detail-links {
-  justify-content: center;
-}
-
-.course-detail-places {
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--cs-map-gray);
-}
-
-.course-detail-places-title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cs-text-muted);
-}
-
-.course-detail-places ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: course-place;
-}
-
-.course-detail-places li {
-  counter-increment: course-place;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 6px 0;
-  font-size: 14px;
-  color: var(--cs-black);
-}
-
-.course-detail-places li::before {
-  content: counter(course-place);
-  flex-shrink: 0;
-  width: 18px;
-  font-size: 12px;
-  font-weight: 600;
+.course-detail-tagline {
+  margin: 16px 0 0;
+  font-family: var(--font-maruburi);
+  font-size: 13.5px;
   color: var(--cs-orange);
-}
-
-.course-detail-place-label {
-  font-size: 12px;
-  color: var(--cs-text-muted);
+  word-break: keep-all;
 }
 
 .course-detail-footer {
   flex-shrink: 0;
-  padding: 12px 22px 20px;
-  border-top: 1px solid var(--cs-map-gray);
+  padding: 20px 28px 24px;
 }
 
 .course-detail-start {
   width: 100%;
   margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 @media (max-width: 600px) {
-  .course-detail-cover {
-    width: 128px;
+  .course-detail-scroll {
+    padding: 14px 20px 4px;
+  }
+
+  .course-detail-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 22px;
+    padding: 0;
+  }
+
+  .course-detail-book .book3d {
+    --book-w: 128px;
+  }
+
+  .course-detail-text {
+    width: 100%;
+  }
+
+  .course-detail-title {
+    font-size: 25px;
+  }
+
+  .course-detail-footer {
+    padding: 14px 20px 20px;
   }
 }
 

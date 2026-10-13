@@ -1032,6 +1032,75 @@ function courseCardHtml(course) {
   `;
 }
 
+// 소개 화면 본문 최대 글자 수 — 시안(2026-10-13)의 소개 글 길이(116자).
+// 이보다 길면 소개 화면에서 책 표지보다 글이 길게 늘어진다.
+const COURSE_INTRO_MAX = 116;
+
+function bindCourseIntroCounter() {
+  const input = document.getElementById("course-intro-input");
+  const count = document.getElementById("course-intro-count");
+  const update = () => {
+    count.textContent = `${input.value.length} / ${COURSE_INTRO_MAX}자`;
+  };
+  input.addEventListener("input", update);
+  update();
+}
+
+// 표지 편집기 — 평면 이미지 위 세로선(책등 경계)과 입체 미리보기(js/book3d.js)를
+// 슬라이더와 같이 움직인다. 새 파일을 고르면 책등 경계를 자동으로 찾아
+// 슬라이더를 맞춰둔다(detectBookSpineRatio). 기존 표지는 S3 URL이라 픽셀을
+// 못 읽어서 저장된 값 그대로 시작한다.
+function bindCourseCoverEditor() {
+  const input = document.getElementById("course-cover-input");
+  const editor = document.getElementById("course-cover-editor");
+  const flat = document.getElementById("course-cover-flat");
+  const line = document.getElementById("course-cover-flat-line");
+  const book = document.getElementById("course-cover-3d");
+  const spineRow = document.getElementById("course-cover-spine-row");
+  const slider = document.getElementById("course-cover-spine");
+  const valueEl = document.getElementById("course-cover-spine-value");
+  let url = null;
+
+  const refresh = () => {
+    const r = parseFloat(slider.value) || 0;
+    valueEl.textContent = r > 0 ? `왼쪽 ${Math.round(r * 1000) / 10}%` : "없음(앞표지만)";
+    line.style.left = `${r * 100}%`;
+    line.classList.toggle("hidden", r === 0);
+    if (url) renderBook3d(book, url, r);
+  };
+  const show = (newUrl) => {
+    url = newUrl;
+    let img = flat.querySelector("img");
+    if (!img) {
+      img = document.createElement("img");
+      img.alt = "";
+      flat.prepend(img);
+    }
+    img.src = newUrl;
+    editor.classList.remove("hidden");
+    spineRow.classList.remove("hidden");
+    refresh();
+  };
+
+  slider.addEventListener("input", refresh);
+  input.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    const probe = new Image();
+    probe.onload = () => {
+      slider.value = String(detectBookSpineRatio(probe));
+      show(objectUrl);
+    };
+    probe.src = objectUrl;
+  });
+  if (flat.dataset.photoKey) {
+    resolveAdminPhotoUrl(flat.dataset.photoKey).then((existingUrl) => {
+      if (existingUrl && !url) show(existingUrl);
+    });
+  }
+}
+
 function courseFormHtml() {
   const c = editingCourseId ? courses.find((x) => x.id === editingCourseId) : null;
   const v = (field) => escapeHtml(c?.[field] ?? "");
@@ -1045,16 +1114,30 @@ function courseFormHtml() {
           ${COURSE_KINDS.map((k) => `<option value="${k.value}"${(c?.kind || "book") === k.value ? " selected" : ""}>${k.label}</option>`).join("")}
         </select>
       </label>
-      <label>소개<textarea name="description" rows="6" placeholder="발자취 소개 화면에 보일 글 — 책/작품 소개. 줄바꿈으로 문단을 나눌 수 있어요(목록에선 앞부분만 보여요).">${v("description")}</textarea></label>
+      <label>부제(한 줄)<input type="text" name="description" value="${v("description")}" maxlength="40" placeholder="예: 콘크리트 사피엔스의 발자취" /></label>
+      <p class="field-hint">소개 화면 제목 바로 아래, 코스 목록에도 보여요.</p>
+      <label>책·작품 소개<textarea name="intro" id="course-intro-input" rows="4" maxlength="${COURSE_INTRO_MAX}" placeholder="소개 화면 본문 — 최대 ${COURSE_INTRO_MAX}자">${v("intro")}</textarea></label>
+      <p class="field-hint course-intro-count" id="course-intro-count"></p>
       <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
       <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.</p>
-      <label>표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
-      <div class="course-cover-preview" id="course-cover-preview"${c?.coverKey ? ` data-photo-key="${escapeHtml(c.coverKey)}"` : ""}></div>
+      <label>표지 — 책등 + 앞표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
+      <div class="course-cover-guide">
+        <p><b>책등(스파인)과 겉표지(앞표지)를 한 장으로 올려주세요.</b> 펼친 표지 파일에서 <b>왼쪽 책등 + 오른쪽 앞표지</b> 부분만 잘라서 올리면, 소개 화면에 책이 옆면(책등)까지 보이는 입체로 세워져요.</p>
+        <p>책등 경계는 올리면 자동으로 찾아요. 아래 미리보기를 보면서 슬라이더로 맞춰주세요. 앞표지만 있으면 슬라이더를 0으로 두면 돼요(책등은 표지 왼쪽 끝 색으로 채워져요). 드라마·영화는 세로 포스터를 올리면 돼요.</p>
+      </div>
+      <div class="course-cover-editor${c?.coverKey ? "" : " hidden"}" id="course-cover-editor">
+        <div class="course-cover-flat" id="course-cover-flat"${c?.coverKey ? ` data-photo-key="${escapeHtml(c.coverKey)}"` : ""}>
+          <div class="course-cover-flat-line" id="course-cover-flat-line"></div>
+        </div>
+        <div class="course-cover-3d" id="course-cover-3d"></div>
+      </div>
+      <label class="course-cover-spine${c?.coverKey ? "" : " hidden"}" id="course-cover-spine-row">책등 경계 <span id="course-cover-spine-value"></span>
+        <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
+      </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
-      <p class="field-hint">책 표지·포스터처럼 세로로 긴 이미지. 코스 소개 카드 오른쪽에 들어가요.</p>
       <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1244,18 +1327,14 @@ async function renderCoursesTab() {
     const preview = document.getElementById("course-logo-preview");
     preview.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" />`;
   });
-  document.getElementById("course-cover-input").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    document.getElementById("course-cover-preview").innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" />`;
-  });
-  ["course-logo-preview", "course-cover-preview"].forEach((id) => {
-    const preview = document.getElementById(id);
-    if (!preview.dataset.photoKey) return;
-    resolveAdminPhotoUrl(preview.dataset.photoKey).then((url) => {
-      if (url && !preview.firstChild) preview.innerHTML = `<img src="${url}" alt="" />`;
+  const logoPreview = document.getElementById("course-logo-preview");
+  if (logoPreview.dataset.photoKey) {
+    resolveAdminPhotoUrl(logoPreview.dataset.photoKey).then((url) => {
+      if (url && !logoPreview.firstChild) logoPreview.innerHTML = `<img src="${url}" alt="" />`;
     });
-  });
+  }
+  bindCourseIntroCounter();
+  bindCourseCoverEditor();
   const placeForm = document.getElementById("place-form");
   if (placeForm) {
     placeForm.addEventListener("submit", handlePlaceSubmit);
@@ -1331,6 +1410,8 @@ async function handleCourseSubmit(e) {
     }
   }
   fields.coverKey = coverKey;
+  fields.coverSpineRatio = coverKey ? parseFloat(f.get("coverSpineRatio")) || 0 : null;
+  fields.intro = (f.get("intro") || "").trim().slice(0, COURSE_INTRO_MAX) || null;
   if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;

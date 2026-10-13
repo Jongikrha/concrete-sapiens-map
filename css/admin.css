@@ -629,15 +629,69 @@ body {
   display: block;
 }
 
-/* 코스 표지 미리보기 — 소개 카드처럼 세로 직사각형 */
-.course-cover-preview:empty {
+/* 코스 표지 — 업로드 안내, 평면(책등 경계선) + 입체 미리보기, 경계 슬라이더 */
+.course-cover-guide {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #555;
+  background: #fff7f3;
+  border: 1px solid #ffd9cc;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.course-cover-guide p {
+  margin: 0;
+}
+
+.course-cover-guide p + p {
+  margin-top: 6px;
+}
+
+.course-cover-editor {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.course-cover-editor.hidden,
+.course-cover-spine.hidden,
+.course-cover-flat-line.hidden {
   display: none;
 }
 
-.course-cover-preview img {
+.course-cover-flat {
+  position: relative;
+  width: 160px;
+}
+
+.course-cover-flat img {
   display: block;
-  width: 80px;
+  width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 책등과 앞표지 경계 — 슬라이더 값 위치 */
+.course-cover-flat-line {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 0;
+  border-left: 2px dashed var(--cs-orange);
+}
+
+.course-cover-3d .book3d {
+  --book-w: 110px;
+}
+
+.course-cover-spine input {
+  width: 100%;
+}
+
+.course-intro-count {
+  text-align: right;
+  margin-top: -4px;
 }
