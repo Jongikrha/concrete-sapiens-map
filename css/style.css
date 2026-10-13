@@ -175,20 +175,24 @@ body {
   white-space: nowrap;
 }
 
-/* 기존 텍스트 워드마크와 같은 자리를 차지하도록 높이만 그 줄(14px 볼드
-   텍스트 한 줄) 크기에 맞춘다 — 로고 이미지(assets/wordmark-logo.png)로
-   교체(2026-08-23). 원본은 레티나 대비 3배 해상도로 준비해뒀다. */
+/* 한글 두 줄 로고(assets/wordmark-logo-ko.png, 2026-10-13 — 영문
+   "Concrete Sapiens"에서 교체). 두 줄이라 영문(22px)보다 높게 잡아야
+   글자가 읽힌다. 원본은 레티나 대비 3배 이상 해상도로 준비해뒀다. */
 .wordmark-logo {
   display: block;
-  height: 22px;
+  height: 36px;
   width: auto;
+  margin: 0 auto;
 }
 
+/* 시안처럼 로고와 폭을 맞추려고 영문 때보다 자간을 줄이고 가운데로 둔다
+   (영문 로고 시절 0.14em 그대로면 한글 로고보다 1.5배 넓어진다). */
 .wordmark small {
   display: block;
   font-weight: 400;
-  font-size: 7px;
-  letter-spacing: 0.14em;
+  font-size: 6.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
   color: var(--cs-orange);
   margin-top: 1px;
 }
