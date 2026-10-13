@@ -1018,7 +1018,6 @@ function courseCardHtml(course) {
         <span>${course.isPublished ? "공개" : "비공개"}</span>
         <span>정렬 ${course.sortOrder ?? 0}</span>
         ${course.logoKey ? `<span>로고 있음</span>` : ""}
-        ${course.youtubeUrl ? `<span>♪ ${escapeHtml([course.musicArtist, course.musicTitle].filter(Boolean).join(" - ") || "배경음악")}</span>` : ""}
       </div>
       ${course.description ? `<p class="field-hint">${escapeHtml(course.description)}</p>` : ""}
       <div class="admin-card-actions">
@@ -1046,11 +1045,6 @@ function courseFormHtml() {
       </label>
       <label>소개<textarea name="description" rows="2" placeholder="코스 목록에 보일 한두 문장">${v("description")}</textarea></label>
       <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
-      <label>배경음악 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 흐를 한 곡" /></label>
-      <div class="course-music-row">
-        <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
-        <label>곡 제목<input type="text" name="musicTitle" value="${v("musicTitle")}" /></label>
-      </div>
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
@@ -1111,7 +1105,7 @@ function placeFormHtml() {
       <label>설명(선택)<textarea name="description" rows="2">${v("description")}</textarea></label>
       <label>인용(선택)<textarea name="quote" rows="2" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
       ${placePhotoFieldHtml(p)}
-      <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="비워두면 흐르던 곡이 그대로 이어져요" /></label>
+      <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 장소 노래들이 차례로 흘러요" /></label>
       <div class="course-music-row">
         <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
         <label>곡 제목<input type="text" name="musicTitle" value="${v("musicTitle")}" /></label>
@@ -1290,9 +1284,6 @@ async function handleCourseSubmit(e) {
     kind: f.get("kind"),
     description: f.get("description").trim() || null,
     linkUrl: f.get("linkUrl").trim() || null,
-    youtubeUrl: f.get("youtubeUrl").trim() || null,
-    musicArtist: f.get("musicArtist").trim() || null,
-    musicTitle: f.get("musicTitle").trim() || null,
     sortOrder: parseInt(f.get("sortOrder"), 10) || 0,
   };
   const editing = editingCourseId ? courses.find((c) => c.id === editingCourseId) : null;
@@ -1311,10 +1302,6 @@ async function handleCourseSubmit(e) {
     }
   }
   fields.logoKey = logoKey;
-  if (fields.youtubeUrl && !Storage.extractYoutubeVideoId(fields.youtubeUrl)) {
-    alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
-    return;
-  }
   if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;
