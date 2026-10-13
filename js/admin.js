@@ -1054,7 +1054,7 @@ function courseFormHtml() {
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
-      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 작은 원 안에 보이니 정사각형에 가까운 단순한 로고가 좋아요. 없으면 번호로 보여요.</p>
+      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.</p>
       <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1124,20 +1124,61 @@ function placeFormHtml() {
   `;
 }
 
-// 코스 로고 — 핀 안 작은 원에만 쓰이므로 긴 변 256px로 줄이고, 투명 배경을
-// 살리려고 사진(PhotoUpload.resizeImageFile, JPEG)과 달리 PNG로 인코딩한다.
+// 코스 로고 — 지도 핀 배지에 작게 들어가므로 (1) 가장자리 배경색(왼쪽 위
+// 픽셀 기준)과 비슷한 픽셀은 투명하게 지우고 (2) 남은 내용만 남도록 여백을
+// 잘라낸 뒤 (3) 긴 변 256px로 줄여 PNG(투명 유지)로 만든다. 흰 배경에 여백이
+// 넓은 로고를 올렸더니 배지 안에서 글자가 가운데 조그맣게만 보였다(2026-10-13).
 function resizeLogoFile(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, 256 / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("로고를 처리할 수 없어요."))), "image/png");
+      const s0 = Math.min(1, 1024 / Math.max(img.width, img.height));
+      const w = Math.round(img.width * s0);
+      const h = Math.round(img.height * s0);
+      const work = document.createElement("canvas");
+      work.width = w;
+      work.height = h;
+      const ctx = work.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = ctx.getImageData(0, 0, w, h);
+      const px = data.data;
+      const [br, bg, bb, ba] = px;
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const k = (y * w + x) * 4;
+          if (ba > 200) {
+            const d = Math.max(Math.abs(px[k] - br), Math.abs(px[k + 1] - bg), Math.abs(px[k + 2] - bb));
+            // 배경과 아주 가까우면 투명, 경계(안티에일리어싱)는 거리만큼 반투명
+            if (d < 16) px[k + 3] = 0;
+            else if (d < 48) px[k + 3] = Math.round(px[k + 3] * (d - 16) / 32);
+          }
+          if (px[k + 3] > 24) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+      if (maxX < 0) {
+        reject(new Error("로고에서 내용을 찾지 못했어요."));
+        return;
+      }
+      const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+      const cx = Math.max(0, minX - pad);
+      const cy = Math.max(0, minY - pad);
+      const cw = Math.min(w, maxX + pad + 1) - cx;
+      const ch = Math.min(h, maxY + pad + 1) - cy;
+      const scale = Math.min(1, 256 / Math.max(cw, ch));
+      const out = document.createElement("canvas");
+      out.width = Math.round(cw * scale);
+      out.height = Math.round(ch * scale);
+      out.getContext("2d").drawImage(work, cx, cy, cw, ch, 0, 0, out.width, out.height);
+      out.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("로고를 처리할 수 없어요."))), "image/png");
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
