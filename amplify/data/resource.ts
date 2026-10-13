@@ -215,6 +215,12 @@ const schema = a.schema({
       kind: a.string(),
       // 책 소개/구매처 등 바깥 링크(선택)
       linkUrl: a.string(),
+      // 코스 배경음악(선택, 2026-10-13) — 장소마다 곡이 바뀌면 넘길 때마다
+      // 음악이 끊겨 산만해서 코스 전체에 한 곡만 둔다. Story.youtubeUrl/
+      // musicArtist/musicTitle과 같은 형식이라 미니 플레이어를 그대로 쓴다.
+      youtubeUrl: a.string(),
+      musicArtist: a.string(),
+      musicTitle: a.string(),
       // 코스 목록 정렬용(작을수록 앞)
       sortOrder: a.integer(),
       isPublished: a.boolean().required(),
@@ -238,6 +244,9 @@ const schema = a.schema({
       label: a.string(),
       description: a.string(),
       quote: a.string(),
+      // 장소 사진 1장(선택, 2026-10-13) — Story.photoKey와 같은 story-photos/
+      // 경로(amplify/storage/resource.ts, Admins 쓰기 허용)에 어드민이 올린다.
+      photoKey: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
