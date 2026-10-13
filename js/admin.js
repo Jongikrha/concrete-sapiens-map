@@ -912,6 +912,432 @@ async function handleBulkDeleteAll() {
   renderBulkTab();
 }
 
+// ------------------------------------------------------------
+// 발자취(코스) 관리 — 여러 장소를 순서대로 묶은 큐레이션(2026-10-13).
+// 첫 코스는 책 『콘크리트 사피엔스』 속 장소. 모델은 amplify/data/
+// resource.ts의 Course/CoursePlace. 장소 좌표는 손으로 입력하지 않고
+// 카카오 장소 검색으로 고른다 — 어드민 화면엔 원래 지도가 없어서
+// 카카오 SDK를 이 탭에 들어올 때만 불러온다.
+// ------------------------------------------------------------
+const COURSE_KINDS = [
+  { value: "book", label: "책" },
+  { value: "person", label: "인물" },
+  { value: "drama", label: "드라마·영화" },
+  { value: "org", label: "단체" },
+  { value: "etc", label: "기타" },
+];
+
+let courses = null; // 발자취 탭 첫 진입 때 로드(지연 로딩)
+let coursePlacesById = {}; // courseId -> CoursePlace[] (seq 순)
+let selectedCourseId = null; // 장소 관리 중인 코스
+let editingCourseId = null; // null이면 "새 코스" 폼
+let editingPlaceId = null; // null이면 "장소 추가" 폼
+let placeDraft = null; // 카카오 검색에서 고른 { name, address, lat, lng }
+
+// list()는 한 번에 최대 100건이라 nextToken을 끝까지 따라간다. GraphQL
+// 에러는 reject가 아니라 errors 배열로 오므로 직접 확인해서 던진다.
+async function listAllRecords(model) {
+  const all = [];
+  let nextToken = null;
+  do {
+    const { data, errors, nextToken: next } = await model.list({ limit: 1000, nextToken });
+    if (errors?.length) throw new Error(errors.map((e) => e.message).join(", "));
+    all.push(...(data || []));
+    nextToken = next;
+  } while (nextToken);
+  return all;
+}
+
+// create/update/delete 공통 — 실패를 조용히 삼키지 않고 알린다.
+async function runCourseMutation(promise, failMessage) {
+  try {
+    const { data, errors } = await promise;
+    if (errors?.length) {
+      console.error(failMessage, errors);
+      alert(`${failMessage}\n${errors.map((e) => e.message).join("\n")}`);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.error(failMessage, e);
+    alert(`${failMessage}\n${e.message || e}`);
+    return null;
+  }
+}
+
+async function loadCourses() {
+  const [courseList, placeList] = await Promise.all([
+    listAllRecords(client.models.Course),
+    listAllRecords(client.models.CoursePlace),
+  ]);
+  courses = courseList.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  coursePlacesById = {};
+  placeList.forEach((p) => {
+    (coursePlacesById[p.courseId] ||= []).push(p);
+  });
+  Object.values(coursePlacesById).forEach((list) => list.sort((a, b) => a.seq - b.seq));
+}
+
+let _kakaoServicesPromise = null;
+function loadKakaoServices() {
+  if (window.kakao?.maps?.services) return Promise.resolve();
+  if (!_kakaoServicesPromise) {
+    _kakaoServicesPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${CONFIG.KAKAO_APP_KEY}&autoload=false&libraries=services`;
+      script.onload = () => window.kakao.maps.load(resolve);
+      script.onerror = () => {
+        _kakaoServicesPromise = null;
+        reject(new Error("카카오 SDK 로드 실패"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return _kakaoServicesPromise;
+}
+
+function kakaoMapLink(name, lat, lng) {
+  return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
+}
+
+function courseCardHtml(course) {
+  const places = coursePlacesById[course.id] || [];
+  const kindLabel = COURSE_KINDS.find((k) => k.value === course.kind)?.label || course.kind || "-";
+  const isSelected = course.id === selectedCourseId;
+  return `
+    <div class="admin-card${isSelected ? " course-card--selected" : ""}">
+      <p class="admin-card-content"><b>${escapeHtml(course.title)}</b></p>
+      <div class="admin-card-meta">
+        <span>${escapeHtml(course.slug)}</span>
+        <span>${escapeHtml(kindLabel)}</span>
+        <span>장소 ${places.length}곳</span>
+        <span>${course.isPublished ? "공개" : "비공개"}</span>
+        <span>정렬 ${course.sortOrder ?? 0}</span>
+      </div>
+      ${course.description ? `<p class="field-hint">${escapeHtml(course.description)}</p>` : ""}
+      <div class="admin-card-actions">
+        <button class="btn-restore" data-course-action="select" data-course-id="${course.id}">${isSelected ? "장소 관리 닫기" : "장소 관리"}</button>
+        <button class="btn-restore" data-course-action="edit" data-course-id="${course.id}">수정</button>
+        <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${course.isPublished ? "비공개로" : "공개하기"}</button>
+        <button class="btn-delete" data-course-action="delete" data-course-id="${course.id}">삭제</button>
+      </div>
+    </div>
+  `;
+}
+
+function courseFormHtml() {
+  const c = editingCourseId ? courses.find((x) => x.id === editingCourseId) : null;
+  const v = (field) => escapeHtml(c?.[field] ?? "");
+  return `
+    <form class="course-form" id="course-form">
+      <div class="admin-section-title">${c ? `코스 수정 — ${escapeHtml(c.title)}` : "새 코스 만들기"}</div>
+      <label>이름<input type="text" name="title" value="${v("title")}" placeholder="예: 콘크리트 사피엔스" required /></label>
+      <label>영문 식별자(공유 링크용)<input type="text" name="slug" value="${v("slug")}" placeholder="예: concrete-sapiens" pattern="[a-z0-9-]+" required /></label>
+      <label>종류
+        <select name="kind">
+          ${COURSE_KINDS.map((k) => `<option value="${k.value}"${(c?.kind || "book") === k.value ? " selected" : ""}>${k.label}</option>`).join("")}
+        </select>
+      </label>
+      <label>소개<textarea name="description" rows="2" placeholder="코스 목록에 보일 한두 문장">${v("description")}</textarea></label>
+      <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
+      <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
+      <div class="admin-card-actions">
+        <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
+        ${c ? `<button type="button" class="btn-delete" data-course-action="cancel-edit">취소</button>` : ""}
+      </div>
+      ${c ? "" : `<p class="field-hint">새 코스는 비공개로 만들어져요. 장소를 다 넣은 뒤 "공개하기"를 누르세요.</p>`}
+    </form>
+  `;
+}
+
+function placeRowHtml(place, index, total) {
+  return `
+    <div class="admin-card course-place-row">
+      <div class="course-place-seq">${index + 1}</div>
+      <div class="course-place-body">
+        <p class="admin-card-content"><b>${escapeHtml(place.name)}</b>${place.label ? ` <span class="course-place-label">${escapeHtml(place.label)}</span>` : ""}</p>
+        <div class="admin-card-meta">
+          <span>${escapeHtml(place.address || "-")}</span>
+          <a href="${kakaoMapLink(place.name, place.lat, place.lng)}" target="_blank" rel="noopener">카카오맵에서 위치 확인</a>
+        </div>
+        ${place.description ? `<p class="field-hint">${escapeHtml(place.description)}</p>` : ""}
+        ${place.quote ? `<p class="course-place-quote">“${escapeHtml(place.quote)}”</p>` : ""}
+        <div class="admin-card-actions">
+          <button class="btn-restore" data-place-action="up" data-place-id="${place.id}"${index === 0 ? " disabled" : ""}>↑</button>
+          <button class="btn-restore" data-place-action="down" data-place-id="${place.id}"${index === total - 1 ? " disabled" : ""}>↓</button>
+          <button class="btn-restore" data-place-action="edit" data-place-id="${place.id}">수정</button>
+          <button class="btn-delete" data-place-action="delete" data-place-id="${place.id}">삭제</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function placeFormHtml() {
+  const p = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((x) => x.id === editingPlaceId) : null;
+  const v = (field) => escapeHtml(p?.[field] ?? "");
+  const picked = placeDraft
+    ? `<p class="course-place-picked">📍 <b>${escapeHtml(placeDraft.name)}</b> · ${escapeHtml(placeDraft.address || "")}
+         <a href="${kakaoMapLink(placeDraft.name, placeDraft.lat, placeDraft.lng)}" target="_blank" rel="noopener">위치 확인</a></p>`
+    : `<p class="field-hint">아래에서 장소를 검색해 고르세요.</p>`;
+  return `
+    <form class="course-form" id="place-form">
+      <div class="admin-section-title">${p ? `장소 수정 — ${escapeHtml(p.name)}` : "장소 추가"}</div>
+      <div class="course-place-search">
+        <input type="text" id="place-search-input" placeholder="장소 이름이나 주소로 검색 (예: 세운상가)" />
+        <button type="button" class="btn-restore" data-place-action="search">검색</button>
+      </div>
+      <ul class="course-place-results" id="place-search-results"></ul>
+      ${picked}
+      <label>지도에 보일 이름<input type="text" name="name" value="${escapeHtml(p?.name ?? placeDraft?.name ?? "")}" placeholder="검색 결과 이름을 바꾸고 싶을 때만 수정" /></label>
+      <label>꼬리표(선택)<input type="text" name="label" value="${v("label")}" placeholder='예: "3장", "1443년"' /></label>
+      <label>설명(선택)<textarea name="description" rows="2">${v("description")}</textarea></label>
+      <label>인용(선택)<textarea name="quote" rows="2" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
+      <div class="admin-card-actions">
+        <button type="submit" class="btn-restore">${p ? "수정 저장" : "장소 추가"}</button>
+        ${p ? `<button type="button" class="btn-delete" data-place-action="cancel-edit">취소</button>` : ""}
+      </div>
+    </form>
+  `;
+}
+
+async function renderCoursesTab() {
+  clearDeviceFilterBanner();
+  const content = document.getElementById("admin-content");
+  if (courses === null) {
+    content.innerHTML = `<p class="empty-state">불러오는 중...</p>`;
+    try {
+      await loadCourses();
+    } catch (e) {
+      console.error("발자취 불러오기 실패", e);
+      content.innerHTML = `<p class="empty-state">발자취를 불러오지 못했어요. 백엔드 배포(npm run deploy)가 됐는지 확인해주세요.<br>${escapeHtml(e.message || String(e))}</p>`;
+      courses = null;
+      return;
+    }
+  }
+
+  const selected = courses.find((c) => c.id === selectedCourseId) || null;
+  const places = selected ? coursePlacesById[selected.id] || [] : [];
+
+  content.innerHTML = `
+    <div class="admin-section-title">발자취 (${courses.length}개 코스)</div>
+    <p class="field-hint">여러 장소를 순서대로 묶은 코스예요. 지도 화면에서 "따라 걷기"로 보여줄 예정이에요.</p>
+    ${courses.length ? courses.map(courseCardHtml).join("") : `<p class="empty-state">아직 코스가 없어요.</p>`}
+    ${selected ? `
+      <div class="course-places-panel">
+        <div class="admin-section-title">${escapeHtml(selected.title)} — 장소 ${places.length}곳 (따라 걷기 순서)</div>
+        ${places.length ? places.map((p, i) => placeRowHtml(p, i, places.length)).join("") : `<p class="empty-state">아직 장소가 없어요.</p>`}
+        ${placeFormHtml()}
+      </div>
+    ` : ""}
+    ${courseFormHtml()}
+  `;
+
+  document.getElementById("course-form").addEventListener("submit", handleCourseSubmit);
+  const placeForm = document.getElementById("place-form");
+  if (placeForm) {
+    placeForm.addEventListener("submit", handlePlaceSubmit);
+    const searchInput = document.getElementById("place-search-input");
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handlePlaceSearch();
+      }
+    });
+  }
+}
+
+async function handleCourseSubmit(e) {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const fields = {
+    title: f.get("title").trim(),
+    slug: f.get("slug").trim(),
+    kind: f.get("kind"),
+    description: f.get("description").trim() || null,
+    linkUrl: f.get("linkUrl").trim() || null,
+    sortOrder: parseInt(f.get("sortOrder"), 10) || 0,
+  };
+  if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
+    alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
+    return;
+  }
+  if (editingCourseId) {
+    const updated = await runCourseMutation(client.models.Course.update({ id: editingCourseId, ...fields }), "코스 수정 실패");
+    if (!updated) return;
+    courses = courses.map((c) => (c.id === updated.id ? updated : c));
+    editingCourseId = null;
+  } else {
+    const created = await runCourseMutation(client.models.Course.create({ ...fields, isPublished: false }), "코스 만들기 실패");
+    if (!created) return;
+    courses.push(created);
+    selectedCourseId = created.id;
+  }
+  courses.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  renderCoursesTab();
+}
+
+async function handleCourseAction(action, courseId) {
+  const course = courses.find((c) => c.id === courseId);
+  if (action === "select") {
+    selectedCourseId = selectedCourseId === courseId ? null : courseId;
+    editingPlaceId = null;
+    placeDraft = null;
+  } else if (action === "edit") {
+    editingCourseId = courseId;
+    renderCoursesTab();
+    document.getElementById("course-form").scrollIntoView({ behavior: "smooth" });
+    return;
+  } else if (action === "cancel-edit") {
+    editingCourseId = null;
+  } else if (action === "toggle-publish") {
+    const places = coursePlacesById[courseId] || [];
+    if (!course.isPublished && places.length === 0 && !confirm("장소가 하나도 없어요. 그래도 공개할까요?")) return;
+    const updated = await runCourseMutation(
+      client.models.Course.update({ id: courseId, isPublished: !course.isPublished }),
+      "공개 상태 변경 실패",
+    );
+    if (!updated) return;
+    courses = courses.map((c) => (c.id === updated.id ? updated : c));
+  } else if (action === "delete") {
+    const places = coursePlacesById[courseId] || [];
+    if (!confirm(`"${course.title}" 코스와 장소 ${places.length}곳을 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    for (const p of places) {
+      const ok = await runCourseMutation(client.models.CoursePlace.delete({ id: p.id }), "장소 삭제 실패");
+      if (!ok) return;
+    }
+    const ok = await runCourseMutation(client.models.Course.delete({ id: courseId }), "코스 삭제 실패");
+    if (!ok) return;
+    courses = courses.filter((c) => c.id !== courseId);
+    delete coursePlacesById[courseId];
+    if (selectedCourseId === courseId) selectedCourseId = null;
+    if (editingCourseId === courseId) editingCourseId = null;
+  }
+  renderCoursesTab();
+}
+
+async function handlePlaceSearch() {
+  const query = document.getElementById("place-search-input").value.trim();
+  const resultsEl = document.getElementById("place-search-results");
+  if (!query) return;
+  resultsEl.innerHTML = `<li class="field-hint">검색 중...</li>`;
+  try {
+    await loadKakaoServices();
+  } catch (e) {
+    resultsEl.innerHTML = `<li class="field-hint">카카오 장소 검색을 불러오지 못했어요. 이 도메인이 카카오 콘솔에 등록돼 있는지 확인해주세요.</li>`;
+    return;
+  }
+  new kakao.maps.services.Places().keywordSearch(query, (data, status) => {
+    if (status !== kakao.maps.services.Status.OK || !data.length) {
+      resultsEl.innerHTML = `<li class="field-hint">검색 결과가 없어요.</li>`;
+      return;
+    }
+    resultsEl.innerHTML = data.slice(0, 8).map((d, i) => `
+      <li><button type="button" data-place-action="pick" data-result-index="${i}">
+        <b>${escapeHtml(d.place_name)}</b> <span>${escapeHtml(d.road_address_name || d.address_name)}</span>
+      </button></li>
+    `).join("");
+    resultsEl._results = data;
+  });
+}
+
+function pickSearchResult(index) {
+  const d = document.getElementById("place-search-results")._results?.[index];
+  if (!d) return;
+  // 고르기 전에 폼에 적어둔 꼬리표/설명/인용은 다시 그려도 남게 한다.
+  const form = document.getElementById("place-form");
+  const kept = Object.fromEntries(["label", "description", "quote"].map((k) => [k, form.elements[k].value]));
+  placeDraft = {
+    name: d.place_name,
+    address: d.road_address_name || d.address_name || null,
+    lat: parseFloat(d.y),
+    lng: parseFloat(d.x),
+  };
+  renderCoursesTab();
+  const newForm = document.getElementById("place-form");
+  newForm.elements.name.value = placeDraft.name;
+  Object.entries(kept).forEach(([k, val]) => {
+    newForm.elements[k].value = val;
+  });
+}
+
+async function handlePlaceSubmit(e) {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const list = coursePlacesById[selectedCourseId] || [];
+  const existing = editingPlaceId ? list.find((p) => p.id === editingPlaceId) : null;
+  const location = placeDraft || existing;
+  if (!location) {
+    alert("장소를 먼저 검색해서 골라주세요.");
+    return;
+  }
+  const fields = {
+    name: f.get("name").trim() || location.name,
+    lat: location.lat,
+    lng: location.lng,
+    address: location.address || null,
+    label: f.get("label").trim() || null,
+    description: f.get("description").trim() || null,
+    quote: f.get("quote").trim() || null,
+  };
+  if (existing) {
+    const updated = await runCourseMutation(client.models.CoursePlace.update({ id: existing.id, ...fields }), "장소 수정 실패");
+    if (!updated) return;
+    coursePlacesById[selectedCourseId] = list.map((p) => (p.id === updated.id ? updated : p));
+    editingPlaceId = null;
+  } else {
+    const seq = list.length ? Math.max(...list.map((p) => p.seq)) + 1 : 1;
+    const created = await runCourseMutation(
+      client.models.CoursePlace.create({ courseId: selectedCourseId, seq, ...fields }),
+      "장소 추가 실패",
+    );
+    if (!created) return;
+    coursePlacesById[selectedCourseId] = [...list, created];
+  }
+  placeDraft = null;
+  renderCoursesTab();
+}
+
+async function handlePlaceAction(action, placeId) {
+  if (action === "search") {
+    handlePlaceSearch();
+    return;
+  }
+  const list = coursePlacesById[selectedCourseId] || [];
+  const index = list.findIndex((p) => p.id === placeId);
+  const place = list[index];
+  if (action === "edit") {
+    editingPlaceId = placeId;
+    placeDraft = null;
+    renderCoursesTab();
+    document.getElementById("place-form").scrollIntoView({ behavior: "smooth" });
+    return;
+  } else if (action === "cancel-edit") {
+    editingPlaceId = null;
+    placeDraft = null;
+  } else if (action === "up" || action === "down") {
+    const other = list[action === "up" ? index - 1 : index + 1];
+    if (!other) return;
+    // seq를 맞바꾼다 — 둘 중 하나만 저장되면 순서가 같은 값으로 겹치므로
+    // 실패하면 목록을 다시 불러와 실제 상태를 보여준다.
+    const a = await runCourseMutation(client.models.CoursePlace.update({ id: place.id, seq: other.seq }), "순서 변경 실패");
+    const b = a && await runCourseMutation(client.models.CoursePlace.update({ id: other.id, seq: place.seq }), "순서 변경 실패");
+    if (!a || !b) {
+      courses = null;
+      renderCoursesTab();
+      return;
+    }
+    coursePlacesById[selectedCourseId] = list.map((p) => (p.id === a.id ? a : p.id === b.id ? b : p)).sort((x, y) => x.seq - y.seq);
+  } else if (action === "delete") {
+    if (!confirm(`"${place.name}"을(를) 이 코스에서 삭제할까요?`)) return;
+    const ok = await runCourseMutation(client.models.CoursePlace.delete({ id: placeId }), "장소 삭제 실패");
+    if (!ok) return;
+    coursePlacesById[selectedCourseId] = list.filter((p) => p.id !== placeId);
+    if (editingPlaceId === placeId) editingPlaceId = null;
+  }
+  renderCoursesTab();
+}
+
 function renderActiveTab() {
   if (activeTab === "queue") renderQueueTab();
   else if (activeTab === "all") renderAllTab();
@@ -919,6 +1345,7 @@ function renderActiveTab() {
   else if (activeTab === "visits") renderVisitsTab();
   else if (activeTab === "members") renderMembersTab();
   else if (activeTab === "bulk") renderBulkTab();
+  else if (activeTab === "courses") renderCoursesTab();
   hydrateAdminPhotos();
 }
 
@@ -926,6 +1353,17 @@ document.getElementById("admin-content").addEventListener("click", (e) => {
   const deviceBtn = e.target.closest(".device-badge");
   if (deviceBtn) {
     setDeviceFilter(deviceBtn.dataset.device);
+    return;
+  }
+  const courseBtn = e.target.closest("[data-course-action]");
+  if (courseBtn) {
+    handleCourseAction(courseBtn.dataset.courseAction, courseBtn.dataset.courseId);
+    return;
+  }
+  const placeBtn = e.target.closest("[data-place-action]");
+  if (placeBtn) {
+    if (placeBtn.dataset.placeAction === "pick") pickSearchResult(Number(placeBtn.dataset.resultIndex));
+    else handlePlaceAction(placeBtn.dataset.placeAction, placeBtn.dataset.placeId);
     return;
   }
   const actionBtn = e.target.closest("[data-action]");

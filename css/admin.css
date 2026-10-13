@@ -456,3 +456,133 @@ body {
   font-size: 12px;
   resize: vertical;
 }
+
+/* 발자취(코스) 관리 — js/admin.js renderCoursesTab (2026-10-13) */
+.course-card--selected {
+  border-color: var(--cs-black);
+}
+
+.course-places-panel {
+  margin: 4px 0 24px;
+  padding: 4px 16px 16px;
+  background: var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+}
+
+.course-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+  margin-bottom: 24px;
+}
+
+.course-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-form input,
+.course-form select,
+.course-form textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--cs-gray);
+  border-radius: var(--cs-radius-card);
+  font: inherit;
+  font-size: 14px;
+  color: var(--cs-black);
+  background: #fff;
+}
+
+.course-place-row {
+  display: flex;
+  gap: 12px;
+}
+
+.course-place-seq {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.course-place-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.course-place-label {
+  font-size: 12px;
+  color: var(--cs-orange);
+  font-weight: 400;
+}
+
+.course-place-quote {
+  font-size: 13px;
+  font-style: italic;
+  margin: 4px 0 10px;
+}
+
+.course-place-row .admin-card-actions button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.course-place-search {
+  display: flex;
+  gap: 8px;
+}
+
+.course-place-search input {
+  flex: 1;
+}
+
+.course-place-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.course-place-results button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.course-place-results button:hover {
+  border-color: var(--cs-black);
+}
+
+.course-place-results span {
+  color: var(--cs-text-muted);
+  margin-left: 6px;
+}
+
+.course-place-picked {
+  font-size: 13px;
+  margin: 0;
+}
+
+.course-place-search button {
+  border: none;
+  border-radius: var(--cs-radius-card);
+  padding: 0 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
