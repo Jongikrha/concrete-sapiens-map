@@ -228,6 +228,14 @@ const schema = a.schema({
       // 코스 표지(선택, 2026-10-13) — 책 표지/포스터 등. 코스 소개 카드
       // 오른쪽에 세로로 놓인다. story-photos/course-cover-*.jpg
       coverKey: a.string(),
+      // 표지 이미지에서 책등이 차지하는 왼쪽 폭 비율(0~0.5, 2026-10-13) —
+      // 어드민에서 "책등+앞표지"를 한 장으로 올리면 이 경계로 나눠 소개
+      // 화면에 입체 책(앞표지 + 왼쪽 측면 책등)으로 그린다. 0/null이면
+      // 앞표지만 있는 이미지로 보고 책등은 표지 왼쪽 끝을 어둡게 늘려 흉내낸다.
+      coverSpineRatio: a.float(),
+      // 소개 화면 본문(책/작품 소개, 2026-10-13) — description은 제목 아래
+      // 한 줄 부제로 쓰고, 이건 그 아래 문단. 최대 116자(시안 기준, 어드민에서 제한).
+      intro: a.string(),
       // 코스 목록 정렬용(작을수록 앞)
       sortOrder: a.integer(),
       isPublished: a.boolean().required(),
