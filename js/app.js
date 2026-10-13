@@ -310,12 +310,15 @@ function openRecentMemoriesModal(opts = {}) {
       <h2 class="composer-title" style="margin:0;">기억 아카이브</h2>
       <button class="recent-close" id="recent-close">✕</button>
     </div>
+    ${buildArchiveCourseRowHtml()}
     ${stories.length > 1 ? SORT_TOGGLE_HTML(recentSort) : ""}
     ${listHtml}
     ${hasMore ? `<button class="recent-load-more" id="recent-load-more" type="button">더 불러오기 <span class="recent-load-more-chevron" aria-hidden="true">⌄</span></button>` : ""}
   `;
 
   panel.querySelector("#recent-close").onclick = closeRecentMemoriesModal;
+  // 맨 위 "발자취" 한 줄(js/course.js)
+  bindArchiveCourseRow(panel, closeRecentMemoriesModal);
 
   panel.querySelectorAll(".sort-btn").forEach((btn) => {
     btn.onclick = () => { recentSort = btn.dataset.sort; openRecentMemoriesModal({ visibleCount: 50 }); };

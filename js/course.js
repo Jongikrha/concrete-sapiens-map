@@ -244,6 +244,51 @@ function closeCourseDetail() {
   document.getElementById("course-detail-overlay").classList.add("hidden");
 }
 
+// ------------------------------------------------------------
+// 기억 아카이브 맨 위 "발자취" 한 줄(2026-10-13) — 아카이브를 여는 사람은
+// 이미 둘러볼 거리를 찾는 중이라 칩보다 발자취를 발견하기 좋다. 기억
+// 목록 사이에 코스 장소를 섞지는 않는다(아카이브는 사람들이 직접 남긴
+// 기억만 모인 곳이라는 성격을 지키려고). 표지를 누르면 그 코스 소개 화면,
+// "발자취 ›"를 누르면 코스 목록.
+// ------------------------------------------------------------
+function buildArchiveCourseRowHtml() {
+  if (publishedCourses.length === 0) return "";
+  return `
+    <div class="archive-course-row">
+      <button type="button" class="archive-course-label" id="archive-course-label">
+        ${COURSE_CHIP_ICON}<span>발자취</span><span class="archive-course-label-hint">작품 속 장소 따라 걷기 ›</span>
+      </button>
+      <div class="archive-course-items">
+        ${publishedCourses.map((c, i) => `
+          <button type="button" class="archive-course-item" data-course-index="${i}" aria-label="${escapeHtml(c.title)}">
+            ${c.coverKey ? `<span class="archive-course-cover" data-photo-key="${escapeHtml(c.coverKey)}"></span>` : ""}
+            <span class="archive-course-title">${escapeHtml(c.title)}</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>`;
+}
+
+// onLeave: 아카이브 모달을 닫는 함수(js/app.js closeRecentMemoriesModal)
+function bindArchiveCourseRow(panel, onLeave) {
+  const label = panel.querySelector("#archive-course-label");
+  if (!label) return;
+  label.onclick = () => {
+    onLeave();
+    Storage.logEvent("course_archive_row_clicked");
+    openCourseChoice();
+  };
+  panel.querySelectorAll(".archive-course-item").forEach((btn) => {
+    btn.onclick = () => {
+      const course = publishedCourses[Number(btn.dataset.courseIndex)];
+      onLeave();
+      Storage.logEvent(`course_archive_opened:${course.slug}`);
+      openCourseDetail(course, { fromList: true });
+    };
+  });
+  panel.querySelectorAll(".archive-course-cover").forEach(fillCoverSlot);
+}
+
 function closeCourseChoice() {
   document.getElementById("course-choice-overlay").classList.add("hidden");
 }
