@@ -7,6 +7,7 @@ import { data } from './data/resource';
 import { storage } from './storage/resource';
 import { adminUsersFn } from './functions/admin-users/resource';
 import { reactionDigestFn, emailUnsubscribeFn } from './functions/reaction-digest/resource';
+import { visitDigestFn } from './functions/visit-digest/resource';
 
 const backend = defineBackend({
   auth,
@@ -15,6 +16,7 @@ const backend = defineBackend({
   adminUsersFn,
   reactionDigestFn,
   emailUnsubscribeFn,
+  visitDigestFn,
 });
 
 // 어드민 회원관리(adminListUsers 등)가 쓰는 Lambda — Cognito Admin API 호출용
@@ -57,6 +59,17 @@ backend.emailUnsubscribeFn.addEnvironment('EMAIL_OPT_OUT_TABLE', tables['EmailOp
 // 링크에 서명이 있어(token.ts) 남의 수신을 끌 수는 없다.
 const unsubscribeUrl = unsubscribeLambda.addFunctionUrl({ authType: FunctionUrlAuthType.NONE });
 backend.reactionDigestFn.addEnvironment('UNSUBSCRIBE_URL', unsubscribeUrl.url);
+
+// 운영자용 새 기기 방문 요약 메일(2026-10-14, amplify/functions/visit-digest) —
+// 방문 기록과 "내 방문 제외" 목록만 읽는다.
+const visitDigestLambda = backend.visitDigestFn.resources.lambda;
+for (const [env, model] of [
+  ['PAGE_VIEW_TABLE', 'PageView'],
+  ['ADMIN_EXCLUDED_DEVICE_TABLE', 'AdminExcludedDevice'],
+] as const) {
+  tables[model].grantReadData(visitDigestLambda);
+  backend.visitDigestFn.addEnvironment(env, tables[model].tableName);
+}
 
 // groups: ['Admins']를 쓰면 Identity Pool의 역할 매핑이 자동으로 "Token" 방식이
 // 된다 — 로그인 토큰에 그룹 역할이 실려 있으면 IAM 인증(js/backend.js의 기본
