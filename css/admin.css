@@ -370,7 +370,7 @@ body {
 }
 
 .daily-visit-count {
-  width: 24px;
+  width: 84px;
   text-align: right;
   flex-shrink: 0;
 }

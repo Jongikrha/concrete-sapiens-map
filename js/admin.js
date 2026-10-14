@@ -482,23 +482,44 @@ function renderWordsTab() {
  * 최근 14일 방문 수를 날짜별로 묶는다. 데이터 없는 날도 0으로 채워서
  * 빈 날짜가 조용히 사라지지 않게 한다(추세를 한눈에 보려면 빠진 날도 보여야 함).
  */
+// createdAt(UTC)을 한국 날짜(YYYY-MM-DD)로 — UTC 그대로 자르면 "어제
+// 오전 9시 ~ 오늘 오전 9시"가 한 줄로 묶였다(2026-10-14).
+const kstDay = (iso) => new Date(Date.parse(iso) + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+// 날짜별 방문 수(사이트를 연 횟수)와 순방문자 수(같은 기기는 하루 1번).
+// 기기 ID가 없는 옛 기록(2026-08-25 이전)은 순방문자에서 빠진다.
 function buildDailyVisitCounts(pageViews, days = 14) {
   const counts = {};
+  const devices = {};
   pageViews.forEach((pv) => {
-    const day = (pv.createdAt || "").slice(0, 10);
-    if (!day) return;
+    if (!pv.createdAt) return;
+    const day = kstDay(pv.createdAt);
     counts[day] = (counts[day] || 0) + 1;
+    if (pv.deviceId) (devices[day] ||= new Set()).add(pv.deviceId);
   });
 
   const result = [];
-  const today = new Date();
+  const now = Date.now();
   for (let i = 0; i < days; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    result.push({ date: key, count: counts[key] || 0 });
+    const key = kstDay(new Date(now - i * 86400000).toISOString());
+    result.push({ date: key, count: counts[key] || 0, unique: devices[key]?.size || 0 });
   }
   return result; // 오늘이 맨 앞
+}
+
+// 어제·오늘(한국 날짜) 사이트를 많이 연 기기 — 제외 안 된 내 다른
+// 브라우저(카톡 인앱 브라우저, 휴대폰 등)를 눈으로 찾아 바로 제외하려고.
+function buildTopDevices(pageViews, dayKeys, limit = 10) {
+  const byDevice = {};
+  pageViews.forEach((pv) => {
+    if (!pv.createdAt || !dayKeys.includes(kstDay(pv.createdAt))) return;
+    const key = pv.deviceId || "";
+    const d = (byDevice[key] ||= { deviceId: key, count: 0, first: pv.createdAt, last: pv.createdAt });
+    d.count += 1;
+    if (pv.createdAt < d.first) d.first = pv.createdAt;
+    if (pv.createdAt > d.last) d.last = pv.createdAt;
+  });
+  return Object.values(byDevice).sort((a, b) => b.count - a.count).slice(0, limit);
 }
 
 // 이벤트 타입별 개수 + "노출→확인" 전환율 — "이맘때 기억"/작성 폼 같은
@@ -607,11 +628,27 @@ async function renderVisitsTab() {
         <div class="daily-visit-row">
           <span class="daily-visit-date">${d.date.slice(5)}</span>
           <div class="daily-visit-bar-track"><div class="daily-visit-bar" style="width:${(d.count / maxCount) * 100}%"></div></div>
-          <span class="daily-visit-count">${d.count}</span>
+          <span class="daily-visit-count">${d.unique}명 · ${d.count}회</span>
         </div>
       `
     )
     .join("");
+
+  const kstTime = (iso) =>
+    new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const topDevices = buildTopDevices(pageViews, [dailyCounts[0].date, dailyCounts[1].date]);
+  const topDevicesHtml = topDevices.length
+    ? topDevices
+        .map(
+          (d) => `
+            <div class="top-story-row">
+              <span title="${escapeHtml(d.deviceId)}">${d.deviceId ? `${escapeHtml(d.deviceId.slice(0, 8))}…` : "(기기 ID 없음)"}${d.deviceId === myDeviceId ? " (이 브라우저)" : ""}
+                <small class="empty-state">${kstTime(d.first)} ~ ${kstTime(d.last)}</small></span>
+              <span>${d.count}회 ${d.deviceId ? `<button type="button" class="btn-secondary" data-exclude-device="${escapeHtml(d.deviceId)}">제외</button>` : ""}</span>
+            </div>`
+        )
+        .join("")
+    : `<p class="empty-state">어제·오늘 방문이 없습니다.</p>`;
 
   const excludedChipsHtml = excludedRecords.length
     ? excludedRecords
@@ -634,11 +671,15 @@ async function renderVisitsTab() {
     <div class="stat-row">
       <div class="stat-tile"><div class="num">${pageViews.length}</div><div class="label">전체 방문 수</div></div>
       <div class="stat-tile"><div class="num">${dailyCounts[0].count}</div><div class="label">오늘 방문 수</div></div>
+      <div class="stat-tile"><div class="num">${dailyCounts[0].unique}</div><div class="label">오늘 순방문자</div></div>
       <div class="stat-tile"><div class="num">${Storage.getAllStories().length}</div><div class="label">전체 기억 수</div></div>
       <div class="stat-tile"><div class="num">${returningRate}%</div><div class="label">재방문 비율(근사)</div></div>
     </div>
-    <div class="admin-section-title">최근 14일 방문 추이</div>
+    <div class="admin-section-title">최근 14일 방문 추이 (한국 날짜 · 순방문자 · 연 횟수)</div>
     <div class="daily-visit-chart">${dailyHtml}</div>
+    <div class="admin-section-title">어제·오늘 많이 연 기기</div>
+    <p class="empty-state">같은 기기가 여러 번 열면 여기 위로 올라와요. 내 다른 브라우저(카톡 안 브라우저, 휴대폰 등)면 바로 제외하세요.</p>
+    ${topDevicesHtml}
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
     <div class="admin-section-title">기능별 전환율</div>
@@ -654,6 +695,14 @@ async function renderVisitsTab() {
     if (!deviceId || excludedDeviceIds.includes(deviceId)) return;
     await Storage.addExcludedDevice(deviceId);
     renderVisitsTab();
+  });
+
+  document.querySelectorAll("[data-exclude-device]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      await Storage.addExcludedDevice(btn.dataset.excludeDevice);
+      renderVisitsTab();
+    });
   });
 
   document.querySelectorAll("[data-exclude-record-id]").forEach((btn) => {
