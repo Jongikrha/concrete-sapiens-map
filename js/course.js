@@ -627,17 +627,39 @@ function showCourseStep(index, { deferMusic = false } = {}) {
     const place = activeCourse.places[index];
     map.setLevel(4);
     map.setCenter(new kakao.maps.LatLng(place.lat, place.lng));
-    // 지도 정중앙에 두면 아래 카드에 가려지므로(특히 모바일), 카드 위로
-    // 남는 영역의 가운데에 장소가 오도록 지도 중심을 그만큼 아래로 민다.
-    // 노래가 나오는 중이면 위쪽 미니 플레이어 아래부터를 남는 영역으로 본다.
-    const mapHeight = document.getElementById("map").clientHeight;
-    const cardTop = document.getElementById("course-card").getBoundingClientRect().top;
-    const miniPlayer = document.getElementById("mini-player");
-    const topEdge = miniPlayer.classList.contains("hidden") ? 0 : miniPlayer.getBoundingClientRect().bottom;
-    const offset = Math.max(0, mapHeight / 2 - (topEdge + cardTop) / 2);
-    if (offset > 0) map.panBy(0, offset);
+    placeCoursePinBesideCard(index);
   }
   if (index === activeCourse.places.length - 1) Storage.logEvent(`course_completed:${activeCourse.slug}`);
+}
+
+// 지도 정중앙에 두면 카드에 가려지므로 장소가 보일 자리로 지도를 민다.
+// 넓은 화면(PC)에선 카드가 미니 플레이어 바로 아래까지 길어지므로
+// (css/style.css .course-card-frame) 카드 왼쪽이나 오른쪽 빈 지도의
+// 가운데에 둔다(2026-10-14). 쪽은 이웃 장소(이전, 첫 장소면 다음)가 있는
+// 쪽 — 지나온/갈 길이 카드 뒤로 숨지 않고 화면 바깥쪽으로 뻗게. 옆 공간이
+// 말풍선보다 좁은 화면(모바일·좁은 창)은 예전처럼 카드 위로 남는 영역의
+// 가운데에 둔다. 노래가 나오는 중이면 미니 플레이어 아래부터를 본다.
+function placeCoursePinBesideCard(index) {
+  const mapEl = document.getElementById("map");
+  const mapWidth = mapEl.clientWidth;
+  const mapHeight = mapEl.clientHeight;
+  const cardRect = document.getElementById("course-card").getBoundingClientRect();
+  const miniPlayer = document.getElementById("mini-player");
+  const topEdge = miniPlayer.classList.contains("hidden") ? 0 : miniPlayer.getBoundingClientRect().bottom;
+
+  const sideWidth = cardRect.left;
+  if (window.matchMedia("(min-width: 768px)").matches && sideWidth >= 160) {
+    const places = activeCourse.places;
+    const place = places[index];
+    const neighbor = places[index - 1] || places[index + 1];
+    const left = neighbor ? neighbor.lng < place.lng : false;
+    const targetX = left ? sideWidth / 2 : mapWidth - sideWidth / 2;
+    const targetY = (topEdge + mapHeight) / 2;
+    map.panBy(mapWidth / 2 - targetX, mapHeight / 2 - targetY);
+    return;
+  }
+  const offset = Math.max(0, mapHeight / 2 - (topEdge + cardRect.top) / 2);
+  if (offset > 0) map.panBy(0, offset);
 }
 
 function renderCourseCard() {

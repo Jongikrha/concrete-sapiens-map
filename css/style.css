@@ -5393,6 +5393,15 @@ button.story-place-line:hover {
   transform: none;
 }
 
+/* PC에선 카드를 미니 플레이어(top 18px + 56px) 바로 아래까지 늘려 카드 안
+   스크롤을 줄인다 — 장소 말풍선은 카드 옆 빈 지도로 보낸다(js/course.js
+   placeCoursePinBesideCard). 모바일은 옆 공간이 없어 예전 60vh 그대로. */
+@media (min-width: 768px) {
+  .course-card-frame > .course-card {
+    max-height: calc(100vh - 56px - 90px);
+  }
+}
+
 /* 첫 줄이 사진이면 오른쪽 위 모서리를 ✕ 원(중심: 사진 모서리에서 왼쪽 2px)
    + 틈 5px만큼 파낸다 */
 .course-card > .recall-card-photo:first-child {
