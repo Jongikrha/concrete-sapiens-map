@@ -5393,12 +5393,12 @@ button.story-place-line:hover {
   transform: none;
 }
 
-/* PC에선 카드를 미니 플레이어(top 18px + 56px) 바로 아래까지 늘려 카드 안
+/* PC에선 카드를 미니 플레이어(아래 끝 약 82px) 아래 24px 틈까지 늘려 카드 안
    스크롤을 줄인다 — 장소 말풍선은 카드 옆 빈 지도로 보낸다(js/course.js
    placeCoursePinBesideCard). 모바일은 옆 공간이 없어 예전 60vh 그대로. */
 @media (min-width: 768px) {
   .course-card-frame > .course-card {
-    max-height: calc(100vh - 56px - 90px);
+    max-height: calc(100vh - 56px - 106px);
   }
 }
 
