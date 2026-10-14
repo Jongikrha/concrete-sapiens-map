@@ -4657,21 +4657,6 @@ button.story-place-line:hover {
   .recall-radio-night--late .recall-exit-btn:hover {
     color: #fff;
   }
-
-  /* 발자취 따라 걷기도 모바일에선 라디오처럼 반투명 원 + 얇은 ✕(2026-10-13
-     요청). 밝은 지도 위라 낮 라디오와 같은 어두운 ✕, 원은 지도 글씨에
-     묻히지 않게 조금 더 진하게. */
-  .course-session .recall-exit-btn {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 15.5px, transparent 16px);
-    box-shadow: none;
-    color: rgba(0, 0, 0, 0.72);
-    font-size: 16px;
-    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
-  }
-
-  .course-session .recall-exit-btn:hover {
-    color: #000;
-  }
 }
 
 /* 별자리 개요 — 실제 카카오 지도가 아니라 별도의 "밤하늘" 캔버스에
@@ -5379,35 +5364,130 @@ button.story-place-line:hover {
   flex-shrink: 1;
 }
 
-/* 카드를 접으면 카드는 살며시 내려가 사라지고 같은 자리에 얇은 띠만 남는다 */
+/* 카드 틀 + 모서리 홈 ✕(2026-10-14 시안) — 예전엔 ✕가 화면 오른쪽 위
+   구석에 따로 떠 있었는데, 모바일에선 엄지가 닿기 어렵고 미니 플레이어
+   옆이 붐벼서 카드 오른쪽 위 모서리를 파내고 그 홈에 ✕를 앉혔다.
+   ✕는 여전히 따라 걷기 전체를 끝낸다(카드만 접는 건 "지도 보기").
+   카드를 접으면 띠가 같은 틀 안에서 카드 자리를 대신하고, ✕는 띠 오른쪽
+   옆에 따로 선다 — 띠는 키가 낮아 홈을 파면 아래에 꼬리만 남아 어색했다. 홈은 mask로 파내서 카드 안이 스크롤돼도 모양이 그대로고,
+   mask가 box-shadow까지 잘라내므로 그림자는 틀의 drop-shadow로 준다
+   (파낸 모양을 그대로 따라간다 — ✕ 원에도 같은 그림자가 생긴다).
+   홈 모양 = 오른쪽 위 44×44를 비우되 왼쪽 아래 모서리는 ✕와 같은 반지름(22)
+   으로 둥글게, 카드 쪽으로 튀어나온 두 모서리는 12로 둥글린다. */
+.course-card-frame {
+  --course-notch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M0 0H8A12 12 0 0 1 20 12V22A22 22 0 0 0 42 44H52A12 12 0 0 1 64 56V64H0Z'/%3E%3C/svg%3E");
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  width: min(380px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  filter: drop-shadow(0 -6px 22px rgba(0, 0, 0, 0.18));
+}
+
+/* 홈 조각(64×64)은 오른쪽 위에만 깔고, 나머지는 사각형 두 장으로 채운다.
+   두 장이 조각과 1px 겹치게 해 경계에 실선 틈이 안 보이게 한다. */
+.course-card-frame > .course-card {
+  -webkit-mask:
+    var(--course-notch) top right / 64px 64px no-repeat,
+    linear-gradient(#000 0 0) left top / calc(100% - 63px) 100% no-repeat,
+    linear-gradient(#000 0 0) left bottom / 100% calc(100% - 63px) no-repeat;
+  mask:
+    var(--course-notch) top right / 64px 64px no-repeat,
+    linear-gradient(#000 0 0) left top / calc(100% - 63px) 100% no-repeat,
+    linear-gradient(#000 0 0) left bottom / 100% calc(100% - 63px) no-repeat;
+}
+
+.course-card-frame > .course-card {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: 100%;
+  box-shadow: none;
+  transform: translateY(14px);
+}
+
+.course-card-frame > .course-card.recall-card--visible {
+  transform: none;
+}
+
+/* 사진 없이 글로 시작하는 카드(소개·마무리, 사진 없는 장소)는 첫 줄
+   오른쪽 끝("지도 보기", 표지 등)이 홈에 먹히지 않게 그만큼 비켜 둔다 */
+.course-card > .course-card-kicker:first-child,
+.course-card > .course-intro:first-child {
+  margin-right: 20px;
+}
+
+.course-exit-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--cs-paper);
+  color: var(--cs-text-muted);
+  cursor: pointer;
+}
+
+/* 보이는 원은 34px, 누르는 영역은 44px */
+.course-exit-btn::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+}
+
+.course-exit-btn:hover {
+  color: var(--cs-black);
+}
+
+/* ✕가 위 구석에서 빠졌으니 따라 걷는 동안 미니 플레이어는 맨 위로 올린다 */
+#app:has(#course-session:not(.hidden)) .mini-player--floating {
+  top: 18px;
+}
+
+/* 카드를 접으면 카드는 살며시 내려가 사라지고 같은 자리에 얇은 띠만 남는다.
+   카드를 틀의 흐름에서 빼서(absolute) 틀 높이가 띠 높이로 줄고, ✕가 띠
+   모서리로 내려온다. */
 .course-session--folded #course-card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   opacity: 0;
-  transform: translate(-50%, 14px);
+  transform: translateY(14px);
   pointer-events: none;
 }
 
 .course-fold-bar {
-  position: absolute;
-  left: 50%;
-  bottom: 56px;
   display: none;
   align-items: center;
   gap: 10px;
-  width: min(380px, calc(100vw - 32px));
+  /* 오른쪽 옆은 ✕(44px) + 틈 자리 */
+  width: calc(100% - 52px);
   padding: 16px 20px;
   border: none;
   border-radius: var(--cs-radius-sheet);
   background: var(--cs-paper);
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
   font-family: inherit;
   text-align: left;
   color: var(--cs-black);
-  transform: translateX(-50%);
   cursor: pointer;
 }
 
 .course-session--folded .course-fold-bar {
   display: flex;
+}
+
+.course-session--folded .course-exit-btn {
+  top: 50%;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 .course-fold-bar-seq {

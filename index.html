@@ -399,10 +399,16 @@
       <div class="composer-card course-detail-card" id="course-detail-panel"></div>
     </div>
     <div class="recall-session course-session hidden" id="course-session">
-      <button type="button" class="recall-exit-btn" id="course-exit-btn" aria-label="따라 걷기 종료">✕</button>
-      <div class="recall-card course-card" id="course-card"></div>
-      <!-- 카드를 접고 지도만 볼 때 남는 얇은 띠 — 누르면 카드를 다시 편다(js/course.js foldCourseCard) -->
-      <button type="button" class="course-fold-bar" id="course-fold-bar"></button>
+      <!-- 카드(또는 접었을 때의 띠)와 ✕를 한 틀에 묶는다 — ✕는 카드 오른쪽 위
+           모서리를 파낸 홈에 들어앉는다(css/style.css .course-card-frame) -->
+      <div class="course-card-frame">
+        <div class="recall-card course-card" id="course-card"></div>
+        <!-- 카드를 접고 지도만 볼 때 남는 얇은 띠 — 누르면 카드를 다시 편다(js/course.js foldCourseCard) -->
+        <button type="button" class="course-fold-bar" id="course-fold-bar"></button>
+        <button type="button" class="course-exit-btn" id="course-exit-btn" aria-label="따라 걷기 종료">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+        </button>
+      </div>
     </div>
 
     <!-- 기억산책 / 회상 모드 세션 — 진입하면 검색창/해시태그/툴바 등 평소
