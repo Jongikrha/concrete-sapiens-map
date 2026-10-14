@@ -161,6 +161,10 @@ const schema = a.schema({
       // 진짜 신원 아님, 어드민 집계 필터링 용도로만 예외 허용
       // ([[feedback_identity_never_device_based]] 참고).
       deviceId: a.string(),
+      // "모바일 · iPhone · 카카오톡"처럼 기기 종류·OS·브라우저만 요약한 문자열
+      // (2026-10-14, js/storage.js describeDevice). 어드민에서 많이 연 기기가
+      // 누구 것인지 가늠하려고. IP·위치는 개인정보라 남기지 않는다.
+      deviceInfo: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
