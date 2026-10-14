@@ -5344,6 +5344,102 @@ button.story-place-line:hover {
   cursor: pointer;
 }
 
+/* 장소 카드 "지도 보기" — 순서(1 / N) 줄 오른쪽 끝의 작은 알약 버튼.
+   누르면 카드를 접고 코스 전체를 지도로 보여준다(js/course.js
+   setCourseMapFolded, 2026-10-14). */
+.course-map-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 5px 10px;
+  border: 1px solid var(--cs-gray);
+  border-radius: 999px;
+  background: var(--cs-paper);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--cs-text-main);
+  cursor: pointer;
+}
+
+/* 코스 이름이 길면 버튼 자리를 위해 말줄임 */
+.course-card-kicker > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.course-card-kicker > span {
+  flex-shrink: 0;
+}
+
+.course-card-kicker > span:first-of-type {
+  flex-shrink: 1;
+}
+
+.course-directions-link {
+  margin-top: 14px;
+}
+
+/* 카드를 접으면 카드는 살며시 내려가 사라지고 같은 자리에 얇은 띠만 남는다 */
+.course-session--folded #course-card {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  pointer-events: none;
+}
+
+.course-fold-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 16px 20px;
+  border: none;
+  border-radius: var(--cs-radius-sheet);
+  background: var(--cs-paper);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  text-align: left;
+  color: var(--cs-black);
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+
+.course-session--folded .course-fold-bar {
+  display: flex;
+}
+
+.course-fold-bar-seq {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-fold-bar-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.course-fold-bar-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--cs-orange);
+}
+
 /* ------------------------------------------------------------
    발자취 목록(js/course.js openCourseChoice) — 시안(2026-10-13): 큰 제목 +
    "N개의 발자취" 배지, 코스 카드(표지·제목·부제·종류/장소 수·둘러보기).

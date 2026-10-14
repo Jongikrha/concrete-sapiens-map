@@ -28,6 +28,9 @@ let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 // (같은 곡은 한 번만). 끝낼 때 미니 플레이어가 여전히 이 중 하나면 멈춘다
 // (사용자가 중간에 다른 곡으로 바꿨으면 그대로 둔다).
 let courseSongs = [];
+// 장소 카드를 접고 지도만 보는 중인지(2026-10-14) — 카드가 화면 아래를
+// 크게 덮어서 장소들이 어디쯤 있는지 둘러보고 싶을 때 쓴다.
+let courseMapFolded = false;
 
 async function loadPublishedCourses() {
   try {
@@ -575,7 +578,7 @@ function hydrateCoursePinLogo(el, logoKey) {
   });
 }
 
-function fitCourseBounds() {
+function fitCourseBounds({ folded = false } = {}) {
   const bounds = new kakao.maps.LatLngBounds();
   activeCourse.places.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
   if (activeCourse.places.length === 1) {
@@ -583,8 +586,10 @@ function fitCourseBounds() {
     map.panTo(bounds.getCenter());
     return;
   }
-  // 아래 카드가 지도 아래쪽을 덮으므로 아래 여백을 크게 준다.
-  map.setBounds(bounds, 120, 60, 320, 60);
+  // 아래 카드가 지도 아래쪽을 덮으므로 아래 여백을 크게 준다. 카드를
+  // 접었을 땐 아래엔 얇은 띠만 남는다.
+  if (folded) map.setBounds(bounds, 110, 50, 150, 50);
+  else map.setBounds(bounds, 120, 60, 320, 60);
 }
 
 // deferMusic: 따라 걷기를 막 시작한 순간에만 쓴다 — enterRecallImmersiveChrome이
@@ -593,6 +598,9 @@ function fitCourseBounds() {
 // (showRecallStory의 500ms 뒤 openRecallCard)와 같은 간격을 두고 튼다.
 function showCourseStep(index, { deferMusic = false } = {}) {
   if (!courseModeOpen) return;
+  // 접힌 상태에서 핀이나 띠를 누르면 그 장소 카드를 다시 펼친다. 카드
+  // 높이로 지도 위치를 계산하므로 카드를 그리기 전에 편다.
+  if (courseMapFolded) setCourseMapFolded(false);
   courseIndex = index;
   courseOverlays.forEach((o, i) => {
     o.getContent().classList.toggle("course-pin--active", i === index);
@@ -668,16 +676,18 @@ function renderCourseCard() {
     body = `
       ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
       ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
-      <p class="course-card-kicker">
+      <div class="course-card-kicker">
         ${courseKindIconSvg(activeCourse.kind)}
         <span>${escapeHtml(activeCourse.title)}</span>
         <span class="course-card-kicker-sep" aria-hidden="true">·</span>
         <span>${courseIndex + 1} / ${total}</span>
-      </p>
+        <button type="button" class="course-map-btn" id="course-map-btn">${COURSE_MAP_ICON}<span>지도 보기</span></button>
+      </div>
       ${place.label ? `<p class="course-card-label">${escapeHtml(smartQuotes(place.label))}</p>` : ""}
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
       ${!place.photoKey && place.description ? `<p class="story-content">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
       ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(smartQuotes(place.quote))}</blockquote>` : ""}
+      <a class="course-card-link course-directions-link" id="course-directions-link" href="${escapeHtml(kakaoDirectionsUrl(place))}" target="_blank" rel="noopener">카카오맵에서 길찾기 ›</a>
       ${courseSongCardHtml(place)}
     `;
   }
@@ -707,7 +717,40 @@ function renderCourseCard() {
   if (!isIntro && !isOutro) {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
+    document.getElementById("course-map-btn").onclick = () => setCourseMapFolded(true);
+    document.getElementById("course-directions-link").onclick = () => Storage.logEvent(`course_directions:${activeCourse.slug}`);
   }
+}
+
+const COURSE_MAP_ICON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4zM9 4v14M15 6v14" /></svg>`;
+
+// 장소 카드 접기/펴기(2026-10-14) — 따로 지도 페이지를 두지 않고 같은
+// 화면에서 카드만 접는다. 페이지를 옮기면 플레이리스트가 끊기고 핀/지도를
+// 두 군데서 그려야 해서. 접으면 코스 전체가 보이게 지도를 맞추고 아래엔
+// "3 / 7 · 장소 이름" 띠만 남긴다. 지도는 그대로 끌고 확대할 수 있다.
+// 기억 점은 걷는 중과 똑같이 숨겨 둔다(핀과 섞이면 지저분해서).
+function setCourseMapFolded(folded) {
+  courseMapFolded = folded;
+  document.getElementById("course-session").classList.toggle("course-session--folded", folded);
+  if (!folded) return;
+  const total = activeCourse.places.length;
+  const place = activeCourse.places[courseIndex];
+  document.getElementById("course-fold-bar").innerHTML = `
+    <span class="course-fold-bar-seq">${courseIndex + 1} / ${total}</span>
+    <span class="course-fold-bar-name">${escapeHtml(place.name)}</span>
+    <span class="course-fold-bar-open">카드 보기
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m6 15 6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </span>`;
+  fitCourseBounds({ folded: true });
+  Storage.logEvent(`course_map_folded:${activeCourse.slug}`);
+}
+
+// 카카오맵 길찾기 링크 — 도착지만 채워 넘기면 앱/웹이 현재 위치에서 경로를
+// 찾는다. 관광 안내가 목적이 아니라서 경로를 직접 그리진 않는다. 이 URL
+// 형식은 쉼표로 이름/좌표를 나누므로 이름 안의 쉼표는 지운다.
+function kakaoDirectionsUrl(place) {
+  const name = String(place.name).replace(/,/g, " ");
+  return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${place.lat},${place.lng}`;
 }
 
 // 장소 카드 "콘크리트 사피엔스 · 1 / 5" 앞 아이콘 — 코스 종류(Course.kind)를
@@ -765,6 +808,7 @@ function writeMemoryAfterCourse() {
 
 function endCourseWalk() {
   if (!courseModeOpen) return;
+  if (courseMapFolded) setCourseMapFolded(false);
   stopCourseSongTicker();
   if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId)) stopMiniPlayer();
   courseSongs = [];
@@ -785,6 +829,7 @@ function endCourseWalk() {
 
 function bindCourseEvents() {
   document.getElementById("course-exit-btn").onclick = endCourseWalk;
+  document.getElementById("course-fold-bar").onclick = () => showCourseStep(courseIndex);
   bindOverlayClickToClose("course-choice-overlay", closeCourseChoice);
   bindOverlayClickToClose("course-detail-overlay", () => {
     closeCourseDetail();
