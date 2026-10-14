@@ -362,7 +362,7 @@ function bindArchiveCourseRow(panel, onLeave) {
     Storage.logEvent("course_archive_row_clicked");
     openCourseChoice();
   };
-  panel.querySelectorAll(".archive-course-item").forEach((btn) => {
+  panel.querySelectorAll(".archive-course-item[data-course-index]").forEach((btn) => {
     btn.onclick = () => {
       const course = publishedCourses[Number(btn.dataset.courseIndex)];
       onLeave();
@@ -370,7 +370,8 @@ function bindArchiveCourseRow(panel, onLeave) {
       openCourseDetail(course, { fromList: true });
     };
   });
-  panel.querySelectorAll(".archive-course-cover").forEach(fillCoverSlot);
+  // 준비중 표지는 사진이 없어 fillCoverSlot이 빈 칸으로 보고 지워버린다
+  panel.querySelectorAll(".archive-course-cover[data-photo-key]").forEach(fillCoverSlot);
 }
 
 function closeCourseChoice() {
