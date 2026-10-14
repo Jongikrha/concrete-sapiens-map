@@ -3622,11 +3622,10 @@ button.story-place-line:hover {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* 표지 5권(실제 코스 + 준비 중 4권)이 폰 폭 한 줄에 고르게 들어가게 —
+  /* 표지 4권(실제 코스 + 준비중 3권)이 상자 폭에 고르게 퍼지게 —
      넘치면 그때만 옆으로 스크롤 */
   flex: 1 1 0;
-  min-width: 46px;
-  max-width: 76px;
+  min-width: 56px;
   padding: 0;
   border: none;
   background: none;
@@ -3637,7 +3636,7 @@ button.story-place-line:hover {
 .archive-course-cover {
   display: block;
   width: 100%;
-  max-width: 54px;
+  max-width: 56px;
   aspect-ratio: 2 / 3;
   border-radius: 2px;
   overflow: hidden;
@@ -3659,8 +3658,7 @@ button.story-place-line:hover {
   cursor: default;
 }
 
-/* 준비 중 표지 — 팬톤 파스텔 색(js/course.js ARCHIVE_COMING_SOON_COLORS)이라
-   흰 글씨는 안 읽혀서 진한 글씨로 */
+/* 준비중 표지 — 파스텔 색(js/course.js ARCHIVE_COMING_SOON) 위 흰 글씨 */
 .archive-course-item--soon .archive-course-cover {
   position: relative;
 }
@@ -3673,11 +3671,7 @@ button.story-place-line:hover {
   justify-content: center;
   font-family: var(--font-maruburi);
   font-size: 11.5px;
-  color: rgba(47, 48, 49, 0.72);
-}
-
-.archive-course-item--soon .archive-course-title {
-  color: var(--cs-text-muted);
+  color: #fff;
 }
 
 .archive-course-title {

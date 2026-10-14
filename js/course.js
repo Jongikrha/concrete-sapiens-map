@@ -318,15 +318,15 @@ function closeCourseDetail() {
 // 이미 둘러볼 거리를 찾는 중이라 칩보다 발자취를 발견하기 좋다. 기억
 // 목록 사이에 코스 장소를 섞지는 않는다(아카이브는 사람들이 직접 남긴
 // 기억만 모인 곳이라는 성격을 지키려고). 표지를 누르면 그 코스 소개 화면,
-// "발자취 ›"를 누르면 코스 목록. 옆에는 "준비 중" 표지 4권을 세워 책장이
-// 채워지는 느낌을 준다(눌리지 않음) — 표지 색은 팬톤 올해의 색 중 파스텔
-// 톤 4가지. 실제 코스가 공개될 때마다 하나씩 빼면 된다.
+// "발자취 ›"를 누르면 코스 목록. 옆에는 앞으로 올 종류(영상 콘텐츠/인물/
+// 도서)마다 "준비중" 표지를 한 권씩 세워 책장이 채워지는 느낌을 준다
+// (눌리지 않음). 표지 색은 실제 코스 표지가 돋보이게 연한 파스텔로.
+// 실제 코스가 공개될 때마다 해당 종류를 빼면 된다.
 // ------------------------------------------------------------
-const ARCHIVE_COMING_SOON_COLORS = [
-  { code: "13-1023", name: "Peach Fuzz", hex: "#FFBE98" }, // 2024 올해의 색
-  { code: "15-3919", name: "Serenity", hex: "#92A8D1" }, // 2016
-  { code: "13-1520", name: "Rose Quartz", hex: "#F7CAC9" }, // 2016
-  { code: "13-0647", name: "Illuminating", hex: "#F5DF4D" }, // 2021
+const ARCHIVE_COMING_SOON = [
+  { title: "영상 콘텐츠", hex: "#A9CDD9" },
+  { title: "인물", hex: "#B1C3DF" },
+  { title: "도서", hex: "#E5B1A1" },
 ];
 
 function buildArchiveCourseRowHtml() {
@@ -343,10 +343,10 @@ function buildArchiveCourseRowHtml() {
             <span class="archive-course-title">${escapeHtml(c.title)}</span>
           </button>
         `).join("")}
-        ${ARCHIVE_COMING_SOON_COLORS.map((c) => `
+        ${ARCHIVE_COMING_SOON.map((c) => `
           <span class="archive-course-item archive-course-item--soon">
-            <span class="archive-course-cover" style="background:${c.hex}" title="PANTONE ${c.code} ${c.name}"><span class="archive-course-cover-text">준비 중</span></span>
-            <span class="archive-course-title">준비 중</span>
+            <span class="archive-course-cover" style="background:${c.hex}"><span class="archive-course-cover-text">준비중</span></span>
+            <span class="archive-course-title">${c.title}</span>
           </span>
         `).join("")}
       </div>
