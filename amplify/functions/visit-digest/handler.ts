@@ -8,7 +8,7 @@ const FROM = '콘크리트 사피엔스 <noreply@concretesapiens.com>';
 const MAX_DEVICES_IN_MAIL = 20;
 
 // storyId는 ?story=로 들어온 경우의 publicId(js/storage.js logPageView).
-type PageView = { deviceId?: string; storyId?: string; createdAt: string };
+type PageView = { deviceId?: string; storyId?: string; deviceInfo?: string; createdAt: string };
 
 async function scanAll<T>(input: ScanCommandInput): Promise<T[]> {
   const items: T[] = [];
@@ -36,7 +36,7 @@ export const handler = async (event: { day?: string; force?: boolean } = {}) => 
   const [views, excluded] = await Promise.all([
     scanAll<PageView>({
       TableName: process.env.PAGE_VIEW_TABLE,
-      ProjectionExpression: 'deviceId, storyId, createdAt',
+      ProjectionExpression: 'deviceId, storyId, deviceInfo, createdAt',
     }),
     scanAll<{ deviceId: string }>({
       TableName: process.env.ADMIN_EXCLUDED_DEVICE_TABLE,
@@ -71,7 +71,7 @@ export const handler = async (event: { day?: string; force?: boolean } = {}) => 
   const rest = newDevices.length - shown.length;
   const line = (v: PageView) => {
     const from = v.storyId ? `공유 링크로 들어옴(?story=${v.storyId})` : '첫 화면으로 들어옴';
-    return { id: (v.deviceId as string).slice(0, 8), time: kstTime(v.createdAt), opens: opensByDevice.get(v.deviceId as string) ?? 1, from, storyId: v.storyId };
+    return { info: v.deviceInfo, id: (v.deviceId as string).slice(0, 8), time: kstTime(v.createdAt), opens: opensByDevice.get(v.deviceId as string) ?? 1, from, storyId: v.storyId };
   };
   const rows = shown.map(line);
   const html = `<!doctype html><html lang="ko"><body style="margin:0;background:#fafafa">
@@ -81,7 +81,7 @@ export const handler = async (event: { day?: string; force?: boolean } = {}) => 
   ${rows
     .map(
       (r) => `<div style="border:1px solid #eee;border-radius:10px;padding:10px 14px;margin:0 0 8px;font-size:13px">
-    <b>${r.time}</b> · 기기 ${r.id}… · ${r.opens}회 열어봄<br>
+    <b>${r.time}</b> · ${r.info ? `${r.info} · ` : ''}기기 ${r.id}… · ${r.opens}회 열어봄<br>
     <span style="color:#888">${r.storyId ? `<a href="${SITE_URL}/?story=${encodeURIComponent(r.storyId)}" style="color:#e8590c">공유 링크로 들어옴</a>` : '첫 화면으로 들어옴'}</span>
   </div>`,
     )
@@ -93,7 +93,7 @@ export const handler = async (event: { day?: string; force?: boolean } = {}) => 
     subject,
     `방문 ${summary.views}회 · 순방문자 ${summary.unique}명 · 처음 온 기기 ${newDevices.length}대`,
     '',
-    ...rows.map((r) => `- ${r.time} 기기 ${r.id}… ${r.opens}회 · ${r.from}`),
+    ...rows.map((r) => `- ${r.time} ${r.info ? `${r.info} · ` : ''}기기 ${r.id}… ${r.opens}회 · ${r.from}`),
     rest > 0 ? `외 ${rest}대` : '',
   ].join('\n');
 

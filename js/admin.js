@@ -514,10 +514,14 @@ function buildTopDevices(pageViews, dayKeys, limit = 10) {
   pageViews.forEach((pv) => {
     if (!pv.createdAt || !dayKeys.includes(kstDay(pv.createdAt))) return;
     const key = pv.deviceId || "";
-    const d = (byDevice[key] ||= { deviceId: key, count: 0, first: pv.createdAt, last: pv.createdAt });
+    const d = (byDevice[key] ||= { deviceId: key, count: 0, first: pv.createdAt, last: pv.createdAt, deviceInfo: null });
     d.count += 1;
     if (pv.createdAt < d.first) d.first = pv.createdAt;
-    if (pv.createdAt > d.last) d.last = pv.createdAt;
+    if (pv.createdAt >= d.last) {
+      d.last = pv.createdAt;
+      // 기기 요약은 2026-10-14부터 남긴다 — 가장 최근 방문 것으로.
+      if (pv.deviceInfo) d.deviceInfo = pv.deviceInfo;
+    }
   });
   return Object.values(byDevice).sort((a, b) => b.count - a.count).slice(0, limit);
 }
@@ -643,7 +647,7 @@ async function renderVisitsTab() {
           (d) => `
             <div class="top-story-row">
               <span title="${escapeHtml(d.deviceId)}">${d.deviceId ? `${escapeHtml(d.deviceId.slice(0, 8))}…` : "(기기 ID 없음)"}${d.deviceId === myDeviceId ? " (이 브라우저)" : ""}
-                <small class="empty-state">${kstTime(d.first)} ~ ${kstTime(d.last)}</small></span>
+                <small class="empty-state">${d.deviceInfo ? `${escapeHtml(d.deviceInfo)} · ` : ""}${kstTime(d.first)} ~ ${kstTime(d.last)}</small></span>
               <span>${d.count}회 ${d.deviceId ? `<button type="button" class="btn-secondary" data-exclude-device="${escapeHtml(d.deviceId)}">제외</button>` : ""}</span>
             </div>`
         )

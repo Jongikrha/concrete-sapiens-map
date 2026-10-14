@@ -522,8 +522,54 @@ const Storage = {
    */
   logPageView(storyId) {
     if (!client) return;
-    client.models.PageView.create({ storyId: storyId || null, deviceId: this.getDeviceId() })
+    let deviceInfo = null;
+    try {
+      const standalone = window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+      deviceInfo = this.describeDevice(navigator.userAgent, navigator.maxTouchPoints || 0, standalone);
+    } catch (e) {
+      // 기기 요약은 없어도 방문 기록은 남긴다.
+    }
+    client.models.PageView.create({ storyId: storyId || null, deviceId: this.getDeviceId(), deviceInfo })
       .catch((e) => console.error("방문 로그 기록 실패", e));
+  },
+
+  /**
+   * userAgent → "모바일 · iPhone · 카카오톡" 같은 기기 요약(2026-10-14) —
+   * 어드민 방문현황에서 많이 연 기기가 누구 것인지 가늠하는 용도. 종류·OS·
+   * 브라우저까지만 남기고 IP·위치는 남기지 않는다. 카톡/네이버/인스타 등
+   * 인앱 브라우저는 UA에 크롬·사파리 표시도 같이 있어서 먼저 확인한다.
+   * 아이패드(iPadOS)는 UA가 맥과 같아서 터치 지원 여부로 구분한다.
+   */
+  describeDevice(ua, maxTouchPoints = 0, standalone = false) {
+    let os = "기타";
+    if (/iPhone|iPod/.test(ua)) os = "iPhone";
+    else if (/iPad/.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1)) os = "iPad";
+    else if (/Android/.test(ua)) os = "Android";
+    else if (/Windows/.test(ua)) os = "Windows";
+    else if (/Macintosh|Mac OS X/.test(ua)) os = "Mac";
+    else if (/Linux|CrOS/.test(ua)) os = "Linux";
+
+    let type = "PC";
+    if (os === "iPad" || (os === "Android" && !/Mobile/.test(ua))) type = "태블릿";
+    else if (os === "iPhone" || os === "Android") type = "모바일";
+
+    const browsers = [
+      [/KAKAOTALK/i, "카카오톡"],
+      [/NAVER\(inapp|NAVER\//, "네이버앱"],
+      [/Instagram/, "인스타그램"],
+      [/FBAN|FBAV/, "페이스북"],
+      [/Line\//, "라인"],
+      [/DaumApps/, "다음앱"],
+      [/SamsungBrowser/, "삼성인터넷"],
+      [/Whale/, "웨일"],
+      [/Edg(A|iOS)?\//, "엣지"],
+      [/FxiOS|Firefox/, "파이어폭스"],
+      [/CriOS|Chrome/, "크롬"],
+      [/Safari/, "사파리"],
+    ];
+    let browser = (browsers.find(([re]) => re.test(ua)) || [null, "기타"])[1];
+    if (standalone) browser = "홈 화면 앱";
+    return `${type} · ${os} · ${browser}`;
   },
 
   /**
