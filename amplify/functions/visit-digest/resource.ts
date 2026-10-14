@@ -11,6 +11,10 @@ export const visitDigestFn = defineFunction({
   schedule: { cron: '0 9 * * ? *', timezone: 'Asia/Seoul' },
   // PageView 테이블은 프로비전 5 RCU라 전체 스캔이 느릴 수 있어 넉넉히.
   timeoutSeconds: 300,
+  // 방문 기록 전체를 메모리에 올려 세므로 기본(128MB)보다 넉넉히. 코드만
+  // 바꾸면 ampx가 lambda:UpdateFunctionCode로 바로 덮어쓰려다 배포 계정 권한에
+  // 막히는데(2026-10-14), 설정이 같이 바뀌면 CloudFormation 경로로 배포된다.
+  memoryMB: 256,
   environment: {
     RESEND_API_KEY: secret('RESEND_API_KEY'),
     DIGEST_TO: 'hello@todoc.us',
