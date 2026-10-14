@@ -252,6 +252,7 @@ function initMap() {
     level: CONFIG.DEFAULT_LEVEL,
   };
   map = new kakao.maps.Map(container, options);
+  constrainMapToKorea();
 
   clusterer = new kakao.maps.MarkerClusterer({
     map,
@@ -315,6 +316,49 @@ function initMap() {
     },
     true
   );
+}
+
+// 지도를 우리나라 근처에 가둔다(2026-10-14) — 카카오 지도 타일은 대략
+// 북위 30~45°, 동경 116~139°까지만 있어서 많이 축소하거나 끌고 나가면
+// 중국·일본 너머에서 회색 빈 화면으로 뚝 끊겼다(발자취 지도 보기에서 발견).
+// 최대 축소는 첫 화면 레벨(DEFAULT_LEVEL)까지만 허용하고, 화면 가장자리가
+// 아래 KOREA_VIEW 범위를 넘어가면 중심을 되밀어 넣는다. 화면이 범위보다
+// 넓은 방향은 범위 한가운데에 고정한다. 아주 큰 모니터에선 그 레벨에서도
+// 타일 끝이 보일 수 있어, 화면 폭이 타일 범위를 넘으면 한 단계 확대한다.
+const KOREA_VIEW = { minLat: 32.0, maxLat: 39.5, minLng: 123.0, maxLng: 132.5 };
+const TILE_SPAN = { lat: 14, lng: 22 };
+
+function constrainMapToKorea() {
+  map.setMaxLevel(CONFIG.DEFAULT_LEVEL);
+
+  const clamp = () => {
+    const b = map.getBounds();
+    const sw = b.getSouthWest();
+    const ne = b.getNorthEast();
+    const latSpan = ne.getLat() - sw.getLat();
+    const lngSpan = ne.getLng() - sw.getLng();
+    if ((latSpan > TILE_SPAN.lat || lngSpan > TILE_SPAN.lng) && map.getLevel() > 1) {
+      map.setLevel(map.getLevel() - 1);
+      return;
+    }
+    const shift = (lo, hi, min, max) => {
+      if (hi - lo >= max - min) return (min + max) / 2 - (lo + hi) / 2;
+      if (lo < min) return min - lo;
+      if (hi > max) return max - hi;
+      return 0;
+    };
+    const dLat = shift(sw.getLat(), ne.getLat(), KOREA_VIEW.minLat, KOREA_VIEW.maxLat);
+    const dLng = shift(sw.getLng(), ne.getLng(), KOREA_VIEW.minLng, KOREA_VIEW.maxLng);
+    // 아주 작은 차이로 다시 setCenter → center_changed가 끝없이 이어지지 않게
+    if (Math.abs(dLat) < 1e-6 && Math.abs(dLng) < 1e-6) return;
+    const c = map.getCenter();
+    map.setCenter(new kakao.maps.LatLng(c.getLat() + dLat, c.getLng() + dLng));
+  };
+
+  kakao.maps.event.addListener(map, "center_changed", clamp);
+  kakao.maps.event.addListener(map, "zoom_changed", clamp);
+  kakao.maps.event.addListener(map, "tilesloaded", clamp);
+  clamp();
 }
 
 function spawnClickStamp(mouseEvent) {
