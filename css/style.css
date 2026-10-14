@@ -4627,38 +4627,6 @@ button.story-place-line:hover {
   color: var(--cs-black);
 }
 
-/* 모바일 기억 라디오 — 어두운 밤하늘 위에서 흰 원 ✕가 혼자 튀어 거슬린다는
-   피드백(2026-10-02). 터치 영역(44px)은 그대로 두고, 보이는 건 반투명
-   32px 원 + 얇은 ✕로만 가볍게 그린다. 기억산책은 밝은 지도 위라
-   라디오(.recall-radio-night)에만 적용.
-   ✕ 색은 배경 사진에 맞춰 시간대별로 나눈다 — 낮 배경(radio-day-bg,
-   밝은 비 오는 버스 창가)에선 흰 ✕가 묻혀 안 보여서 어두운 ✕, 늦은 밤
-   배경(--late, 어두운 야경)에선 흰 ✕. 배경 사진을 바꾸면 여기 색도
-   같이 맞춰야 한다. */
-@media (max-width: 767px) {
-  .recall-radio-night .recall-exit-btn {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 15.5px, transparent 16px);
-    box-shadow: none;
-    color: rgba(0, 0, 0, 0.72);
-    font-size: 16px;
-    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
-  }
-
-  .recall-radio-night .recall-exit-btn:hover {
-    color: #000;
-  }
-
-  .recall-radio-night--late .recall-exit-btn {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 15.5px, transparent 16px);
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-  }
-
-  .recall-radio-night--late .recall-exit-btn:hover {
-    color: #fff;
-  }
-}
-
 /* 별자리 개요 — 실제 카카오 지도가 아니라 별도의 "밤하늘" 캔버스에
    내 기억을 점으로 찍는다. 예전에 실제 지도 위에서 점을 선으로 이었다가
    "지하철 노선도 같다"는 피드백으로 뺀 이력이 있어(js/map.js
@@ -5366,14 +5334,16 @@ button.story-place-line:hover {
 
 /* 카드 틀 + 카드 안 회색 원 ✕(2026-10-14 시안) — 예전엔 ✕가 화면 오른쪽
    위 구석에 따로 떠 있었는데, 모바일에선 엄지가 닿기 어렵고 미니 플레이어
-   옆이 붐벼서 카드 안 오른쪽 위로 옮겼다. ✕는 여전히 따라 걷기 전체를
-   끝낸다(카드만 접는 건 "지도 보기"). 카드 모양은 그대로 두고, 사진 오른쪽
-   위 모서리만 원을 피해 둥글게 파낸다(처음엔 카드 자체를 파내 지도가
-   비치게 했다가 시안과 다르다는 피드백으로 같은 날 바꿈).
-   ✕는 카드 밖 틀에 붙어 있어 카드 안이 스크롤돼도 제자리에 있다.
-   카드를 접으면 띠가 같은 틀 안에서 카드 자리를 대신하고, ✕는 띠 오른쪽
-   옆에 따로 선다. */
-.course-card-frame {
+   옆이 붐벼서 카드 안 오른쪽 위로 옮겼다. 발자취에 먼저 넣고 같은 날 기억
+   라디오·기억산책 카드에도 맞췄다(index.html #recall-card-frame). ✕가 하는
+   일은 그대로 — 세션 전체를 끝낸다(발자취에서 카드만 접는 건 "지도 보기").
+   카드 모양은 그대로 두고, 발자취 사진 오른쪽 위 모서리만 원을 피해 둥글게
+   파낸다(처음엔 카드 자체를 파내 지도가 비치게 했다가 시안과 다르다는
+   피드백으로 같은 날 바꿈). ✕는 카드 밖 틀에 붙어 있어 카드 안이 스크롤돼도
+   제자리에 있다. 틀 자체는 클릭을 통과시키고(기억산책에서 카드가 잠깐
+   사라진 사이 그 자리 지도가 눌리게) 안쪽 요소만 받는다 — #recall-card는
+   위 id 규칙대로 보일 때만 받는다. */
+.card-frame {
   position: absolute;
   left: 50%;
   bottom: 56px;
@@ -5381,7 +5351,15 @@ button.story-place-line:hover {
   transform: translateX(-50%);
 }
 
-.course-card-frame > .course-card {
+.recall-session > .card-frame {
+  pointer-events: none;
+}
+
+.card-frame > * {
+  pointer-events: auto;
+}
+
+.card-frame > .recall-card {
   position: relative;
   left: auto;
   bottom: auto;
@@ -5389,15 +5367,17 @@ button.story-place-line:hover {
   transform: translateY(14px);
 }
 
-.course-card-frame > .course-card.recall-card--visible {
+.card-frame > .recall-card.recall-card--visible {
   transform: none;
 }
 
 /* PC에선 카드를 미니 플레이어(아래 끝 약 82px) 아래 24px 틈까지 늘려 카드 안
-   스크롤을 줄인다 — 장소 말풍선은 카드 옆 빈 지도로 보낸다(js/course.js
-   placeCoursePinBesideCard). 모바일은 옆 공간이 없어 예전 60vh 그대로. */
+   스크롤을 줄인다 — 지도 위 점(발자취 장소 말풍선, 기억산책 점)은 카드 옆
+   빈 지도로 보낸다(js/course.js placeCoursePinBesideCard, js/recall.js
+   recallDotCenter). 기억 라디오는 배경이 사진이라 비킬 점이 없다.
+   모바일은 옆 공간이 없어(기억 라디오는 배경 사진을 남기려고) 예전 60vh. */
 @media (min-width: 768px) {
-  .course-card-frame > .course-card {
+  .card-frame > .recall-card {
     max-height: calc(100vh - 56px - 106px);
   }
 }
@@ -5409,14 +5389,15 @@ button.story-place-line:hover {
   mask: radial-gradient(circle 21px at calc(100% - 2px) 0, transparent 20.5px, #000 21px);
 }
 
-/* 사진 없이 글로 시작하는 카드(소개·마무리, 사진 없는 장소)는 첫 줄
-   오른쪽 끝("지도 보기", 표지 등)이 ✕ 원과 겹치지 않게 그만큼 비켜 둔다 */
+/* 글로 시작하는 첫 줄(발자취 소개·마무리·사진 없는 장소, 기억 카드의 연도·
+   장소)은 오른쪽 끝("지도 보기", 표지 등)이 ✕ 원과 겹치지 않게 비켜 둔다 */
 .course-card > .course-card-kicker:first-child,
-.course-card > .course-intro:first-child {
+.course-card > .course-intro:first-child,
+#recall-card .recall-card-yearplace {
   margin-right: 26px;
 }
 
-.course-exit-btn {
+.card-exit-btn {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -5434,18 +5415,35 @@ button.story-place-line:hover {
 }
 
 /* 보이는 원은 32px, 누르는 영역은 44px */
-.course-exit-btn::after {
+.card-exit-btn::after {
   content: "";
   position: absolute;
   inset: -6px;
 }
 
-.course-exit-btn:hover {
+.card-exit-btn:hover {
   color: var(--cs-black);
 }
 
-/* ✕가 위 구석에서 빠졌으니 따라 걷는 동안 미니 플레이어는 맨 위로 올린다 */
-#app:has(#course-session:not(.hidden)) .mini-player--floating {
+/* 기억 라디오·기억산책 — 카드가 나오는 단계(js/recall.js beginRecallWalk가
+   .recall-session--cards를 붙임)부터 카드 안 ✕를 쓰고 구석 ✕는 숨긴다.
+   카드를 넘길 때 카드가 잠깐 사라져도 ✕는 틀에 남는다. 별자리 화면(기억산책
+   첫 화면)은 카드가 없어 구석 ✕ 그대로. */
+#recall-card-exit-btn {
+  display: none;
+}
+
+.recall-session--cards #recall-card-exit-btn {
+  display: flex;
+}
+
+.recall-session--cards #recall-exit-btn {
+  display: none;
+}
+
+/* ✕가 위 구석에서 빠졌으니 카드 단계에선 미니 플레이어를 맨 위로 올린다 */
+#app:has(#course-session:not(.hidden)) .mini-player--floating,
+#app:has(.recall-session--cards) .mini-player--floating {
   top: 18px;
 }
 
@@ -5483,7 +5481,7 @@ button.story-place-line:hover {
 }
 
 /* 접힌 띠 옆 ✕는 지도 위에 혼자 서므로 띠와 같은 종이색 + 그림자 */
-.course-session--folded .course-exit-btn {
+.course-session--folded .card-exit-btn {
   top: 50%;
   right: 0;
   width: 44px;

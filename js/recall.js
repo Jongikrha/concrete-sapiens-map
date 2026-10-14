@@ -703,6 +703,8 @@ function buildRecallQueue(pool, avoidId) {
 }
 
 function beginRecallWalk(pool) {
+  // 카드 단계 — ✕를 화면 구석에서 카드 안으로 옮긴다(css/style.css .recall-session--cards)
+  document.getElementById("recall-session").classList.add("recall-session--cards");
   recallPool = pool;
   recallQueue = buildRecallQueue(pool, null);
   recallHistory = [];
@@ -736,7 +738,7 @@ function showRecallStory(story) {
   recallCurrentStory = story;
   document.getElementById("recall-card-prev-btn").disabled = recallHistoryIndex <= 0;
   map.setLevel(4);
-  map.panTo(new kakao.maps.LatLng(story.lat, story.lng));
+  map.panTo(recallDotCenter(story));
   placeRecallDot(story);
 
   // 점만 띄우고 눌러야 카드가 열리면 "어딜 눌러야 할지 모르겠다"는
@@ -747,6 +749,34 @@ function showRecallStory(story) {
   setTimeout(() => {
     if (recallSessionOpen && recallCurrentStory === story) openRecallCard();
   }, 500);
+}
+
+// 기억 점을 둘 지도 중심. PC 기억산책은 카드가 미니 플레이어 아래까지
+// 길어지므로(css/style.css .card-frame) 발자취(js/course.js
+// placeCoursePinBesideCard)처럼 점을 카드 왼쪽/오른쪽 빈 지도 가운데로
+// 보낸다 — 쪽은 이전 기억이 있는 쪽(지나온 자리가 카드 뒤로 숨지 않게),
+// 첫 기억이면 오른쪽. 기억 라디오는 배경이 사진이라, 모바일은 옆 공간이
+// 없어 예전처럼 점이 정중앙. panTo로 부드럽게 옮기려고 패닝 양 대신 목표
+// 중심 좌표를 계산한다(setLevel 직후라 현재 레벨 기준 화면 좌표가 맞다).
+function recallDotCenter(story) {
+  const target = new kakao.maps.LatLng(story.lat, story.lng);
+  if (recallScope === "songs" || !window.matchMedia("(min-width: 768px)").matches) return target;
+  const mapEl = document.getElementById("map");
+  const mapWidth = mapEl.clientWidth;
+  const mapHeight = mapEl.clientHeight;
+  const sideWidth = document.getElementById("recall-card-frame").getBoundingClientRect().left;
+  if (sideWidth < 160) return target;
+  const miniPlayer = document.getElementById("mini-player");
+  const topEdge = miniPlayer.classList.contains("hidden") ? 0 : miniPlayer.getBoundingClientRect().bottom;
+  const prev = recallHistory[recallHistoryIndex - 1];
+  const left = prev ? prev.lng < story.lng : false;
+  const targetX = left ? sideWidth / 2 : mapWidth - sideWidth / 2;
+  const targetY = (topEdge + mapHeight) / 2;
+  const projection = map.getProjection();
+  const pt = projection.containerPointFromCoords(target);
+  return projection.coordsFromContainerPoint(
+    new kakao.maps.Point(pt.x + mapWidth / 2 - targetX, pt.y + mapHeight / 2 - targetY)
+  );
 }
 
 function placeRecallDot(story) {
@@ -988,6 +1018,7 @@ function endRecallSession() {
   }
   hideRecallCard();
   hideConstellationOverview();
+  document.getElementById("recall-session").classList.remove("recall-session--cards");
   document.getElementById("recall-session").classList.add("hidden");
   exitRecallImmersiveChrome();
   exitRecallNightMode();
@@ -1129,6 +1160,7 @@ async function shareConstellationCard() {
 function bindRecallEvents() {
   bindOverlayClickToClose("recall-choice-overlay", closeRecallChoice);
   document.getElementById("recall-exit-btn").onclick = endRecallSession;
+  document.getElementById("recall-card-exit-btn").onclick = endRecallSession;
   document.getElementById("recall-card-next-btn").onclick = advanceRecall;
   document.getElementById("recall-card-prev-btn").onclick = retreatRecall;
 
