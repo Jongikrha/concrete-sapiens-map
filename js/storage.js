@@ -509,7 +509,7 @@ const Storage = {
     const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
     target.viewCount = (target.viewCount || 0) + 1;
-    if (client) {
+    if (client && !this.isAutomatedBrowser()) {
       client.models.Story.update({ id: storyId, viewCount: target.viewCount })
         .catch((e) => console.error("조회수 반영 실패(백그라운드)", storyId, e));
     }
@@ -517,11 +517,21 @@ const Storage = {
   },
 
   /**
+   * 사람이 아닌 자동화 브라우저인지 — 이런 접속은 방문·이벤트·조회수 통계에
+   * 남기지 않는다(2026-10-14). 화면 확인용으로 띄우는 헤드리스 크롬(Claude
+   * 세션의 배포 전 점검)이 방문 기록에 9번 찍혀 사람 방문처럼 보였다.
+   * 헤드리스 크롬은 navigator.webdriver가 false로 나와서 UA로도 거른다.
+   */
+  isAutomatedBrowser() {
+    return navigator.webdriver === true || /HeadlessChrome/.test(navigator.userAgent);
+  },
+
+  /**
    * 방문 로그 기록 — write-only(게스트는 read 권한이 없어 자기가 남긴 것도
    * 못 읽는다). 실패해도 지도 사용에는 영향 없으니 fire-and-forget.
    */
   logPageView(storyId) {
-    if (!client) return;
+    if (!client || this.isAutomatedBrowser()) return;
     let deviceInfo = null;
     try {
       const standalone = window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -578,7 +588,7 @@ const Storage = {
    * PageView와 같은 write-only/fire-and-forget 패턴(2026-08-21).
    */
   logEvent(type) {
-    if (!client) return;
+    if (!client || this.isAutomatedBrowser()) return;
     client.models.AppEvent.create({ type })
       .catch((e) => console.error("이벤트 로그 기록 실패", type, e));
   },
