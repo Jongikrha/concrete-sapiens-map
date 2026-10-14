@@ -980,11 +980,6 @@ function renderStoryItem(story, options = {}) {
   `;
 }
 
-function getStoryYearLabel(story) {
-  const y = Storage.getStoryYear(story);
-  return y !== null ? y : "· · ·";
-}
-
 // ------------------------------------------------------------
 // 기억 전달하기 — 카드 안에서 펼쳐지는 링크 패널(2026-08-13, 카카오톡
 // 공유 버튼은 제거하고 링크 보여주기+복사로 단순화). 개별 기억/스팟 전체

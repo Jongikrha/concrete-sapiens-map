@@ -2498,14 +2498,6 @@ body {
   }
 }
 
-.story-eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--cs-text-muted);
-  text-transform: uppercase;
-  margin: 4px 0 14px;
-}
-
 .story-place-line {
   font-family: var(--font-pretendard);
   font-size: 15px;
@@ -2678,12 +2670,6 @@ button.story-place-line:hover {
   margin: 0;
 }
 
-.story-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .reaction-btn,
 .share-btn {
   display: flex;
@@ -2815,11 +2801,6 @@ button.story-place-line:hover {
 
 .spot-banner--song .spot-banner-title {
   color: var(--cs-memory-core);
-}
-
-.share-btn--emphasized {
-  font-weight: 500;
-  color: var(--cs-black);
 }
 
 .btn-add-story {
@@ -3354,12 +3335,6 @@ button.story-place-line:hover {
 
 .field-label:first-of-type {
   margin-top: 0;
-}
-
-.field-value {
-  font-size: 15px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--cs-map-gray);
 }
 
 .field-address {
@@ -4481,13 +4456,11 @@ button.story-place-line:hover {
 /* ------------------------------------------------------------
    빈 상태 / 삭제된 기억
    ------------------------------------------------------------ */
-.empty-state-content,
 .gone-state-content {
   text-align: center;
   padding: 8px 0 20px;
 }
 
-.empty-state-content p,
 .gone-state-content p {
   font-size: 14px;
   line-height: 1.8;

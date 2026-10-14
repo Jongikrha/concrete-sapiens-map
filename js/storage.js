@@ -1000,12 +1000,6 @@ const Storage = {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   },
 
-  getTopHashtags(limit = 30) {
-    return this._getHashtagCounts()
-      .slice(0, limit)
-      .map(([tag]) => tag);
-  },
-
   // 상단 바의 "더보기" 시트용 — 개수 제한 없이 전체 태그를 많이 쓰인 순으로.
   getAllHashtagsWithCounts() {
     return this._getHashtagCounts().map(([tag, count]) => ({ tag, count }));
@@ -1149,10 +1143,6 @@ const Storage = {
       else map.set(key, { artist: s.musicArtist || null, title: s.musicTitle, count: 1 });
     });
     return [...map.values()].sort((a, b) => b.count - a.count);
-  },
-
-  getTopSongs(limit = 30) {
-    return this._getSongCounts().slice(0, limit);
   },
 
   // 상단 바의 "더보기" 시트용 — 개수 제한 없이 전체 곡을 많이 남겨진 순으로.

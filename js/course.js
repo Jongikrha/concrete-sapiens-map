@@ -206,12 +206,6 @@ function openCourseChoice() {
 
 const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", org: "단체" };
 
-// "책 · " 처럼 뒤에 붙일 구분자까지 — 종류가 없거나 "기타"면 빈 문자열.
-function courseKindLabel(course) {
-  const label = COURSE_KIND_LABELS[course.kind];
-  return label ? `${label} · ` : "";
-}
-
 // data-photo-key를 가진 표지 슬롯에 이미지를 채운다(못 받으면 슬롯 제거).
 // 책등+앞표지 이미지(data-spine-ratio > 0)면 이미지를 그만큼 넓게 그리고
 // 왼쪽으로 밀어 책등 부분을 슬롯 밖으로 빼낸다 — 작은 썸네일엔 앞표지만.
