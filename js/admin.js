@@ -972,6 +972,26 @@ async function runCourseMutation(promise, failMessage) {
   }
 }
 
+// 저장이 끝나기 전에 버튼을 한 번 더 누르면 같은 장소가 두 줄 만들어졌다
+// (2026-10-14 카페서연의집 — 사진 업로드 동안 0.6초 차이로 두 번 create).
+// 진행 중엔 다시 눌려도 무시하고 저장 버튼을 잠근다.
+function guardDoubleSubmit(handler) {
+  let busy = false;
+  return async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    const btn = e.target.querySelector('button[type="submit"], button:not([type])');
+    if (btn) btn.disabled = true;
+    try {
+      await handler(e);
+    } finally {
+      busy = false;
+      if (btn?.isConnected) btn.disabled = false;
+    }
+  };
+}
+
 async function loadCourses() {
   const [courseList, placeList] = await Promise.all([
     listAllRecords(client.models.Course),
@@ -1370,7 +1390,7 @@ async function renderCoursesTab() {
     ${courseFormHtml()}
   `;
 
-  document.getElementById("course-form").addEventListener("submit", handleCourseSubmit);
+  document.getElementById("course-form").addEventListener("submit", guardDoubleSubmit(handleCourseSubmit));
   document.getElementById("course-logo-input").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1387,7 +1407,7 @@ async function renderCoursesTab() {
   bindCourseCoverEditor();
   const placeForm = document.getElementById("place-form");
   if (placeForm) {
-    placeForm.addEventListener("submit", handlePlaceSubmit);
+    placeForm.addEventListener("submit", guardDoubleSubmit(handlePlaceSubmit));
     bindNonSpaceLimits(placeForm);
     const searchInput = document.getElementById("place-search-input");
     searchInput.addEventListener("keydown", (e) => {
