@@ -687,7 +687,6 @@ function renderCourseCard() {
       <h2 class="course-card-title">${escapeHtml(place.name)}</h2>
       ${!place.photoKey && place.description ? `<p class="story-content">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
       ${place.quote ? `<blockquote class="course-card-quote">${escapeHtml(smartQuotes(place.quote))}</blockquote>` : ""}
-      <a class="course-card-link course-directions-link" id="course-directions-link" href="${escapeHtml(kakaoDirectionsUrl(place))}" target="_blank" rel="noopener">카카오맵에서 길찾기 ›</a>
       ${courseSongCardHtml(place)}
     `;
   }
@@ -718,7 +717,6 @@ function renderCourseCard() {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
     document.getElementById("course-map-btn").onclick = () => setCourseMapFolded(true);
-    document.getElementById("course-directions-link").onclick = () => Storage.logEvent(`course_directions:${activeCourse.slug}`);
   }
 }
 
@@ -743,14 +741,6 @@ function setCourseMapFolded(folded) {
     </span>`;
   fitCourseBounds({ folded: true });
   Storage.logEvent(`course_map_folded:${activeCourse.slug}`);
-}
-
-// 카카오맵 길찾기 링크 — 도착지만 채워 넘기면 앱/웹이 현재 위치에서 경로를
-// 찾는다. 관광 안내가 목적이 아니라서 경로를 직접 그리진 않는다. 이 URL
-// 형식은 쉼표로 이름/좌표를 나누므로 이름 안의 쉼표는 지운다.
-function kakaoDirectionsUrl(place) {
-  const name = String(place.name).replace(/,/g, " ");
-  return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${place.lat},${place.lng}`;
 }
 
 // 장소 카드 "콘크리트 사피엔스 · 1 / 5" 앞 아이콘 — 코스 종류(Course.kind)를

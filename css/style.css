@@ -5379,10 +5379,6 @@ button.story-place-line:hover {
   flex-shrink: 1;
 }
 
-.course-directions-link {
-  margin-top: 14px;
-}
-
 /* 카드를 접으면 카드는 살며시 내려가 사라지고 같은 자리에 얇은 띠만 남는다 */
 .course-session--folded #course-card {
   opacity: 0;
