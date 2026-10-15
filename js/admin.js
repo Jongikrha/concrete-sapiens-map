@@ -1198,7 +1198,7 @@ function courseFormHtml() {
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
-      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.</p>
+      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.<br />말풍선을 꽉 채우려면 여백을 뺀 로고 자체를 <b>가로:세로 5:2(예: 250×100px)</b>로 만들어주세요 — 말풍선 안 로고 자리가 최대 80×32px라, 이보다 가로로 더 길면 위아래가 비어요.</p>
       <label>표지 — 책등 + 앞표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
       <div class="course-cover-guide">
         <p><b>책등(스파인)과 겉표지(앞표지)를 한 장으로 올려주세요.</b> 펼친 표지 파일에서 <b>왼쪽 책등 + 오른쪽 앞표지</b> 부분만 잘라서 올리면, 소개 화면에 책이 옆면(책등)까지 보이는 입체로 세워져요.</p>
