@@ -1291,6 +1291,8 @@ function placeFormHtml() {
       ${placePhotoFieldHtml(p)}
       <label>사진 제목(선택)<input type="text" name="description" value="${v("description")}" data-max-nonspace="${PLACE_PHOTO_TITLE_MAX}" placeholder="사진 바로 아래에 작게 보여요" /></label>
       <p class="field-hint field-count" data-count-for="description"></p>
+      <label>사진 출처(선택)<input type="text" name="photoCredit" value="${v("photoCredit")}" maxlength="30" placeholder="예: 군산시" /></label>
+      <p class="field-hint">사진 제목 아래에 "사진 출처 | 군산시"처럼 작게 보여요. 이름만 적어주세요.</p>
       <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 장소 노래들이 차례로 흘러요" /></label>
       <div class="course-music-row">
         <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
@@ -1499,10 +1501,10 @@ async function renderCoursesTab() {
   bindPlacePhotoCrop();
 }
 
-// 폼을 다시 그려도 적어둔 이름/꼬리표/사진 제목/인용은 남게 한다.
+// 폼을 다시 그려도 적어둔 이름/꼬리표/사진 제목·출처/인용은 남게 한다.
 function keepPlaceFormFields(rerender) {
   const form = document.getElementById("place-form");
-  const kept = Object.fromEntries(["name", "label", "description", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
+  const kept = Object.fromEntries(["name", "label", "description", "photoCredit", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
   rerender();
   const newForm = document.getElementById("place-form");
   Object.entries(kept).forEach(([k, val]) => {
@@ -1742,6 +1744,7 @@ async function handlePlaceSubmit(e) {
     address: location.address || null,
     label: f.get("label").trim() || null,
     description: f.get("description").trim() || null,
+    photoCredit: photoKey ? f.get("photoCredit").trim() || null : null,
     quote: f.get("quote").trim() || null,
     youtubeUrl,
     musicArtist: f.get("musicArtist").trim() || null,

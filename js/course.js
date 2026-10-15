@@ -743,6 +743,7 @@ function renderCourseCard() {
     body = `
       ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
       ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
+      ${place.photoKey && place.photoCredit ? `<p class="course-card-photo-credit">사진 출처<span class="course-card-photo-credit-bar" aria-hidden="true"></span>${escapeHtml(place.photoCredit)}</p>` : ""}
       <div class="course-card-kicker">
         ${courseKindIconSvg(activeCourse.kind)}
         <span>${escapeHtml(activeCourse.title)}</span>
