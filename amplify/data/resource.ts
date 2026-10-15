@@ -269,6 +269,9 @@ const schema = a.schema({
       // 장소 사진 1장(선택, 2026-10-13) — Story.photoKey와 같은 story-photos/
       // 경로(amplify/storage/resource.ts, Admins 쓰기 허용)에 어드민이 올린다.
       photoKey: a.string(),
+      // 장소 사진 출처(선택, 2026-10-15) — 사진 제목 아래 "사진 출처 | 군산시"
+      // 처럼 보인다. 어드민엔 이름만 적고 앞 글자는 화면이 붙인다.
+      photoCredit: a.string(),
       // 장소 사진 크롭 기준점(0~100%, 2026-10-13) — Story.photoFocusX/Y와 같다.
       // 장소 카드 사진 칸이 가로로 납작해서(16:9) 세로로 긴 사진은 어느
       // 높이를 보여줄지 어드민에서 끌어서 정한다(object-position).
