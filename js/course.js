@@ -573,9 +573,53 @@ function hydrateCoursePinLogo(el, logoKey) {
     }
     const img = document.createElement("img");
     img.alt = "";
+    img.crossOrigin = "anonymous"; // 픽셀을 읽어 배경 있는 로고인지 본다(S3 CORS 허용)
+    img.onload = () => fillPinLogoIfOpaque(slot, img);
+    // 캐시 등으로 CORS 로드가 실패하면 예전처럼 흰 말풍선 안 로고로
+    img.onerror = () => {
+      img.onerror = null;
+      img.onload = null;
+      img.removeAttribute("crossorigin");
+      img.src = url;
+    };
     img.src = url;
     slot.replaceChildren(img);
   });
+}
+
+// 배경까지 채운 로고(픽셀 90% 이상 불투명 — 예: 종이 질감 위 <탁류>)는 흰
+// 여백 없이 말풍선을 꽉 채우고, 꼬리도 로고 아래쪽 색으로 칠한다. 흰 여백
+// 안에 로고만 가운데 떠 보인다는 피드백(2026-10-15). 투명 배경 로고는 그대로.
+// 모서리만 보지 않는 건, 어드민 업로드(resizeLogoFile)가 왼쪽 위 색과 비슷한
+// 종이 부분을 반투명하게 지워 모서리 알파가 낮게 남기 때문이다 — 그 반투명
+// 자리는 말풍선 바탕을 같은 색으로 깔아 메운다.
+function fillPinLogoIfOpaque(slot, img) {
+  try {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const all = ctx.getImageData(0, 0, w, h).data;
+    let opaque = 0;
+    for (let i = 3; i < all.length; i += 4) if (all[i] > 200) opaque++;
+    if (opaque < (all.length / 4) * 0.9) return;
+    // 꼬리 색 = 아래 가장자리 가운데 띠의 평균 색
+    const band = ctx.getImageData(Math.round(w * 0.4), h - 3, Math.max(1, Math.round(w * 0.2)), 3).data;
+    let r = 0, g = 0, b = 0;
+    const n = band.length / 4;
+    for (let i = 0; i < band.length; i += 4) {
+      r += band[i];
+      g += band[i + 1];
+      b += band[i + 2];
+    }
+    slot.style.setProperty("--pin-tail", `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`);
+    slot.classList.add("course-pin-logo--fill");
+  } catch {
+    // 픽셀을 못 읽으면(캔버스 오염) 흰 말풍선 그대로
+  }
 }
 
 function fitCourseBounds({ folded = false } = {}) {

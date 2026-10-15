@@ -5134,6 +5134,24 @@ button.story-place-line:hover {
   object-fit: contain;
 }
 
+/* 배경까지 채운 로고(js/course.js fillPinLogoIfOpaque) — 흰 여백 없이
+   로고가 말풍선 전체가 되고, 꼬리는 로고 아래쪽 색(--pin-tail). */
+.course-pin-logo--fill {
+  padding: 0;
+  background: var(--pin-tail, #fff);
+}
+
+.course-pin-logo--fill::after {
+  background: var(--pin-tail, #fff);
+}
+
+.course-pin-logo--fill img {
+  height: 44px;
+  max-width: 110px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
 .course-pin--logo.course-pin--active {
   transform: scale(1.35);
   filter: drop-shadow(0 6px 14px rgba(47, 48, 49, 0.32));
