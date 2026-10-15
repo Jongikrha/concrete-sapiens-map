@@ -60,7 +60,9 @@ function renderBook3d(container, url, spineRatio) {
  */
 function detectBookSpineRatio(img) {
   const w = 300;
-  const h = Math.max(1, Math.round((img.naturalHeight / img.naturalWidth) * w));
+  const iw = img.naturalWidth || img.width; // canvas도 받는다(cleanBookCoverImage 결과)
+  const ih = img.naturalHeight || img.height;
+  const h = Math.max(1, Math.round((ih / iw) * w));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -87,4 +89,90 @@ function detectBookSpineRatio(img) {
     }
   }
   return Math.round((bestX / w) * 1000) / 1000;
+}
+
+/**
+ * 올린 표지 이미지를 정리한다 — (1) 바깥 배경 여백(왼쪽 위 픽셀 색)을 잘라내고
+ * (2) 책등과 앞표지가 배경 틈을 두고 따로 놓인 이미지면 그 틈을 빼서 책등에
+ * 앞표지를 바로 붙인다. 틈이 남아 있으면 책등 경계를 틈 앞쪽에 잡아도 작은
+ * 썸네일 왼쪽에 책등 끝 + 흰 틈이 같이 보였다(채만식 <탁류>, 2026-10-15).
+ * @returns {{ canvas: HTMLCanvasElement, spineRatio: number|null }} 틈을 찾았으면
+ *   spineRatio는 정확한 책등 비율, 못 찾았으면 null(detectBookSpineRatio로 추정)
+ */
+function cleanBookCoverImage(img) {
+  const s = Math.min(1, 2048 / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.round(img.naturalWidth * s);
+  const h = Math.round(img.naturalHeight * s);
+  const work = document.createElement("canvas");
+  work.width = w;
+  work.height = h;
+  work.getContext("2d").drawImage(img, 0, 0, w, h);
+  const { data } = work.getContext("2d").getImageData(0, 0, w, h);
+  const [br, bg, bb] = data;
+  const isBg = (x, y) => {
+    const i = (y * w + x) * 4;
+    return Math.max(Math.abs(data[i] - br), Math.abs(data[i + 1] - bg), Math.abs(data[i + 2] - bb)) < 28;
+  };
+  const colBgShare = (x, y0, y1) => {
+    let hit = 0, n = 0;
+    for (let y = y0; y < y1; y += 2, n++) if (isBg(x, y)) hit++;
+    return hit / n;
+  };
+  const rowBgShare = (y, x0, x1) => {
+    let hit = 0, n = 0;
+    for (let x = x0; x < x1; x += 2, n++) if (isBg(x, y)) hit++;
+    return hit / n;
+  };
+  // 한 줄의 98% 이상이 배경색이면 배경 줄(종이 질감·노이즈 몇 점은 봐준다).
+  // 가장자리 그림자·둥근 모서리 줄은 반쯤만 배경이라, 배경 줄을 찾은 뒤엔
+  // 절반 이상 배경인 이웃 줄까지 같이 잘라 흰 실선이 안 남게 한다.
+  const colIsBg = (x, y0, y1) => colBgShare(x, y0, y1) >= 0.98;
+  const rowIsBg = (y, x0, x1) => rowBgShare(y, x0, x1) >= 0.98;
+  let left = 0, right = w, top = 0, bottom = h;
+  while (left < w && colIsBg(left, 0, h)) left++;
+  while (right > left && colIsBg(right - 1, 0, h)) right--;
+  while (top < h && rowIsBg(top, left, right)) top++;
+  while (bottom > top && rowIsBg(bottom - 1, left, right)) bottom--;
+  if (left > 0) while (left < right && colBgShare(left, top, bottom) >= 0.5) left++;
+  if (right < w) while (right > left && colBgShare(right - 1, top, bottom) >= 0.5) right--;
+  if (top > 0) while (top < bottom && rowBgShare(top, left, right) >= 0.5) top++;
+  if (bottom < h) while (bottom > top && rowBgShare(bottom - 1, left, right) >= 0.5) bottom--;
+  // 거의 다 배경으로 보이면(표지 자체가 배경색과 같은 단색 등) 손대지 않는다
+  if (right - left < w * 0.3 || bottom - top < h * 0.3) {
+    left = 0; right = w; top = 0; bottom = h;
+  }
+  const tw = right - left;
+  const th = bottom - top;
+  // 책등과 앞표지 사이 틈 — 왼쪽 3~45% 안에서 처음 나오는 배경 세로줄 묶음.
+  // 바깥 여백이 있던 이미지만(여백이 없으면 왼쪽 위 색이 표지 그림 색이라
+  // 단색 표지를 틈으로 오인할 수 있다), 틈은 전체 폭의 10% 미만만 인정.
+  let gapStart = -1, gapEnd = -1;
+  if (left > 0 || top > 0) {
+    for (let x = left + Math.round(tw * 0.03); x < left + Math.round(tw * 0.45); x++) {
+      if (colIsBg(x, top, bottom)) {
+        if (gapStart < 0) gapStart = x;
+        gapEnd = x + 1;
+      } else if (gapStart >= 0) break;
+    }
+    if (gapStart >= 0) {
+      while (gapStart > left && colBgShare(gapStart - 1, top, bottom) >= 0.5) gapStart--;
+      while (gapEnd < right && colBgShare(gapEnd, top, bottom) >= 0.5) gapEnd++;
+      if (gapEnd - gapStart >= tw * 0.1 || gapEnd >= right) gapStart = -1;
+    }
+  }
+  const out = document.createElement("canvas");
+  const octx = out.getContext("2d");
+  if (gapStart < 0) {
+    out.width = tw;
+    out.height = th;
+    octx.drawImage(work, left, top, tw, th, 0, 0, tw, th);
+    return { canvas: out, spineRatio: null };
+  }
+  const spineW = gapStart - left;
+  const frontW = right - gapEnd;
+  out.width = spineW + frontW;
+  out.height = th;
+  octx.drawImage(work, left, top, spineW, th, 0, 0, spineW, th);
+  octx.drawImage(work, gapEnd, top, frontW, th, spineW, 0, frontW, th);
+  return { canvas: out, spineRatio: Math.round((spineW / out.width) * 1000) / 1000 };
 }

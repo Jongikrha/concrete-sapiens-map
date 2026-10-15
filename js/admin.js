@@ -1122,11 +1122,14 @@ function bindCourseIntroCounter() {
   update();
 }
 
+let pendingCoverBlob = null; // 새로 고른 표지를 정리한 이미지(cleanBookCoverImage)
+
 // 표지 편집기 — 평면 이미지 위 세로선(책등 경계)과 입체 미리보기(js/book3d.js)를
 // 슬라이더와 같이 움직인다. 새 파일을 고르면 책등 경계를 자동으로 찾아
 // 슬라이더를 맞춰둔다(detectBookSpineRatio). 기존 표지는 S3 URL이라 픽셀을
 // 못 읽어서 저장된 값 그대로 시작한다.
 function bindCourseCoverEditor() {
+  pendingCoverBlob = null;
   const input = document.getElementById("course-cover-input");
   const editor = document.getElementById("course-cover-editor");
   const flat = document.getElementById("course-cover-flat");
@@ -1161,12 +1164,25 @@ function bindCourseCoverEditor() {
   slider.addEventListener("input", refresh);
   input.addEventListener("change", (e) => {
     const file = e.target.files[0];
+    pendingCoverBlob = null;
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
     const probe = new Image();
     probe.onload = () => {
-      slider.value = String(detectBookSpineRatio(probe));
-      show(objectUrl);
+      // 바깥 여백·책등과 앞표지 사이 틈을 잘라낸 이미지로 미리보기하고, 저장도
+      // 이 이미지로 한다(pendingCoverBlob). 정리에 실패하면 원본 그대로.
+      const { canvas, spineRatio } = cleanBookCoverImage(probe);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          slider.value = String(detectBookSpineRatio(probe));
+          show(objectUrl);
+          return;
+        }
+        URL.revokeObjectURL(objectUrl);
+        pendingCoverBlob = blob;
+        slider.value = String(spineRatio ?? detectBookSpineRatio(canvas));
+        show(URL.createObjectURL(blob));
+      }, "image/jpeg", 0.92);
     };
     probe.src = objectUrl;
   });
@@ -1553,7 +1569,7 @@ async function handleCourseSubmit(e) {
   const coverFile = f.get("cover");
   if (coverFile && coverFile.size) {
     try {
-      const blob = await PhotoUpload.resizeImageFile(coverFile);
+      const blob = await PhotoUpload.resizeImageFile(pendingCoverBlob || coverFile);
       coverKey = `story-photos/course-cover-${Date.now()}.jpg`;
       await uploadData({ path: coverKey, data: blob, options: { contentType: "image/jpeg" } }).result;
     } catch (err) {
