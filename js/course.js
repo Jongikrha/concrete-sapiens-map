@@ -166,6 +166,7 @@ function openCourseChoice() {
               <span class="course-choice-title">${escapeHtml(c.title)}</span>
               ${COURSE_RELEASE_NOTES[c.title] ? `<span class="course-choice-release">${escapeHtml(COURSE_RELEASE_NOTES[c.title])}</span>` : ""}
             </span>
+            ${c.author ? `<span class="course-choice-author">${escapeHtml(c.author)} 지음</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳</span>
           </span>

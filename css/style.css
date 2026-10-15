@@ -5711,6 +5711,12 @@ button.story-place-line:hover {
   color: var(--cs-text-muted);
 }
 
+.course-choice-author {
+  margin-top: -2px;
+  font-size: 14px;
+  color: var(--cs-text-muted);
+}
+
 .course-choice-desc {
   font-size: 13.5px;
   line-height: 1.55;

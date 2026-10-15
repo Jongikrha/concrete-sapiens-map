@@ -1200,6 +1200,8 @@ function courseFormHtml() {
     <form class="course-form" id="course-form">
       <div class="admin-section-title">${c ? `코스 수정 — ${escapeHtml(c.title)}` : "새 코스 만들기"}</div>
       <label>이름<input type="text" name="title" value="${v("title")}" placeholder="예: 콘크리트 사피엔스" required /></label>
+      <label>저자(선택)<input type="text" name="author" value="${v("author")}" maxlength="30" placeholder="예: 채만식" /></label>
+      <p class="field-hint">코스 목록 제목 아래 "채만식 지음"처럼 보여요. 이름에는 작품 제목만 적어주세요.</p>
       <label>영문 식별자(공유 링크용)<input type="text" name="slug" value="${v("slug")}" placeholder="예: concrete-sapiens" pattern="[a-z0-9-]+" required /></label>
       <label>종류
         <select name="kind">
@@ -1540,6 +1542,7 @@ async function handleCourseSubmit(e) {
   const f = new FormData(e.target);
   const fields = {
     title: f.get("title").trim(),
+    author: f.get("author").trim() || null,
     slug: f.get("slug").trim(),
     kind: f.get("kind"),
     description: f.get("description").trim() || null,
