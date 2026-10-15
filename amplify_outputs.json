@@ -1246,6 +1246,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "photoCredit": {
+              "name": "photoCredit",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "photoFocusX": {
               "name": "photoFocusX",
               "isArray": false,
