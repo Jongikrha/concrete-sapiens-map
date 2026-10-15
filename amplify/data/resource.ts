@@ -213,6 +213,9 @@ const schema = a.schema({
       // 코스를 바로 여는 공유 링크에 쓴다.
       slug: a.string().required(),
       title: a.string().required(),
+      // 저자/감독 등(선택, 2026-10-15) — 코스 목록 제목 아래 "OOO 지음"으로
+      // 보인다. 예전엔 제목에 "채만식 <탁류>"처럼 같이 적었다.
+      author: a.string(),
       description: a.string(),
       // "book" | "person" | "drama" | "org" 등 자유 문자열 — 종류가 늘어도
       // 스키마 변경 없이 대응한다(AppEvent.type과 같은 방식).
