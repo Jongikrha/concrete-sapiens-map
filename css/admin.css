@@ -714,3 +714,36 @@ body {
   pointer-events: none;
   -webkit-user-drag: none;
 }
+
+/* 장소 사진 여러 장(2026-10-16) — 사진마다 미리보기 + 제목 + 출처를 한 묶음으로 */
+.course-place-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.course-place-photo-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 8px;
+}
+
+.course-place-photo-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.course-place-photo-slot-head b {
+  margin-right: auto;
+}
+
+.course-form .course-place-photo-replace {
+  display: inline-flex;
+  flex-direction: row;
+  cursor: pointer;
+}

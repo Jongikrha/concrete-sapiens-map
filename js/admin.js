@@ -987,12 +987,12 @@ let selectedCourseId = null; // 장소 관리 중인 코스
 let editingCourseId = null; // null이면 "새 코스" 폼
 let editingPlaceId = null; // null이면 "장소 추가" 폼
 let placeDraft = null; // 카카오 검색에서 고른 { name, address, lat, lng }
-// 장소 폼에서 고른 사진 File — 검색 결과를 고르면 폼을 다시 그리는데
-// <input type=file> 값은 되살릴 수 없어서 여기 들고 있는다.
-let placePhotoFile = null;
-// 장소 사진 크롭 기준점 { x, y }(0~100%) — 끌어서 바꾼 값. null이면 수정 중인
-// 장소의 저장값(없으면 가운데). 새 사진을 고르면 가운데로 다시 시작한다.
-let placePhotoFocus = null;
+// 장소 폼의 사진 칸들(최대 COURSE_PLACE_PHOTO_MAX장, 2026-10-16) —
+// [{ key, file, focus: { x, y }, title, credit }], 앞이 1번(대표). key는 이미
+// 올라간 사진, file은 새로 고른 사진(저장할 때 올린다). 검색 결과를 고르면
+// 폼을 다시 그리는데 <input type=file> 값과 끌어둔 크롭은 되살릴 수 없어서
+// 여기 들고 있는다. null이면 수정 중인 장소의 저장값으로 다시 채운다.
+let placePhotoSlots = null;
 
 // list()는 한 번에 최대 100건이라 nextToken을 끝까지 따라간다. GraphQL
 // 에러는 reject가 아니라 errors 배열로 오므로 직접 확인해서 던진다.
@@ -1255,7 +1255,8 @@ function placeRowHtml(place, index, total) {
         ${place.description ? `<p class="field-hint">${escapeHtml(place.description)}</p>` : ""}
         ${place.quote ? `<p class="course-place-quote">“${escapeHtml(place.quote)}”</p>` : ""}
         ${place.youtubeUrl ? `<p class="field-hint">♪ ${escapeHtml([place.musicArtist, place.musicTitle].filter(Boolean).join(" - ") || "이 장소의 노래")}</p>` : ""}
-        ${place.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(place.photoKey)}"></div>` : ""}
+        ${place.photoKey ? `<div class="admin-card-photo" data-photo-key="${escapeHtml(place.photoKey)}" data-focus-x="${place.photoFocusX ?? 50}" data-focus-y="${place.photoFocusY ?? 50}"></div>` : ""}
+        ${Storage.getCoursePlacePhotos(place).length > 1 ? `<p class="field-hint">사진 ${Storage.getCoursePlacePhotos(place).length}장 (대표 사진만 보여요)</p>` : ""}
         <div class="admin-card-actions">
           <button class="btn-restore" data-place-action="up" data-place-id="${place.id}"${index === 0 ? " disabled" : ""}>↑</button>
           <button class="btn-restore" data-place-action="down" data-place-id="${place.id}"${index === total - 1 ? " disabled" : ""}>↓</button>
@@ -1288,11 +1289,7 @@ function placeFormHtml() {
       <p class="field-hint field-count" data-count-for="label"></p>
       <label>인용(선택)<textarea name="quote" rows="3" data-max-nonspace="${PLACE_QUOTE_MAX}" placeholder="책 속 한두 문장">${v("quote")}</textarea></label>
       <p class="field-hint field-count" data-count-for="quote"></p>
-      ${placePhotoFieldHtml(p)}
-      <label>사진 제목(선택)<input type="text" name="description" value="${v("description")}" data-max-nonspace="${PLACE_PHOTO_TITLE_MAX}" placeholder="사진 바로 아래에 작게 보여요" /></label>
-      <p class="field-hint field-count" data-count-for="description"></p>
-      <label>사진 출처(선택)<input type="text" name="photoCredit" value="${v("photoCredit")}" maxlength="30" placeholder="예: 군산시" /></label>
-      <p class="field-hint">사진 제목 아래에 "사진 출처 | 군산시"처럼 작게 보여요. 이름만 적어주세요.</p>
+      ${placePhotoFieldHtml()}
       <label>이 장소의 노래 — 유튜브 링크(선택)<input type="url" name="youtubeUrl" value="${v("youtubeUrl")}" placeholder="따라 걷는 동안 장소 노래들이 차례로 흘러요" /></label>
       <div class="course-music-row">
         <label>아티스트<input type="text" name="musicArtist" value="${v("musicArtist")}" /></label>
@@ -1370,63 +1367,126 @@ function resizeLogoFile(file) {
   });
 }
 
-// 장소 사진(선택, 1장) — 카드에 16:9로 잘려 보이므로 가로 사진이 좋다.
-// 직접 찍었거나 사용 허락을 받은 사진만 올린다.
-function getPlacePhotoFocus(p) {
-  return placePhotoFocus || { x: p?.photoFocusX ?? 50, y: p?.photoFocusY ?? 50 };
+// 장소 사진(선택, 최대 COURSE_PLACE_PHOTO_MAX장, 2026-10-16) — 카드에 16:9로
+// 잘려 보이므로 가로 사진이 좋고, 카드에서 옆으로 넘겨 본다. 1번이 대표
+// 사진이다. 직접 찍었거나 사용 허락을 받은 사진만 올린다.
+function getPlacePhotoSlots() {
+  if (!placePhotoSlots) {
+    const p = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((x) => x.id === editingPlaceId) : null;
+    placePhotoSlots = Storage.getCoursePlacePhotos(p).map((ph) => ({
+      key: ph.key,
+      file: null,
+      focus: { x: ph.focusX, y: ph.focusY },
+      title: ph.title,
+      credit: ph.credit,
+    }));
+  }
+  return placePhotoSlots;
 }
 
 // 미리보기 칸은 장소 카드 사진 칸과 같은 16:9 — 기억 카드 사진(js/composer.js
-// 사진 미리보기)처럼 사진을 끌어 보일 부분을 고른다(WYSIWYG).
-function placePhotoFieldHtml(p) {
-  const focus = getPlacePhotoFocus(p);
-  const focusAttrs = `data-focus-x="${focus.x}" data-focus-y="${focus.y}"`;
-  let preview = "";
-  if (placePhotoFile) {
-    preview = `<div class="admin-card-photo course-place-photo-crop" id="place-photo-crop" ${focusAttrs}><img src="${URL.createObjectURL(placePhotoFile)}" alt="" style="object-position:${focus.x}% ${focus.y}%" /></div>`;
-  } else if (p?.photoKey) {
-    preview = `<div class="admin-card-photo course-place-photo-crop" id="place-photo-crop" data-photo-key="${escapeHtml(p.photoKey)}" ${focusAttrs}></div>
-      <label class="course-photo-remove"><input type="checkbox" name="removePhoto" /> 사진 빼기</label>`;
-  }
+// 사진 미리보기)처럼 사진을 끌어 보일 부분을 고른다(WYSIWYG). 사진마다
+// 제목/출처를 따로 단다(카드에서 넘길 때 같이 바뀐다).
+function placePhotoFieldHtml() {
+  const slots = getPlacePhotoSlots();
+  const slotHtml = (slot, i) => {
+    const focusAttrs = `data-focus-x="${slot.focus.x}" data-focus-y="${slot.focus.y}"`;
+    if (slot.file && !slot.previewUrl) slot.previewUrl = URL.createObjectURL(slot.file);
+    const preview = slot.file
+      ? `<div class="admin-card-photo course-place-photo-crop" data-slot="${i}" ${focusAttrs}><img src="${slot.previewUrl}" alt="" style="object-position:${slot.focus.x}% ${slot.focus.y}%" /></div>`
+      : `<div class="admin-card-photo course-place-photo-crop" data-slot="${i}" data-photo-key="${escapeHtml(slot.key)}" ${focusAttrs}></div>`;
+    return `
+      <div class="course-place-photo-slot">
+        <div class="course-place-photo-slot-head">
+          <b>사진 ${i + 1}${i === 0 ? " · 대표" : ""}</b>
+          ${i > 0 ? `<button type="button" class="btn-restore" data-photo-slot-action="forward" data-slot="${i}">앞으로</button>` : ""}
+          <label class="btn-restore course-place-photo-replace">바꾸기<input type="file" accept="image/*" data-photo-slot-replace="${i}" hidden /></label>
+          <button type="button" class="btn-delete" data-photo-slot-action="remove" data-slot="${i}">빼기</button>
+        </div>
+        ${preview}
+        <label>사진 제목(선택)<input type="text" name="photoTitle${i}" value="${escapeHtml(slot.title)}" data-slot="${i}" data-slot-field="title" data-max-nonspace="${PLACE_PHOTO_TITLE_MAX}" placeholder="사진 바로 아래에 한 줄로 작게 보여요" /></label>
+        <p class="field-hint field-count" data-count-for="photoTitle${i}"></p>
+        <label>사진 출처(선택)<input type="text" name="photoCredit${i}" value="${escapeHtml(slot.credit)}" data-slot="${i}" data-slot-field="credit" maxlength="30" placeholder="예: 군산시" /></label>
+      </div>
+    `;
+  };
   return `
-    <label>사진(선택)<input type="file" name="photo" id="place-photo-input" accept="image/*" /></label>
-    ${preview}
-    <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보여요. ${preview ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+    <div class="course-place-photos">
+      ${slots.map(slotHtml).join("")}
+      ${slots.length < COURSE_PLACE_PHOTO_MAX ? `
+        <label>사진 추가(선택, ${slots.length} / ${COURSE_PLACE_PHOTO_MAX}장)<input type="file" id="place-photo-input" accept="image/*" /></label>
+      ` : ""}
+      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "사진 출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+    </div>
   `;
+}
+
+// 사진 칸 조작(추가/바꾸기/빼기/앞으로) 뒤에는 폼을 다시 그린다. 사진 칸이
+// 아닌 다른 칸에 적어둔 값은 keepPlaceFormFields가 지킨다.
+function bindPlacePhotoSlots(form) {
+  form.querySelectorAll("[data-slot-field]").forEach((input) => {
+    input.addEventListener("input", () => {
+      getPlacePhotoSlots()[Number(input.dataset.slot)][input.dataset.slotField] = input.value;
+    });
+  });
+  document.getElementById("place-photo-input")?.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    getPlacePhotoSlots().push({ key: null, file, focus: { x: 50, y: 50 }, title: "", credit: "" });
+    keepPlaceFormFields(renderCoursesTab);
+  });
+  form.querySelectorAll("[data-photo-slot-replace]").forEach((input) => {
+    input.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const slot = getPlacePhotoSlots()[Number(input.dataset.photoSlotReplace)];
+      Object.assign(slot, { key: null, file, previewUrl: null, focus: { x: 50, y: 50 } });
+      keepPlaceFormFields(renderCoursesTab);
+    });
+  });
+  form.querySelectorAll("[data-photo-slot-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const slots = getPlacePhotoSlots();
+      const i = Number(btn.dataset.slot);
+      if (btn.dataset.photoSlotAction === "remove") slots.splice(i, 1);
+      else [slots[i - 1], slots[i]] = [slots[i], slots[i - 1]];
+      keepPlaceFormFields(renderCoursesTab);
+    });
+  });
 }
 
 // 미리보기 사진 끌기 — js/composer.js 사진 미리보기와 같은 계산(넘치는 만큼을
 // 0~100%로 환산). 기존 사진은 hydrateAdminPhotos가 img를 나중에 넣으므로
 // 칸에 이벤트를 걸고 누를 때 img를 찾는다.
 function bindPlacePhotoCrop() {
-  const box = document.getElementById("place-photo-crop");
-  if (!box) return;
-  const p = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((x) => x.id === editingPlaceId) : null;
-  let drag = null;
-  box.addEventListener("pointerdown", (e) => {
-    const img = box.querySelector("img");
-    if (!img || !img.naturalWidth) return;
-    const scale = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
-    const overflowX = img.naturalWidth * scale - box.clientWidth;
-    const overflowY = img.naturalHeight * scale - box.clientHeight;
-    if (overflowX <= 0 && overflowY <= 0) return;
-    e.preventDefault();
-    box.setPointerCapture(e.pointerId);
-    drag = { img, overflowX, overflowY, startX: e.clientX, startY: e.clientY, start: { ...getPlacePhotoFocus(p) } };
-    box.classList.add("dragging");
-  });
-  box.addEventListener("pointermove", (e) => {
-    if (!drag) return;
-    const focus = { ...drag.start };
-    if (drag.overflowX > 0) focus.x = Math.min(100, Math.max(0, drag.start.x - ((e.clientX - drag.startX) / drag.overflowX) * 100));
-    if (drag.overflowY > 0) focus.y = Math.min(100, Math.max(0, drag.start.y - ((e.clientY - drag.startY) / drag.overflowY) * 100));
-    placePhotoFocus = focus;
-    drag.img.style.objectPosition = `${focus.x}% ${focus.y}%`;
-  });
-  ["pointerup", "pointercancel"].forEach((evt) => {
-    box.addEventListener(evt, () => {
-      drag = null;
-      box.classList.remove("dragging");
+  document.querySelectorAll(".course-place-photo-crop[data-slot]").forEach((box) => {
+    const slot = getPlacePhotoSlots()[Number(box.dataset.slot)];
+    let drag = null;
+    box.addEventListener("pointerdown", (e) => {
+      const img = box.querySelector("img");
+      if (!img || !img.naturalWidth) return;
+      const scale = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
+      const overflowX = img.naturalWidth * scale - box.clientWidth;
+      const overflowY = img.naturalHeight * scale - box.clientHeight;
+      if (overflowX <= 0 && overflowY <= 0) return;
+      e.preventDefault();
+      box.setPointerCapture(e.pointerId);
+      drag = { img, overflowX, overflowY, startX: e.clientX, startY: e.clientY, start: { ...slot.focus } };
+      box.classList.add("dragging");
+    });
+    box.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const focus = { ...drag.start };
+      if (drag.overflowX > 0) focus.x = Math.min(100, Math.max(0, drag.start.x - ((e.clientX - drag.startX) / drag.overflowX) * 100));
+      if (drag.overflowY > 0) focus.y = Math.min(100, Math.max(0, drag.start.y - ((e.clientY - drag.startY) / drag.overflowY) * 100));
+      slot.focus = focus;
+      drag.img.style.objectPosition = `${focus.x}% ${focus.y}%`;
+    });
+    ["pointerup", "pointercancel"].forEach((evt) => {
+      box.addEventListener(evt, () => {
+        drag = null;
+        box.classList.remove("dragging");
+      });
     });
   });
 }
@@ -1489,22 +1549,17 @@ async function renderCoursesTab() {
         handlePlaceSearch();
       }
     });
-    document.getElementById("place-photo-input").addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      placePhotoFile = file;
-      placePhotoFocus = { x: 50, y: 50 };
-      keepPlaceFormFields(renderCoursesTab);
-    });
+    bindPlacePhotoSlots(placeForm);
   }
   hydrateAdminPhotos();
   bindPlacePhotoCrop();
 }
 
-// 폼을 다시 그려도 적어둔 이름/꼬리표/사진 제목·출처/인용은 남게 한다.
+// 폼을 다시 그려도 적어둔 이름/꼬리표/인용/노래는 남게 한다. 사진 제목·출처는
+// 사진 칸(placePhotoSlots)이 들고 있다.
 function keepPlaceFormFields(rerender) {
   const form = document.getElementById("place-form");
-  const kept = Object.fromEntries(["name", "label", "description", "photoCredit", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
+  const kept = Object.fromEntries(["name", "label", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
   rerender();
   const newForm = document.getElementById("place-form");
   Object.entries(kept).forEach(([k, val]) => {
@@ -1623,8 +1678,7 @@ async function handleCourseAction(action, courseId) {
     selectedCourseId = selectedCourseId === courseId ? null : courseId;
     editingPlaceId = null;
     placeDraft = null;
-    placePhotoFile = null;
-    placePhotoFocus = null;
+    placePhotoSlots = null;
   } else if (action === "edit") {
     editingCourseId = courseId;
     renderCoursesTab();
@@ -1687,9 +1741,9 @@ async function handlePlaceSearch() {
 function pickSearchResult(index) {
   const d = document.getElementById("place-search-results")._results?.[index];
   if (!d) return;
-  // 고르기 전에 폼에 적어둔 꼬리표/설명/인용은 다시 그려도 남게 한다.
+  // 고르기 전에 폼에 적어둔 꼬리표/인용/노래는 다시 그려도 남게 한다.
   const form = document.getElementById("place-form");
-  const kept = Object.fromEntries(["label", "description", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
+  const kept = Object.fromEntries(["label", "quote", "youtubeUrl", "musicArtist", "musicTitle"].map((k) => [k, form.elements[k].value]));
   placeDraft = {
     name: d.place_name,
     address: d.road_address_name || d.address_name || null,
@@ -1720,31 +1774,47 @@ async function handlePlaceSubmit(e) {
     alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
     return;
   }
-  let photoKey = existing?.photoKey || null;
-  if (f.get("removePhoto")) photoKey = null;
-  if (placePhotoFile) {
-    try {
-      const blob = await PhotoUpload.resizeImageFile(placePhotoFile);
-      photoKey = `story-photos/course-${selectedCourseId}-${Date.now()}.jpg`;
-      await uploadData({ path: photoKey, data: blob, options: { contentType: "image/jpeg" } }).result;
-    } catch (err) {
-      console.error("장소 사진 업로드 실패", err);
-      alert(`사진을 올리지 못했어요. ${err.message || ""}`);
-      return;
+  // 사진 칸 순서대로 — 새로 고른 사진만 올리고, 1번은 예전 필드에, 나머지는
+  // extraPhotos에 담는다(Storage.getCoursePlacePhotos와 반대 방향).
+  const photos = [];
+  for (const slot of getPlacePhotoSlots()) {
+    let key = slot.key;
+    if (slot.file) {
+      try {
+        const blob = await PhotoUpload.resizeImageFile(slot.file);
+        key = `story-photos/course-${selectedCourseId}-${Date.now()}-${photos.length}.jpg`;
+        await uploadData({ path: key, data: blob, options: { contentType: "image/jpeg" } }).result;
+        // 저장이 뒤에서 실패해도 다시 누를 때 또 올리지 않게
+        Object.assign(slot, { key, file: null });
+      } catch (err) {
+        console.error("장소 사진 업로드 실패", err);
+        alert(`사진을 올리지 못했어요. ${err.message || ""}`);
+        return;
+      }
     }
+    photos.push({
+      key,
+      focusX: Math.round(slot.focus.x),
+      focusY: Math.round(slot.focus.y),
+      title: slot.title.trim() || null,
+      credit: slot.credit.trim() || null,
+    });
   }
-  const focus = getPlacePhotoFocus(existing);
+  const [first, ...extras] = photos;
   const fields = {
-    photoKey,
-    photoFocusX: photoKey ? Math.round(focus.x) : null,
-    photoFocusY: photoKey ? Math.round(focus.y) : null,
+    photoKey: first?.key || null,
+    photoFocusX: first ? first.focusX : null,
+    photoFocusY: first ? first.focusY : null,
+    // 사진 없는 장소의 description은 예전에 쓰던 본문 글이라 그대로 둔다
+    // (사진이 있다가 다 뺀 경우엔 사진 제목이었으니 지운다).
+    description: first ? first.title : existing?.photoKey ? null : existing?.description ?? null,
+    photoCredit: first ? first.credit : null,
+    extraPhotos: extras.length ? extras : null,
     name: f.get("name").trim() || location.name,
     lat: location.lat,
     lng: location.lng,
     address: location.address || null,
     label: f.get("label").trim() || null,
-    description: f.get("description").trim() || null,
-    photoCredit: photoKey ? f.get("photoCredit").trim() || null : null,
     quote: f.get("quote").trim() || null,
     youtubeUrl,
     musicArtist: f.get("musicArtist").trim() || null,
@@ -1765,8 +1835,7 @@ async function handlePlaceSubmit(e) {
     coursePlacesById[selectedCourseId] = [...list, created];
   }
   placeDraft = null;
-  placePhotoFile = null;
-  placePhotoFocus = null;
+  placePhotoSlots = null;
   renderCoursesTab();
 }
 
@@ -1781,16 +1850,14 @@ async function handlePlaceAction(action, placeId) {
   if (action === "edit") {
     editingPlaceId = placeId;
     placeDraft = null;
-    placePhotoFile = null;
-    placePhotoFocus = null;
+    placePhotoSlots = null;
     renderCoursesTab();
     document.getElementById("place-form").scrollIntoView({ behavior: "smooth" });
     return;
   } else if (action === "cancel-edit") {
     editingPlaceId = null;
     placeDraft = null;
-    placePhotoFile = null;
-    placePhotoFocus = null;
+    placePhotoSlots = null;
   } else if (action === "up" || action === "down") {
     const other = list[action === "up" ? index - 1 : index + 1];
     if (!other) return;
