@@ -936,3 +936,25 @@ test("getCoursePhotoStartIndex: 처음엔 1번, 본 다음엔 다음 장, 끝이
   assert.equal(Storage.getCoursePhotoStartIndex("p1", 2), 0);
   assert.equal(Storage.getCoursePhotoStartIndex("p1", 1), 0);
 });
+
+test("getCourseProgress: 보던 장소부터 이어 걷기, 다 보면 처음부터", () => {
+  localStorage.clear();
+  const course = { id: "c1", places: [{ id: "a" }, { id: "b" }, { id: "c" }] };
+  assert.deepEqual(Storage.getCourseProgress(course), { resumeIndex: null, seenCount: 0, finished: false });
+  Storage.markCoursePlaceSeen("c1", "a");
+  // 첫 장소에서 나갔으면 이어 걸을 게 없다
+  assert.equal(Storage.getCourseProgress(course).resumeIndex, null);
+  Storage.markCoursePlaceSeen("c1", "b");
+  assert.deepEqual(Storage.getCourseProgress(course), { resumeIndex: 1, seenCount: 2, finished: false });
+  // 어드민이 순서를 바꿔도 같은 장소로
+  assert.equal(Storage.getCourseProgress({ id: "c1", places: [{ id: "b" }, { id: "c" }, { id: "a" }] }).resumeIndex, null);
+  assert.equal(Storage.getCourseProgress({ id: "c1", places: [{ id: "c" }, { id: "a" }, { id: "b" }] }).resumeIndex, 2);
+  // 그 장소가 지워졌으면 처음부터
+  assert.equal(Storage.getCourseProgress({ id: "c1", places: [{ id: "a" }, { id: "c" }] }).resumeIndex, null);
+  Storage.markCourseFinished("c1");
+  assert.deepEqual(Storage.getCourseProgress(course), { resumeIndex: null, seenCount: 2, finished: true });
+  Storage.markCoursePlaceSeen("c1", "a");
+  assert.equal(Storage.getCourseProgress(course).finished, false);
+  Storage.resetCourseProgress("c1");
+  assert.deepEqual(Storage.getCourseProgress(course), { resumeIndex: null, seenCount: 0, finished: false });
+});

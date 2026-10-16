@@ -36,6 +36,11 @@ const STORY_CACHE_KEY = "concrete_sapiens_story_cache_v1";
 // 카드를 열면 그 다음 사진부터 보여준다(인스타그램처럼). 보기 편의일 뿐이라
 // 계정이 아니라 이 브라우저에만 둔다. { [placeId]: index }
 const COURSE_PHOTO_SEEN_KEY = "concrete_sapiens_course_photo_seen_v1";
+// 발자취 따라 걷기 진행(2026-10-16) — 장소가 많은 코스를 다시 열면 지난번
+// 보던 장소부터 이어 걷게. 사진 번호처럼 보기 편의라 이 브라우저에만 둔다.
+// { [courseId]: { lastPlaceId, seen: [placeId...], finished } } — 번호가 아니라
+// 장소 id로 기억해서 어드민이 순서를 바꿔도 같은 장소로 돌아간다.
+const COURSE_PROGRESS_KEY = "concrete_sapiens_course_progress_v1";
 // 발자취 장소 하나에 올릴 수 있는 사진 수(js/admin.js, js/course.js)
 const COURSE_PLACE_PHOTO_MAX = 3;
 
@@ -989,6 +994,64 @@ const Storage = {
     } catch (e) {
       // 시크릿 창 등 저장이 막혀도 매번 1번부터 보일 뿐이다.
     }
+  },
+
+  _readCourseProgressAll() {
+    try {
+      return JSON.parse(localStorage.getItem(COURSE_PROGRESS_KEY) || "{}") || {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  _writeCourseProgressAll(all) {
+    try {
+      localStorage.setItem(COURSE_PROGRESS_KEY, JSON.stringify(all));
+    } catch (e) {
+      // 저장이 막혀도 매번 처음부터 걸을 뿐이다.
+    }
+  },
+
+  /**
+   * 코스 진행 요약 — 지금 코스에 남아 있는 장소 기준으로 센다.
+   * resumeIndex: 이어 걸을 장소 순서(지난번 마지막으로 보던 장소). 첫 장소였거나,
+   *   끝까지 다 봤거나, 그 장소가 지워졌으면 null(처음부터).
+   * seenCount: 둘러본 장소 수, finished: 마지막 카드까지 다 봤는지.
+   */
+  getCourseProgress(course) {
+    const progress = this._readCourseProgressAll()[course.id];
+    if (!progress) return { resumeIndex: null, seenCount: 0, finished: false };
+    const seen = new Set(progress.seen || []);
+    const index = course.places.findIndex((p) => p.id === progress.lastPlaceId);
+    return {
+      resumeIndex: !progress.finished && index > 0 ? index : null,
+      seenCount: course.places.filter((p) => seen.has(p.id)).length,
+      finished: Boolean(progress.finished),
+    };
+  },
+
+  markCoursePlaceSeen(courseId, placeId) {
+    const all = this._readCourseProgressAll();
+    const progress = all[courseId] || { seen: [] };
+    all[courseId] = {
+      lastPlaceId: placeId,
+      seen: [...new Set([...(progress.seen || []), placeId])],
+      finished: false,
+    };
+    this._writeCourseProgressAll(all);
+  },
+
+  markCourseFinished(courseId) {
+    const all = this._readCourseProgressAll();
+    all[courseId] = { ...(all[courseId] || { seen: [] }), lastPlaceId: null, finished: true };
+    this._writeCourseProgressAll(all);
+  },
+
+  /** "처음부터 걷기" — 둘러본 기록까지 비우고 새로 센다. */
+  resetCourseProgress(courseId) {
+    const all = this._readCourseProgressAll();
+    delete all[courseId];
+    this._writeCourseProgressAll(all);
   },
 
   getStoriesNear(lat, lng, radiusMeters) {
