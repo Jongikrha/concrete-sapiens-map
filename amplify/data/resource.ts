@@ -253,6 +253,16 @@ const schema = a.schema({
       allow.group('Admins'),
     ]),
 
+  // 발자취 장소의 추가 사진 한 장(CoursePlace.extraPhotos) — 필드 뜻은
+  // 1번 사진의 photoKey/photoFocusX·Y/description/photoCredit과 같다.
+  CoursePlacePhoto: a.customType({
+    key: a.string().required(),
+    focusX: a.float(),
+    focusY: a.float(),
+    title: a.string(),
+    credit: a.string(),
+  }),
+
   CoursePlace: a
     .model({
       courseId: a.string().required(),
@@ -277,6 +287,11 @@ const schema = a.schema({
       // 높이를 보여줄지 어드민에서 끌어서 정한다(object-position).
       photoFocusX: a.float(),
       photoFocusY: a.float(),
+      // 장소 사진 2~3번째(선택, 2026-10-16) — 카드에서 옆으로 넘겨 본다.
+      // 1번(대표) 사진은 위 photoKey/photoFocusX·Y/description(사진 제목)/
+      // photoCredit 그대로 두고 나머지만 여기 담는다 — 기존 장소 데이터를
+      // 옮기지 않아도 되고, 대표 사진을 읽는 곳은 손댈 필요가 없다.
+      extraPhotos: a.ref('CoursePlacePhoto').array(),
       // 장소 노래(선택, 2026-10-13) — 코스 배경음악(Course.youtubeUrl) 위에
       // 섞는다. 노래가 있는 장소에 오면 그 곡으로 바뀌고, 없는 장소에선
       // 흐르던 곡이 그대로 이어진다(js/course.js playPlaceSong).
