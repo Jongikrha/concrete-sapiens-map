@@ -907,3 +907,32 @@ test("getCityLabel은 매칭되는 시/도가 없거나 주소가 없으면 null
   assert.equal(Storage.getCityLabel(null), null);
   assert.equal(Storage.getCityLabel(""), null);
 });
+
+test("getCoursePlacePhotos: 사진이 없으면 빈 목록", () => {
+  assert.deepEqual(Storage.getCoursePlacePhotos({ description: "옛 설명" }), []);
+});
+
+test("getCoursePlacePhotos: 1번은 예전 필드, 2번부터 extraPhotos, 최대 3장", () => {
+  const photos = Storage.getCoursePlacePhotos({
+    photoKey: "a.jpg",
+    photoFocusX: 10,
+    description: "제목",
+    photoCredit: "군산시",
+    extraPhotos: [{ key: "b.jpg", title: "둘" }, null, { key: "c.jpg" }, { key: "d.jpg" }],
+  });
+  assert.deepEqual(photos.map((p) => p.key), ["a.jpg", "b.jpg", "c.jpg"]);
+  assert.deepEqual(photos[0], { key: "a.jpg", focusX: 10, focusY: 50, title: "제목", credit: "군산시" });
+  assert.deepEqual(photos[1], { key: "b.jpg", focusX: 50, focusY: 50, title: "둘", credit: "" });
+});
+
+test("getCoursePhotoStartIndex: 처음엔 1번, 본 다음엔 다음 장, 끝이면 다시 1번", () => {
+  assert.equal(Storage.getCoursePhotoStartIndex("p1", 3), 0);
+  Storage.markCoursePhotoSeen("p1", 0);
+  assert.equal(Storage.getCoursePhotoStartIndex("p1", 3), 1);
+  Storage.markCoursePhotoSeen("p1", 2);
+  assert.equal(Storage.getCoursePhotoStartIndex("p1", 3), 0);
+  // 사진이 줄어도 범위 안으로 돌아온다
+  Storage.markCoursePhotoSeen("p1", 1);
+  assert.equal(Storage.getCoursePhotoStartIndex("p1", 2), 0);
+  assert.equal(Storage.getCoursePhotoStartIndex("p1", 1), 0);
+});

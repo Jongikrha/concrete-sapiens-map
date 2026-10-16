@@ -32,6 +32,12 @@ const READ_STORIES_KEY = "concrete_sapiens_read_stories_v1";
 // 스토리 수가 아주 많아지면(수만 건) 이 캐시 자체도 커지겠지만, localStorage
 // 한도(보통 5~10MB)에는 아직 여유가 커서 지금은 그대로 둔다.
 const STORY_CACHE_KEY = "concrete_sapiens_story_cache_v1";
+// 발자취 장소마다 마지막으로 본 사진 번호(2026-10-16) — 다음에 그 장소
+// 카드를 열면 그 다음 사진부터 보여준다(인스타그램처럼). 보기 편의일 뿐이라
+// 계정이 아니라 이 브라우저에만 둔다. { [placeId]: index }
+const COURSE_PHOTO_SEEN_KEY = "concrete_sapiens_course_photo_seen_v1";
+// 발자취 장소 하나에 올릴 수 있는 사진 수(js/admin.js, js/course.js)
+const COURSE_PLACE_PHOTO_MAX = 3;
 
 // "새 글" 지도 표시(2026-08-27)의 기준 시각 — markVisitAndGetUnseenThreshold()가
 // 앱 부팅 시 한 번 채워두고, 세션 내내 이 값을 기준으로 isUnseen()을 판정한다.
@@ -937,6 +943,52 @@ const Storage = {
       .filter((c) => c.isPublished && placesByCourse[c.id]?.length)
       .map((c) => ({ ...c, places: placesByCourse[c.id].sort((a, b) => a.seq - b.seq) }))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  },
+
+  /**
+   * 발자취 장소 사진들(최대 COURSE_PLACE_PHOTO_MAX장, 2026-10-16) — 1번(대표)은
+   * 예전 필드(photoKey/photoFocusX·Y/description/photoCredit), 2번부터는
+   * extraPhotos에 있다(amplify/data/resource.ts CoursePlace). 카드와 어드민이
+   * 같은 모양 { key, focusX, focusY, title, credit }으로 다루게 합친다.
+   */
+  getCoursePlacePhotos(place) {
+    if (!place?.photoKey) return [];
+    const first = {
+      key: place.photoKey,
+      focusX: place.photoFocusX ?? 50,
+      focusY: place.photoFocusY ?? 50,
+      title: place.description || "",
+      credit: place.photoCredit || "",
+    };
+    const extras = (place.extraPhotos || [])
+      .filter((p) => p?.key)
+      .map((p) => ({ key: p.key, focusX: p.focusX ?? 50, focusY: p.focusY ?? 50, title: p.title || "", credit: p.credit || "" }));
+    return [first, ...extras].slice(0, COURSE_PLACE_PHOTO_MAX);
+  },
+
+  /**
+   * 이 장소 카드를 열 때 처음 보여줄 사진 번호 — 지난번에 마지막으로 본
+   * 사진의 다음 장(끝이면 다시 1번). 처음 보는 장소면 1번(0).
+   */
+  getCoursePhotoStartIndex(placeId, count) {
+    if (count <= 1) return 0;
+    let seen;
+    try {
+      seen = JSON.parse(localStorage.getItem(COURSE_PHOTO_SEEN_KEY) || "{}")[placeId];
+    } catch (e) {
+      return 0;
+    }
+    return Number.isInteger(seen) ? (seen + 1) % count : 0;
+  },
+
+  markCoursePhotoSeen(placeId, index) {
+    try {
+      const seen = JSON.parse(localStorage.getItem(COURSE_PHOTO_SEEN_KEY) || "{}");
+      seen[placeId] = index;
+      localStorage.setItem(COURSE_PHOTO_SEEN_KEY, JSON.stringify(seen));
+    } catch (e) {
+      // 시크릿 창 등 저장이 막혀도 매번 1번부터 보일 뿐이다.
+    }
   },
 
   getStoriesNear(lat, lng, radiusMeters) {
