@@ -124,6 +124,21 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 발자취 장소 "가보고 싶어요"(2026-10-16) — 따라 걷다가 직접 가보고 싶은
+  // 장소를 계정에 모아둔다(계정 메뉴 "가보고 싶은 곳"). "내 것"이라
+  // StoryReaction과 같이 로그인 계정(owner) 기준이고 브라우저에는 두지 않는다.
+  // courseId는 목록에서 "어느 코스의 몇 번째 장소"를 보여주고, 나중에 코스별로
+  // 많이 담긴 장소를 세는 데 쓴다.
+  PlaceWish: a
+    .model({
+      placeId: a.string().required(),
+      courseId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'delete']),
+      allow.group('Admins').to(['read']),
+    ]),
+
   // "떠올랐어요" 알림 메일 수신 거부(2026-10-08) — 레코드가 있으면 거부.
   // 메일의 수신 거부 링크(amplify/functions/reaction-digest/unsubscribe.ts)가
   // DynamoDB에 직접 쓰고, 화면에서는 관리자 + 본인만 읽는다. 본인 읽기는
