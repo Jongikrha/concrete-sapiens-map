@@ -1267,6 +1267,16 @@
               "isRequired": false,
               "attributes": []
             },
+            "extraPhotos": {
+              "name": "extraPhotos",
+              "isArray": true,
+              "type": {
+                "nonModel": "CoursePlacePhoto"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
             "youtubeUrl": {
               "name": "youtubeUrl",
               "isArray": false,
@@ -1434,6 +1444,46 @@
       },
       "enums": {},
       "nonModels": {
+        "CoursePlacePhoto": {
+          "name": "CoursePlacePhoto",
+          "fields": {
+            "key": {
+              "name": "key",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "focusX": {
+              "name": "focusX",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "focusY": {
+              "name": "focusY",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "title": {
+              "name": "title",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "credit": {
+              "name": "credit",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
         "AdminUser": {
           "name": "AdminUser",
           "fields": {
