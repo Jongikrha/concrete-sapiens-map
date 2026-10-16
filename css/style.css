@@ -5977,7 +5977,8 @@ button.story-place-line:hover {
   grid-template-columns: 1fr;
 }
 
-.course-detail-book .book3d {
+.course-detail-book .book3d,
+.course-detail-book .cover-art {
   --book-w: 190px;
 }
 
@@ -6056,7 +6057,8 @@ button.story-place-line:hover {
     padding: 0;
   }
 
-  .course-detail-book .book3d {
+  .course-detail-book .book3d,
+  .course-detail-book .cover-art {
     --book-w: 128px;
   }
 
@@ -6122,4 +6124,16 @@ button.story-place-line:hover {
   height: 1px;
   background: currentColor;
   opacity: 0.3;
+}
+
+/* 음악 코스 표지 썸네일(2026-10-16) — 앨범 커버라 정사각형 칸 */
+.course-choice-cover.course-cover--music,
+.archive-course-cover.course-cover--music,
+.course-intro-cover.course-cover--music {
+  aspect-ratio: 1 / 1;
+}
+
+/* 아카이브 줄에선 세로 표지들 사이에서 키가 작으니 아래로 붙여 제목 높이를 맞춘다 */
+.archive-course-cover.course-cover--music {
+  margin-top: auto;
 }

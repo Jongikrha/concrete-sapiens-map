@@ -53,6 +53,51 @@ function renderBook3d(container, url, spineRatio) {
 }
 
 /**
+ * 코스 종류(Course.kind)에 맞는 모양으로 표지를 그린다(2026-10-16) — 책만
+ * 책등이 보이는 입체 책이고, 나머지는 책등 없이: 음악은 정사각형 앨범
+ * 커버 뒤로 LP판이 오른쪽으로 삐져나오고, 드라마·영화는 세로 포스터,
+ * 인물은 폴라로이드 사진, 그 외(단체·기타)는 평평한 이미지. 크기는 책과
+ * 같은 --book-w를 따른다(css/book3d.css). kind가 비어 있으면 예전 코스라
+ * 책으로 본다(어드민 기본값도 책).
+ * @returns {Promise<boolean>} 그렸으면 true, 이미지를 못 받았으면 false
+ */
+function renderCourseCover(container, url, kind, spineRatio) {
+  if (isBookCourseKind(kind)) return renderBook3d(container, url, spineRatio);
+  const token = String(Math.random());
+  container.dataset.book3dToken = token;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (container.dataset.book3dToken !== token) return resolve(false);
+      const cssUrl = `url("${url.replace(/"/g, "%22").replace(/'/g, "%27")}")`;
+      const aspect = img.naturalHeight / img.naturalWidth;
+      if (kind === "music") {
+        container.innerHTML = `
+          <div class="cover-art cover-album">
+            <div class="cover-album-disc"><div class="cover-album-label" style='background-image:${cssUrl}'></div></div>
+            <div class="cover-album-sleeve" style='background-image:${cssUrl}'></div>
+          </div>`;
+      } else {
+        const shape = { drama: "cover-poster", person: "cover-polaroid" }[kind] || "cover-flat";
+        container.innerHTML = `
+          <div class="cover-art ${shape}" style="--cover-aspect:${aspect}">
+            <div class="cover-art-img" style='background-image:${cssUrl}'></div>
+          </div>`;
+      }
+      resolve(true);
+    };
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+}
+
+// 책등을 쓰는 종류인지 — 표지 썸네일(js/course.js fillCoverSlot)과 어드민
+// 책등 경계 슬라이더도 이걸로 가른다.
+function isBookCourseKind(kind) {
+  return !kind || kind === "book";
+}
+
+/**
  * 책등+앞표지 이미지에서 책등 경계(왼쪽부터의 폭 비율)를 추정한다 — 왼쪽
  * 40% 안에서 세로로 가장 뚜렷하게 색이 바뀌는 선(책등과 앞표지 사이 접힘)을
  * 찾는다. 같은 출처 이미지(방금 고른 파일의 object URL)여야 픽셀을 읽을 수

@@ -153,13 +153,13 @@ function openCourseChoice() {
     <div class="course-choice-list">
       ${publishedCourses.map((c, i) => `
         <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
-          <span class="course-choice-cover">
-            ${c.coverKey ? `<span class="course-choice-cover-img" data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${c.coverSpineRatio || 0}"></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
+          <span class="course-choice-cover${courseCoverKindClass(c)}">
+            ${c.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(c)}></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
           </span>
           <span class="course-choice-text">
             ${i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
             <span class="course-choice-title">${escapeHtml(c.title)}</span>
-            ${c.author ? `<span class="course-choice-author">${escapeHtml(c.author)} 지음</span>` : ""}
+            ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳</span>
           </span>
@@ -201,7 +201,23 @@ function openCourseChoice() {
   document.getElementById("course-choice-overlay").classList.remove("hidden");
 }
 
-const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", org: "단체" };
+const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", music: "음악", org: "단체" };
+
+// 코스 목록 제목 아래 "OOO 지음" — 종류에 따라 붙는 말이 다르다(2026-10-16).
+const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출" };
+function courseAuthorLine(c) {
+  return `${c.author} ${COURSE_AUTHOR_SUFFIX[c.kind] || "지음"}`;
+}
+
+// 표지 썸네일 공통 속성 — 책등은 책 코스에만 있으니 다른 종류는 비율을 0으로
+// 둬서 이미지를 자르지 않고, 음악은 정사각형 칸(.course-cover--music)에 넣는다.
+function courseCoverSlotAttrs(c) {
+  const ratio = isBookCourseKind(c.kind) ? c.coverSpineRatio || 0 : 0;
+  return `data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${ratio}"`;
+}
+function courseCoverKindClass(c) {
+  return c.kind === "music" ? " course-cover--music" : "";
+}
 
 // data-photo-key를 가진 표지 슬롯에 이미지를 채운다(못 받으면 슬롯 제거).
 // 책등+앞표지 이미지(data-spine-ratio > 0)면 이미지를 그만큼 넓게 그리고
@@ -275,7 +291,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
         book.remove();
         return;
       }
-      renderBook3d(book, url, course.coverSpineRatio).then((ok) => {
+      renderCourseCover(book, url, course.kind, course.coverSpineRatio).then((ok) => {
         if (!ok && book.isConnected) book.remove();
       });
     });
@@ -330,7 +346,7 @@ function buildArchiveCourseRowHtml() {
       <div class="archive-course-items">
         ${publishedCourses.map((c, i) => `
           <button type="button" class="archive-course-item" data-course-index="${i}" aria-label="${escapeHtml(c.title)}">
-            ${c.coverKey ? `<span class="archive-course-cover" data-photo-key="${escapeHtml(c.coverKey)}" data-spine-ratio="${c.coverSpineRatio || 0}"></span>` : ""}
+            ${c.coverKey ? `<span class="archive-course-cover${courseCoverKindClass(c)}" ${courseCoverSlotAttrs(c)}></span>` : ""}
             <span class="archive-course-title">${escapeHtml(c.title)}</span>
           </button>
         `).join("")}
@@ -719,7 +735,7 @@ function renderCourseCard() {
           <h2 class="course-card-title">${escapeHtml(activeCourse.title)}</h2>
           ${activeCourse.description ? `<p class="story-content">${escapeHtml(activeCourse.description)}</p>` : ""}
         </div>
-        ${activeCourse.coverKey ? `<div class="course-intro-cover" data-photo-key="${escapeHtml(activeCourse.coverKey)}" data-spine-ratio="${activeCourse.coverSpineRatio || 0}"></div>` : ""}
+        ${activeCourse.coverKey ? `<div class="course-intro-cover${courseCoverKindClass(activeCourse)}" ${courseCoverSlotAttrs(activeCourse)}></div>` : ""}
       </div>
       <div class="course-card-links">
         ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
@@ -805,12 +821,13 @@ function setCourseMapFolded(folded) {
 
 // 장소 카드 "콘크리트 사피엔스 · 1 / 5" 앞 아이콘 — 코스 종류(Course.kind)를
 // 따라 자동으로 고른다(책이면 펼친 책, 드라마·영화면 클래퍼보드, 인물이면
-// 사람, 그 외엔 칩과 같은 발자국). 글자색을 따라가는 선 아이콘.
+// 사람, 음악이면 음표, 그 외엔 칩과 같은 발자국). 글자색을 따라가는 선 아이콘.
 function courseKindIconSvg(kind) {
   const paths = {
     book: '<path d="M12 6.5C10.3 5.2 7.9 4.6 4 4.8v13.4c3.9-.2 6.3.4 8 1.7 1.7-1.3 4.1-1.9 8-1.7V4.8c-3.9-.2-6.3.4-8 1.7zM12 6.5v13.4" />',
     drama: '<path d="M4 9.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5zM4 9.5 3.3 6.6a1 1 0 0 1 .7-1.2l13.6-3.3a1 1 0 0 1 1.2.7l.6 2.6L4 9.5zM8.2 4.4l2.4 3.4M13.2 3.2l2.4 3.4" />',
     person: '<circle cx="12" cy="8" r="3.6" /><path d="M5 20c.8-3.9 3.6-6 7-6s6.2 2.1 7 6" />',
+    music: '<path d="M9 17.5V5.5l10-2v12" /><circle cx="6.5" cy="17.5" r="2.5" /><circle cx="16.5" cy="15.5" r="2.5" />',
   };
   if (!paths[kind]) return COURSE_CHIP_ICON.replace('class="course-entry-icon"', 'class="course-card-kicker-icon"');
   return `<svg class="course-card-kicker-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind]}</svg>`;
