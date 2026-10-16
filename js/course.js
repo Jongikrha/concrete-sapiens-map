@@ -161,7 +161,7 @@ function openCourseChoice() {
             <span class="course-choice-title">${escapeHtml(c.title)}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳</span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
           </span>
           <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
         </div>
@@ -199,6 +199,14 @@ function openCourseChoice() {
   panel.querySelectorAll(".course-choice-cover-img").forEach(fillCoverSlot);
   panel.scrollTop = 0;
   document.getElementById("course-choice-overlay").classList.remove("hidden");
+}
+
+// 목록 카드 "장소 20곳" 뒤에 붙는 진행 표시 — 다 본 코스는 "다 둘러봄",
+// 걷다 만 코스는 "5곳 둘러봄". 처음 보는 코스엔 아무것도 안 붙는다.
+function courseProgressNote(c) {
+  const { seenCount, finished } = Storage.getCourseProgress(c);
+  if (finished) return " · 다 둘러봄";
+  return seenCount > 0 ? ` · ${seenCount}곳 둘러봄` : "";
 }
 
 const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", music: "음악", org: "단체" };
@@ -251,6 +259,9 @@ function fillCoverSlot(slot) {
 // ------------------------------------------------------------
 function openCourseDetail(course, { fromList = false } = {}) {
   const panel = document.getElementById("course-detail-panel");
+  // 지난번에 걷다 만 코스면 보던 장소부터 이어 걷기(2026-10-16) — 바로
+  // 그 장소로 보내면 왜 중간부터인지 헷갈려서 소개 화면에서 고르게 한다.
+  const { resumeIndex } = Storage.getCourseProgress(course);
   // 시안(2026-10-13): 왼쪽 입체 책 표지, 오른쪽에 제목·부제(description)·
   // 소개 글(intro)·고정 문구, 아래 "따라 걷기 시작". 장소 목록은 뺐다
   // (걷기 시작하면 바로 보이니 여기선 콘텐츠 소개에 집중). 아래 주황
@@ -278,9 +289,10 @@ function openCourseDetail(course, { fromList = false } = {}) {
     </div>
     <div class="course-detail-footer">
       <button type="button" class="btn-primary course-detail-start" id="course-detail-start">
-        <span>따라 걷기 시작</span>
+        ${resumeIndex === null ? "<span>따라 걷기 시작</span>" : `<span class="course-detail-resume-label">이어 걷기 · ${resumeIndex + 1}/${course.places.length} ${escapeHtml(course.places[resumeIndex].name)}</span>`}
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
+      ${resumeIndex === null ? "" : `<button type="button" class="course-detail-restart" id="course-detail-restart">처음부터 걷기</button>`}
     </div>
   `;
   const book = document.getElementById("course-detail-book");
@@ -308,8 +320,18 @@ function openCourseDetail(course, { fromList = false } = {}) {
   };
   document.getElementById("course-detail-share").onclick = (e) => shareCourseLink(course, e.currentTarget);
   document.getElementById("course-detail-start").onclick = () => {
+    // 처음부터 시작하면(처음 보거나 지난번에 다 본 코스) 둘러본 수도 새로 센다
+    if (resumeIndex === null) Storage.resetCourseProgress(course.id);
+    else Storage.logEvent(`course_resumed:${course.slug}`);
     closeCourseDetail();
-    startCourseWalk(course);
+    startCourseWalk(course, resumeIndex ?? 0);
+  };
+  const restart = document.getElementById("course-detail-restart");
+  if (restart) restart.onclick = () => {
+    Storage.resetCourseProgress(course.id);
+    Storage.logEvent(`course_restarted:${course.slug}`);
+    closeCourseDetail();
+    startCourseWalk(course, 0);
   };
   panel.scrollTop = 0;
   document.getElementById("course-detail-overlay").classList.remove("hidden");
@@ -385,7 +407,7 @@ function closeCourseChoice() {
   document.getElementById("course-choice-overlay").classList.add("hidden");
 }
 
-function startCourseWalk(course) {
+function startCourseWalk(course, startIndex = 0) {
   if (recallSessionOpen || courseModeOpen) return;
   clearFilters();
   closeSlider();
@@ -407,9 +429,9 @@ function startCourseWalk(course) {
   courseSongs = buildCourseSongs(course);
   // 다른 기억 카드에서 틀어둔 노래는 여기서 끊는다(js/recall.js
   // openRecallSessionShell과 같은 이유). 소개 화면에서 "따라 걷기 시작"을
-  // 누른 거라 첫 장소부터 보여준다.
+  // 누른 거라 첫 장소부터, "이어 걷기"면 지난번 보던 장소부터 보여준다.
   stopMiniPlayer();
-  showCourseStep(0, { deferMusic: true });
+  showCourseStep(startIndex, { deferMusic: true });
 }
 
 // 음악은 기억 라디오처럼 내용과 따로 흐른다(2026-10-13) — 처음엔 코스
@@ -667,6 +689,7 @@ function showCourseStep(index, { deferMusic = false } = {}) {
   // 카드/지도 이동보다 먼저 튼다.
   if (index >= 0 && index < total) {
     const place = activeCourse.places[index];
+    Storage.markCoursePlaceSeen(activeCourse.id, place.id);
     if (deferMusic) {
       setTimeout(() => {
         if (courseModeOpen && courseIndex === index) startCourseMusicAt(place);
@@ -675,6 +698,7 @@ function showCourseStep(index, { deferMusic = false } = {}) {
       startCourseMusicAt(place);
     }
   }
+  if (index >= total) Storage.markCourseFinished(activeCourse.id);
   renderCourseCard();
   if (index < 0 || index >= total) {
     fitCourseBounds();

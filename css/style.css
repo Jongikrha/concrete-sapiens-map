@@ -6045,6 +6045,33 @@ button.story-place-line:hover {
   gap: 10px;
 }
 
+/* "이어 걷기 · 5/20 장소 이름" — 장소 이름이 길면 말줄임 */
+.course-detail-resume-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.course-detail-start svg {
+  flex-shrink: 0;
+}
+
+/* 이어 걷기 아래 "처음부터 걷기" — 작은 글자 버튼 */
+.course-detail-restart {
+  display: block;
+  margin: 10px auto 0;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--cs-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 @media (max-width: 600px) {
   .course-detail-scroll {
     padding: 14px 20px 4px;
