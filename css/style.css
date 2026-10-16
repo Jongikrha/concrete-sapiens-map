@@ -5311,7 +5311,7 @@ button.story-place-line:hover {
 }
 
 /* 사진 출처(2026-10-15 시안) — 사진 제목 아래 더 작고 옅게, 가운데
-   "사진 출처 | 군산시". 제목이 없으면 사진 바로 아래에 이 줄만. */
+   "출처 | 군산시". 제목이 없으면 사진 바로 아래에 이 줄만. */
 .course-card-photo-credit {
   display: flex;
   align-items: center;

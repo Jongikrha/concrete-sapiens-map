@@ -874,7 +874,7 @@ function coursePhotoCarouselHtml(place) {
 function coursePhotoMetaHtml(photo) {
   return `
     ${photo.title ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(photo.title))}</p>` : ""}
-    ${photo.credit ? `<p class="course-card-photo-credit">사진 출처<span class="course-card-photo-credit-bar" aria-hidden="true"></span>${escapeHtml(photo.credit)}</p>` : ""}
+    ${photo.credit ? `<p class="course-card-photo-credit">출처<span class="course-card-photo-credit-bar" aria-hidden="true"></span>${escapeHtml(photo.credit)}</p>` : ""}
   `;
 }
 

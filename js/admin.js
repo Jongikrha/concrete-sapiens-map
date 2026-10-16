@@ -1438,7 +1438,7 @@ function placePhotoFieldHtml() {
       ${slots.length < COURSE_PLACE_PHOTO_MAX ? `
         <label>사진 추가(선택, ${slots.length} / ${COURSE_PLACE_PHOTO_MAX}장)<input type="file" id="place-photo-input" accept="image/*" /></label>
       ` : ""}
-      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "사진 출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
     </div>
   `;
 }
