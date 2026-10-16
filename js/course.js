@@ -31,6 +31,9 @@ let courseSongs = [];
 // 장소 카드를 접고 지도만 보는 중인지(2026-10-14) — 카드가 화면 아래를
 // 크게 덮어서 장소들이 어디쯤 있는지 둘러보고 싶을 때 쓴다.
 let courseMapFolded = false;
+// 이번 걷기에서 장소마다 보고 있던 사진 번호 — 앞뒤 장소를 오가다 돌아와도
+// 같은 사진을 보여준다(js/course.js renderCoursePlacePhoto). 걷기를 새로 시작하면 비운다.
+const coursePhotoIndexByPlace = new Map();
 
 async function loadPublishedCourses() {
   try {
@@ -380,6 +383,7 @@ function startCourseWalk(course) {
 
   activeCourse = course;
   courseModeOpen = true;
+  coursePhotoIndexByPlace.clear();
   enterRecallImmersiveChrome();
   drawCoursePath();
   document.getElementById("course-session").classList.remove("hidden");
@@ -731,9 +735,7 @@ function renderCourseCard() {
   } else {
     const place = activeCourse.places[courseIndex];
     body = `
-      ${place.photoKey ? `<div class="recall-card-photo" id="course-card-photo"></div>` : ""}
-      ${place.photoKey && place.description ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(place.description))}</p>` : ""}
-      ${place.photoKey && place.photoCredit ? `<p class="course-card-photo-credit">사진 출처<span class="course-card-photo-credit-bar" aria-hidden="true"></span>${escapeHtml(place.photoCredit)}</p>` : ""}
+      ${coursePhotoCarouselHtml(place)}
       <div class="course-card-kicker">
         ${courseKindIconSvg(activeCourse.kind)}
         <span>${escapeHtml(activeCourse.title)}</span>
@@ -822,25 +824,112 @@ function smartQuotes(text) {
     .replace(/"([^"\n]*)"/g, "\u201C$1\u201D");
 }
 
-// 장소 사진 — 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
-// 4:3 슬롯과 presigned URL 캐시를 쓴다. URL이 늦게 오면 이미 다른 장소로
-// 넘어갔을 수 있어 그 장소가 아직 보이는 중일 때만 꽂는다.
+// 장소 사진(최대 3장, 2026-10-16) — 옆으로 넘겨 본다. 넘기기는 가로
+// 스크롤 + scroll-snap이라 폰에선 손가락으로 밀고, 마우스로는 양옆 화살표나
+// 아래 점을 누른다. 점은 사진 위에 얹어 카드 높이를 바꾸지 않는다.
+// 사진 제목/출처는 사진마다 다르고 없을 수도 있어서, 넘길 때 아래 "지도
+// 보기" 줄이 들썩이지 않게 두 줄 높이를 항상 비워둔다(.course-card-photo-meta).
+function coursePhotoCarouselHtml(place) {
+  const photos = Storage.getCoursePlacePhotos(place);
+  if (!photos.length) return "";
+  const many = photos.length > 1;
+  return `
+    <div class="recall-card-photo course-photo-carousel" id="course-card-photo">
+      <div class="course-photo-track" id="course-photo-track">
+        ${photos.map(() => `<div class="course-photo-slide"></div>`).join("")}
+      </div>
+      ${many ? `
+        <button type="button" class="course-photo-arrow course-photo-arrow--prev" data-photo-step="-1" aria-label="이전 사진">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m14.5 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+        <button type="button" class="course-photo-arrow course-photo-arrow--next" data-photo-step="1" aria-label="다음 사진">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m9.5 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+        <div class="course-photo-dots">
+          ${photos.map((_, i) => `<button type="button" class="course-photo-dot" data-photo-index="${i}" aria-label="사진 ${i + 1}"></button>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+    <div class="course-card-photo-meta" id="course-card-photo-meta"></div>
+  `;
+}
+
+function coursePhotoMetaHtml(photo) {
+  return `
+    ${photo.title ? `<p class="course-card-photo-caption">${escapeHtml(smartQuotes(photo.title))}</p>` : ""}
+    ${photo.credit ? `<p class="course-card-photo-credit">사진 출처<span class="course-card-photo-credit-bar" aria-hidden="true"></span>${escapeHtml(photo.credit)}</p>` : ""}
+  `;
+}
+
+// 사진 URL은 기억산책 카드 사진(js/recall.js renderRecallCardPhoto)과 같은
+// presigned URL 캐시를 쓴다. URL이 늦게 오면 이미 다른 장소로 넘어갔을 수
+// 있어 그 장소가 아직 보이는 중일 때만 꽂는다.
+// 처음 보이는 사진은 지난번에 이 장소에서 마지막으로 본 사진의 다음 장
+// (Storage.getCoursePhotoStartIndex). 같은 걷기 안에서 앞뒤 장소를 오가다
+// 돌아오면 보던 사진 그대로 둔다(coursePhotoIndexByPlace).
 function renderCoursePlacePhoto(place) {
   const slot = document.getElementById("course-card-photo");
   if (!slot) return;
-  resolveStoryPhotoUrl(place.photoKey).then((url) => {
-    if (!courseModeOpen || activeCourse.places[courseIndex] !== place) return;
-    if (!url) {
-      slot.remove();
-      return;
-    }
-    const img = document.createElement("img");
-    img.className = "recall-card-photo-img";
-    img.alt = "";
-    img.src = url;
-    // 어드민에서 끌어서 정한 보일 부분(CoursePlace.photoFocusX/Y)
-    img.style.objectPosition = `${place.photoFocusX ?? 50}% ${place.photoFocusY ?? 50}%`;
-    slot.replaceChildren(img);
+  const photos = Storage.getCoursePlacePhotos(place);
+  const track = document.getElementById("course-photo-track");
+  const meta = document.getElementById("course-card-photo-meta");
+  const slides = [...track.children];
+  const dots = [...slot.querySelectorAll(".course-photo-dot")];
+  let current = -1;
+
+  const show = (index) => {
+    if (index === current) return;
+    current = index;
+    meta.innerHTML = coursePhotoMetaHtml(photos[index]);
+    dots.forEach((dot, i) => dot.classList.toggle("course-photo-dot--active", i === index));
+    coursePhotoIndexByPlace.set(place.id, index);
+    Storage.markCoursePhotoSeen(place.id, index);
+  };
+  const goTo = (index, smooth) => {
+    const target = (index + photos.length) % photos.length;
+    track.scrollTo({ left: target * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    show(target);
+  };
+
+  const start = coursePhotoIndexByPlace.has(place.id)
+    ? coursePhotoIndexByPlace.get(place.id) % photos.length
+    : Storage.getCoursePhotoStartIndex(place.id, photos.length);
+  show(start);
+  // 카드가 막 그려진 직후라 폭이 0일 수 있어 한 프레임 뒤에 맞춘다.
+  requestAnimationFrame(() => {
+    track.scrollLeft = start * track.clientWidth;
+  });
+  track.addEventListener("scroll", () => {
+    if (!track.clientWidth) return;
+    show(Math.min(photos.length - 1, Math.max(0, Math.round(track.scrollLeft / track.clientWidth))));
+  }, { passive: true });
+  slot.querySelectorAll("[data-photo-step]").forEach((btn) => {
+    btn.onclick = () => goTo(current + Number(btn.dataset.photoStep), true);
+  });
+  dots.forEach((dot, i) => {
+    dot.onclick = () => goTo(i, true);
+  });
+
+  let failed = 0;
+  photos.forEach((photo, i) => {
+    resolveStoryPhotoUrl(photo.key).then((url) => {
+      if (!courseModeOpen || activeCourse.places[courseIndex] !== place) return;
+      if (!url) {
+        // 사진이 하나도 안 열리면 회색 빈칸 대신 사진 자리를 통째로 뺀다.
+        if (++failed === photos.length) {
+          slot.remove();
+          meta.remove();
+        }
+        return;
+      }
+      const img = document.createElement("img");
+      img.className = "recall-card-photo-img";
+      img.alt = "";
+      img.src = url;
+      // 어드민에서 끌어서 정한 보일 부분
+      img.style.objectPosition = `${photo.focusX}% ${photo.focusY}%`;
+      slides[i].replaceChildren(img);
+    });
   });
 }
 
