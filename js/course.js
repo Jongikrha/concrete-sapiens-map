@@ -781,6 +781,7 @@ function renderCourseCard() {
         <span>${escapeHtml(activeCourse.title)}</span>
         <span class="course-card-kicker-sep" aria-hidden="true">·</span>
         <span>${courseIndex + 1} / ${total}</span>
+        <button type="button" class="course-wish-btn" id="course-wish-btn" aria-label="가보고 싶어요" aria-pressed="false">${COURSE_WISH_ICON}</button>
         <button type="button" class="course-map-btn" id="course-map-btn">${COURSE_MAP_ICON}<span>지도 보기</span></button>
       </div>
       ${place.label ? `<p class="course-card-label">${escapeHtml(smartQuotes(place.label))}</p>` : ""}
@@ -817,7 +818,100 @@ function renderCourseCard() {
     renderCoursePlacePhoto(activeCourse.places[courseIndex]);
     bindCourseSongCard(activeCourse.places[courseIndex]);
     document.getElementById("course-map-btn").onclick = () => setCourseMapFolded(true);
+    bindCourseWishButton(activeCourse.places[courseIndex]);
   }
+}
+
+// "가보고 싶어요"(2026-10-16) — 북마크. 담기면 안을 채운다(.course-wish-btn--on).
+const COURSE_WISH_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.6-6.5 4.6v-16a1 1 0 0 1 1-1z" /></svg>`;
+
+// 장소를 계정의 "가보고 싶은 곳"에 담는다(Storage.togglePlaceWish). "내 것"이라
+// 로그인 계정 기준이고, 비로그인이면 로그인부터 — "떠올랐어요"(js/storySheet.js
+// handleReactionTap)와 같은 흐름. 모아보기는 계정 메뉴(js/mymemory.js).
+function bindCourseWishButton(place) {
+  const btn = document.getElementById("course-wish-btn");
+  const sync = () => {
+    const on = Storage.hasWishedPlace(place.id);
+    btn.classList.toggle("course-wish-btn--on", on);
+    btn.setAttribute("aria-pressed", String(on));
+  };
+  const toggle = () => {
+    const on = Storage.togglePlaceWish(place.id, activeCourse.id);
+    sync();
+    showToast("course-wish-toast", on ? "가보고 싶은 곳에 담았어요" : "가보고 싶은 곳에서 뺐어요", 1800);
+    Storage.logEvent(`place_wish_${on ? "added" : "removed"}:${activeCourse.slug}`);
+  };
+  sync();
+  btn.onclick = () => {
+    if (Auth.isLoggedIn()) {
+      toggle();
+      return;
+    }
+    requireLogin(() => {
+      if (!btn.isConnected) return;
+      if (Storage.hasWishedPlace(place.id)) sync();
+      else toggle();
+    });
+  };
+}
+
+// 계정 메뉴 "가보고 싶은 곳"(2026-10-16) — 담은 장소를 최근 순으로. 누르면
+// 그 코스를 그 장소부터 따라 걷는다(소개 화면은 건너뛴다 — 이미 아는 코스).
+// 비공개로 돌렸거나 지워진 코스/장소는 목록에서 뺀다. 기억 목록과 같은
+// 오버레이(#mymemory-panel)를 쓴다.
+function openPlaceWishList() {
+  closeAccountMenu();
+  const panel = document.getElementById("mymemory-panel");
+  const items = Storage.getMyPlaceWishes()
+    .map((w) => {
+      const course = publishedCourses.find((c) => c.id === w.courseId);
+      const index = course ? course.places.findIndex((p) => p.id === w.placeId) : -1;
+      return index < 0 ? null : { course, index, place: course.places[index] };
+    })
+    .filter(Boolean);
+  panel.innerHTML = `
+    <div class="recent-header">
+      <h2 class="composer-title" style="margin:0;">가보고 싶은 곳</h2>
+      <button class="recent-close" id="mymemory-close">✕</button>
+    </div>
+    ${items.length ? items.map(({ course, index, place }) => `
+      <div class="recent-item place-wish-item" data-place-id="${escapeHtml(place.id)}">
+        ${place.photoKey ? `<span class="place-wish-thumb" data-photo-key="${escapeHtml(place.photoKey)}" data-focus="${place.photoFocusX ?? 50}% ${place.photoFocusY ?? 50}%"></span>` : ""}
+        <span class="place-wish-text">
+          <span class="place-wish-name">${escapeHtml(place.name)}</span>
+          <span class="place-wish-meta">${escapeHtml(course.title)} · ${index + 1}번째 장소</span>
+        </span>
+        <button type="button" class="place-wish-remove" aria-label="가보고 싶은 곳에서 빼기">${COURSE_WISH_ICON}</button>
+      </div>
+    `).join("") : `<p class="recent-empty">아직 담은 장소가 없어요.<br />발자취를 따라 걷다가 북마크를 눌러 담아보세요.</p>`}
+  `;
+  panel.querySelector("#mymemory-close").onclick = closeMyMemoryList;
+  panel.querySelectorAll(".place-wish-item").forEach((el, i) => {
+    const { course, index, place } = items[i];
+    el.onclick = () => {
+      closeMyMemoryList();
+      Storage.logEvent(`place_wish_opened:${course.slug}`);
+      startCourseWalk(course, index);
+    };
+    el.querySelector(".place-wish-remove").onclick = (e) => {
+      e.stopPropagation();
+      Storage.togglePlaceWish(place.id, course.id);
+      el.remove();
+      if (!panel.querySelector(".place-wish-item")) openPlaceWishList();
+    };
+  });
+  panel.querySelectorAll(".place-wish-thumb").forEach((slot) => {
+    resolveStoryPhotoUrl(slot.dataset.photoKey).then((url) => {
+      if (!slot.isConnected) return;
+      if (!url) {
+        slot.remove();
+        return;
+      }
+      slot.innerHTML = `<img src="${url}" alt="" style="object-position:${slot.dataset.focus}" />`;
+    });
+  });
+  document.getElementById("mymemory-overlay").classList.remove("hidden");
+  panel.scrollTop = 0;
 }
 
 const COURSE_MAP_ICON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4zM9 4v14M15 6v14" /></svg>`;

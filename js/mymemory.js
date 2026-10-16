@@ -426,6 +426,7 @@ function bindAccountMenuEvents() {
   document.getElementById("menu-overlap").onclick = () => openMyMemoryList("overlap");
   document.getElementById("menu-reacted").onclick = () => openMyMemoryList("reacted");
   document.getElementById("menu-shared").onclick = () => openMyMemoryList("shared");
+  document.getElementById("menu-placewish").onclick = openPlaceWishList;
   document.getElementById("menu-changepw").onclick = () => {
     closeAccountMenu();
     openChangePasswordPanel();

@@ -5451,6 +5451,38 @@ button.story-place-line:hover {
 /* 장소 카드 "지도 보기" — 순서(1 / N) 줄 오른쪽 끝의 작은 알약 버튼.
    누르면 카드를 접고 코스 전체를 지도로 보여준다(js/course.js
    setCourseMapFolded, 2026-10-14). */
+/* "가보고 싶어요"(2026-10-16) — "지도 보기" 바로 왼쪽 아이콘 버튼. 담으면
+   주황으로 채운다. "지도 보기"의 margin-left: auto 대신 이 버튼이 오른쪽으로 민다. */
+.course-wish-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--cs-gray);
+  border-radius: 50%;
+  background: var(--cs-paper);
+  color: var(--cs-text-main);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.course-wish-btn--on {
+  border-color: var(--cs-orange);
+  color: var(--cs-orange);
+}
+
+.course-wish-btn--on svg {
+  fill: currentColor;
+}
+
+.course-wish-btn + .course-map-btn {
+  margin-left: 0;
+}
+
 .course-map-btn {
   display: inline-flex;
   align-items: center;
@@ -6163,4 +6195,84 @@ button.story-place-line:hover {
 /* 아카이브 줄에선 세로 표지들 사이에서 키가 작으니 아래로 붙여 제목 높이를 맞춘다 */
 .archive-course-cover.course-cover--music {
   margin-top: auto;
+}
+
+/* 따라 걷기 화면 안의 "가보고 싶어요" 알림 — 카드가 아래를 덮어서 위쪽에.
+   .recall-session > *가 클릭을 받게 하므로 안 보일 때 클릭을 가로채지 않게 다시 끈다 */
+.recall-session > .course-wish-toast {
+  top: 76px;
+  bottom: auto;
+  pointer-events: none;
+}
+
+/* 가입/로그인 창은 따라 걷기·기억 라디오 화면(.recall-session, 110)보다 위에 —
+   그 화면에서 "가보고 싶어요"/"떠올랐어요"를 누르면 로그인부터 묻는다 */
+#auth-overlay {
+  z-index: 130;
+}
+
+/* 계정 메뉴 "가보고 싶은 곳" 목록(js/course.js openPlaceWishList) — 기억 목록
+   카드(.recent-item) 틀에 장소 사진 썸네일 + 이름 + "코스 · N번째 장소" */
+.place-wish-item {
+  align-items: center;
+}
+
+.place-wish-thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cs-map-gray);
+}
+
+.place-wish-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.place-wish-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.place-wish-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cs-text-main);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.place-wish-meta {
+  font-size: 12.5px;
+  color: var(--cs-text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 채운 북마크 — 누르면 목록에서 뺀다 */
+.place-wish-remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--cs-orange);
+  cursor: pointer;
+}
+
+.place-wish-remove svg {
+  fill: currentColor;
 }

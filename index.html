@@ -150,6 +150,11 @@
                 <span class="account-menu-label">전달한 기억</span>
                 <span class="account-menu-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span>
               </button>
+              <button class="account-menu-item" id="menu-placewish">
+                <span class="account-menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.6-6.5 4.6v-16a1 1 0 0 1 1-1z"/></svg></span>
+                <span class="account-menu-label">가보고 싶은 곳</span>
+                <span class="account-menu-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span>
+              </button>
               <div class="account-menu-divider"></div>
               <button class="account-menu-item" id="menu-changepw">
                 <span class="account-menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
@@ -409,6 +414,9 @@
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
         </button>
       </div>
+      <!-- "가보고 싶어요" 담기/빼기 알림 — 이 화면(z-index 110)이 전역 토스트를
+           덮으므로 화면 안에 따로 둔다(js/course.js bindCourseWishButton) -->
+      <div class="share-toast course-wish-toast" id="course-wish-toast"></div>
     </div>
 
     <!-- 기억산책 / 회상 모드 세션 — 진입하면 검색창/해시태그/툴바 등 평소
