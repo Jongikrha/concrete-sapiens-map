@@ -63,17 +63,19 @@ const Auth = {
     // 계정 연결만 보고 브라우저 기기ID는 절대 안 쓴다(2026-08-14) —
     // await로 완료를 기다려야 그 직후 그려지는 카드들이 최신 상태를 본다.
     // "떠올랐어요" 반응(storage.js hasReacted)과 "전달한 기억"(hasShared)도 같은 이유로 계정 기준으로
-    // 같이 갱신한다(2026-10-08).
+    // 같이 갱신한다(2026-10-08). 발자취 "가보고 싶어요"(hasWishedPlace)도 마찬가지(2026-10-16).
     if (this._currentUser) {
       await Promise.all([
         Storage.refreshMyStoryIds(),
         Storage.refreshMyReactions(),
         Storage.refreshMySharedIds(),
+        Storage.refreshMyPlaceWishes(),
       ]);
     } else {
       Storage.clearMyStoryIds();
       Storage.clearMyReactions();
       Storage.clearMySharedIds();
+      Storage.clearMyPlaceWishes();
     }
     // GNB 아바타(js/mymemory.js)에 로그인 상태 변화를 알려준다. 이 상태가
     // 바뀌는 지점은 init/signIn/confirmSignUp뿐이라 여기 한 곳에서만
@@ -130,6 +132,7 @@ const Auth = {
     Storage.clearMyStoryIds();
     Storage.clearMyReactions();
     Storage.clearMySharedIds();
+    Storage.clearMyPlaceWishes();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
@@ -172,6 +175,7 @@ const Auth = {
     Storage.clearMyStoryIds();
     Storage.clearMyReactions();
     Storage.clearMySharedIds();
+    Storage.clearMyPlaceWishes();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 

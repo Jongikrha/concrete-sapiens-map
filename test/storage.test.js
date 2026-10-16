@@ -47,6 +47,11 @@ function createFakeClient(storyAuthorRecords = [], storyReactionRecords = [], st
         create: async ({ storyId }) => ({ data: { id: `sh-${storyId}`, storyId } }),
         list: async () => ({ data: storyShareRecords, nextToken: null }),
       },
+      PlaceWish: {
+        create: async ({ placeId, courseId }) => ({ data: { id: `w-${placeId}`, placeId, courseId } }),
+        delete: async () => ({}),
+        list: async () => ({ data: [{ id: "w0", placeId: "old", courseId: "c1", createdAt: "2026-10-01T00:00:00.000Z" }], nextToken: null }),
+      },
     },
   };
 }
@@ -957,4 +962,18 @@ test("getCourseProgress: 보던 장소부터 이어 걷기, 다 보면 처음부
   assert.equal(Storage.getCourseProgress(course).finished, false);
   Storage.resetCourseProgress("c1");
   assert.deepEqual(Storage.getCourseProgress(course), { resumeIndex: null, seenCount: 0, finished: false });
+});
+
+test("가보고 싶어요: 비로그인이면 담기지 않고, 로그인 후 담기/빼기와 최근 순 목록", async () => {
+  Storage.clearMyPlaceWishes();
+  assert.equal(Storage.togglePlaceWish("p1", "c1"), false);
+  assert.equal(Storage.hasWishedPlace("p1"), false);
+  await Storage.refreshMyPlaceWishes();
+  assert.equal(Storage.hasWishedPlace("old"), true);
+  assert.equal(Storage.togglePlaceWish("p1", "c1"), true);
+  assert.deepEqual(Storage.getMyPlaceWishes().map((w) => w.placeId), ["p1", "old"]);
+  assert.equal(Storage.togglePlaceWish("p1", "c1"), false);
+  assert.equal(Storage.hasWishedPlace("p1"), false);
+  Storage.clearMyPlaceWishes();
+  assert.deepEqual(Storage.getMyPlaceWishes(), []);
 });

@@ -161,6 +161,9 @@ let _myStoryIds = null;
 let _myReactions = null;
 // 로그인 계정이 "전달한" 기억 id 집합(StoryShare) — 위와 같은 패턴.
 let _mySharedIds = null;
+// 로그인 계정의 발자취 장소 "가보고 싶어요"(PlaceWish, 2026-10-16) —
+// placeId → { courseId, createdAt, recordId(Promise) }. 위와 같은 패턴.
+let _myPlaceWishes = null;
 
 async function fetchAll(modelName) {
   const items = [];
@@ -438,6 +441,87 @@ const Storage = {
    */
   clearMyReactions() {
     _myReactions = null;
+  },
+
+  /**
+   * 발자취 장소를 "가보고 싶어요"에 담았는지 — 로그인 계정 기준(비로그인이면
+   * 항상 false). 반응(hasReacted)과 같은 이유로 브라우저에는 두지 않는다.
+   */
+  hasWishedPlace(placeId) {
+    return !!_myPlaceWishes && _myPlaceWishes.has(placeId);
+  },
+
+  /** 담은 장소들, 최근에 담은 순 — 계정 메뉴 "가보고 싶은 곳" 목록. */
+  getMyPlaceWishes() {
+    if (!_myPlaceWishes) return [];
+    return [..._myPlaceWishes.entries()]
+      .map(([placeId, w]) => ({ placeId, courseId: w.courseId, createdAt: w.createdAt }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  /**
+   * 담기/빼기를 바꾸고 바뀐 상태(담겼으면 true)를 돌려준다. 비로그인이면
+   * 호출부가 먼저 로그인을 요구하므로 여기선 아무것도 안 한다(false).
+   */
+  togglePlaceWish(placeId, courseId) {
+    if (!_myPlaceWishes) return false;
+    const existing = _myPlaceWishes.get(placeId);
+    if (existing) {
+      _myPlaceWishes.delete(placeId);
+      if (client) {
+        // 방금 담은 걸 바로 빼는 경우 create 응답(레코드 id)을 기다렸다가 지운다.
+        existing.recordId
+          .then((id) => id && client.models.PlaceWish.delete({ id }, { authMode: "userPool" }))
+          .then((res) => res?.errors && console.error("가보고 싶어요 삭제 실패", placeId, res.errors))
+          .catch((e) => console.error("가보고 싶어요 삭제 실패", placeId, e));
+      }
+      return false;
+    }
+    // GraphQL 에러는 reject가 아니라 errors 배열로 온다([[project_amplify_data_silent_errors]]).
+    const recordId = client
+      ? client.models.PlaceWish.create({ placeId, courseId }, { authMode: "userPool" })
+        .then(({ data, errors }) => {
+          if (errors) console.error("가보고 싶어요 저장 실패", placeId, errors);
+          return data?.id || null;
+        })
+        .catch((e) => {
+          console.error("가보고 싶어요 저장 실패", placeId, e);
+          return null;
+        })
+      : Promise.resolve(null);
+    _myPlaceWishes.set(placeId, { courseId, createdAt: new Date().toISOString(), recordId });
+    return true;
+  },
+
+  /** 로그인 직후(auth.js) 호출 — refreshMyReactions와 같은 패턴. */
+  async refreshMyPlaceWishes() {
+    const wishes = new Map();
+    if (client) {
+      let nextToken = null;
+      try {
+        do {
+          const { data, nextToken: token, errors } = await client.models.PlaceWish.list({
+            limit: 1000,
+            nextToken,
+            authMode: "userPool",
+          });
+          if (errors) {
+            console.error("가보고 싶어요 조회 실패", errors);
+            break;
+          }
+          data.forEach((w) => wishes.set(w.placeId, { courseId: w.courseId, createdAt: w.createdAt || "", recordId: Promise.resolve(w.id) }));
+          nextToken = token;
+        } while (nextToken);
+      } catch (e) {
+        console.error("가보고 싶어요 조회 실패", e);
+      }
+    }
+    _myPlaceWishes = wishes;
+  },
+
+  /** 로그아웃/탈퇴(auth.js) 시 비운다 — 다음 계정에 섞이지 않게. */
+  clearMyPlaceWishes() {
+    _myPlaceWishes = null;
   },
 
   hasShared(storyId) {
