@@ -977,6 +977,7 @@ const COURSE_KINDS = [
   { value: "book", label: "책" },
   { value: "person", label: "인물" },
   { value: "drama", label: "드라마·영화" },
+  { value: "music", label: "음악" },
   { value: "org", label: "단체" },
   { value: "etc", label: "기타" },
 ];
@@ -1138,14 +1139,21 @@ function bindCourseCoverEditor() {
   const spineRow = document.getElementById("course-cover-spine-row");
   const slider = document.getElementById("course-cover-spine");
   const valueEl = document.getElementById("course-cover-spine-value");
+  const kindSelect = document.querySelector('#course-form select[name="kind"]');
+  const guide = document.getElementById("course-cover-guide");
   let url = null;
 
+  // 책등 경계는 책 코스만 쓴다(2026-10-16) — 다른 종류는 슬라이더와 경계선을
+  // 숨기고, 미리보기도 그 종류 모양(js/book3d.js renderCourseCover)으로.
   const refresh = () => {
-    const r = parseFloat(slider.value) || 0;
+    const isBook = isBookCourseKind(kindSelect.value);
+    const r = isBook ? parseFloat(slider.value) || 0 : 0;
     valueEl.textContent = r > 0 ? `왼쪽 ${Math.round(r * 1000) / 10}%` : "없음(앞표지만)";
     line.style.left = `${r * 100}%`;
     line.classList.toggle("hidden", r === 0);
-    if (url) renderBook3d(book, url, r);
+    spineRow.classList.toggle("hidden", !url || !isBook);
+    guide.innerHTML = COURSE_COVER_GUIDES[kindSelect.value] || COURSE_COVER_GUIDES.etc;
+    if (url) renderCourseCover(book, url, kindSelect.value, r);
   };
   const show = (newUrl) => {
     url = newUrl;
@@ -1157,16 +1165,22 @@ function bindCourseCoverEditor() {
     }
     img.src = newUrl;
     editor.classList.remove("hidden");
-    spineRow.classList.remove("hidden");
     refresh();
   };
 
   slider.addEventListener("input", refresh);
+  kindSelect.addEventListener("change", refresh);
   input.addEventListener("change", (e) => {
     const file = e.target.files[0];
     pendingCoverBlob = null;
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
+    // 책등 찾기·여백 자르기는 책 표지 전용 — 포스터·앨범 등은 올린 그대로
+    if (!isBookCourseKind(kindSelect.value)) {
+      slider.value = "0";
+      show(objectUrl);
+      return;
+    }
     const probe = new Image();
     probe.onload = () => {
       // 바깥 여백·책등과 앞표지 사이 틈을 잘라낸 이미지로 미리보기하고, 저장도
@@ -1193,6 +1207,17 @@ function bindCourseCoverEditor() {
   }
 }
 
+// 표지 안내 — 종류마다 올릴 이미지와 소개 화면에 보이는 모양이 다르다
+// (js/book3d.js renderCourseCover). 종류를 바꾸면 바로 바뀐다.
+const COURSE_COVER_GUIDES = {
+  book: `<p><b>책등(스파인)과 겉표지(앞표지)를 한 장으로 올려주세요.</b> 펼친 표지 파일에서 <b>왼쪽 책등 + 오른쪽 앞표지</b> 부분만 잘라서 올리면, 소개 화면에 책이 옆면(책등)까지 보이는 입체로 세워져요.</p>
+    <p>책등 경계는 올리면 자동으로 찾아요. 아래 미리보기를 보면서 슬라이더로 맞춰주세요. 앞표지만 있으면 슬라이더를 0으로 두면 돼요(책등은 표지 왼쪽 끝 색으로 채워져요).</p>`,
+  music: `<p><b>정사각형 앨범 커버를 올려주세요.</b> 소개 화면에 앨범 커버 뒤로 LP판이 삐져나온 모양으로 보이고, 목록에서도 정사각형으로 보여요.</p>`,
+  drama: `<p><b>세로 포스터를 올려주세요.</b> 소개 화면에 포스터 한 장으로 보여요.</p>`,
+  person: `<p><b>인물 사진을 올려주세요.</b> 소개 화면에 폴라로이드 사진처럼 보여요. 얼굴이 가운데 오게 잘라 올리면 좋아요.</p>`,
+  etc: `<p>소개 화면에 올린 이미지가 평평하게 그대로 보여요. 목록에선 세로로 긴 칸에 맞춰 잘려요.</p>`,
+};
+
 function courseFormHtml() {
   const c = editingCourseId ? courses.find((x) => x.id === editingCourseId) : null;
   const v = (field) => escapeHtml(c?.[field] ?? "");
@@ -1201,7 +1226,7 @@ function courseFormHtml() {
       <div class="admin-section-title">${c ? `코스 수정 — ${escapeHtml(c.title)}` : "새 코스 만들기"}</div>
       <label>이름<input type="text" name="title" value="${v("title")}" placeholder="예: 콘크리트 사피엔스" required /></label>
       <label>저자(선택)<input type="text" name="author" value="${v("author")}" maxlength="30" placeholder="예: 채만식" /></label>
-      <p class="field-hint">코스 목록 제목 아래 "채만식 지음"처럼 보여요. 이름에는 작품 제목만 적어주세요.</p>
+      <p class="field-hint">코스 목록 제목 아래 "채만식 지음"처럼 보여요(음악은 "OOO 노래", 드라마·영화는 "OOO 연출"). 이름에는 작품 제목만 적어주세요.</p>
       <label>영문 식별자(공유 링크용)<input type="text" name="slug" value="${v("slug")}" placeholder="예: concrete-sapiens" pattern="[a-z0-9-]+" required /></label>
       <label>종류
         <select name="kind">
@@ -1217,18 +1242,15 @@ function courseFormHtml() {
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
       <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.<br />말풍선을 꽉 채우려면 여백을 뺀 로고 자체를 <b>가로:세로 5:2(예: 250×100px)</b>로 만들어주세요 — 말풍선 안 로고 자리가 최대 80×32px라, 이보다 가로로 더 길면 위아래가 비어요.</p>
-      <label>표지 — 책등 + 앞표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
-      <div class="course-cover-guide">
-        <p><b>책등(스파인)과 겉표지(앞표지)를 한 장으로 올려주세요.</b> 펼친 표지 파일에서 <b>왼쪽 책등 + 오른쪽 앞표지</b> 부분만 잘라서 올리면, 소개 화면에 책이 옆면(책등)까지 보이는 입체로 세워져요.</p>
-        <p>책등 경계는 올리면 자동으로 찾아요. 아래 미리보기를 보면서 슬라이더로 맞춰주세요. 앞표지만 있으면 슬라이더를 0으로 두면 돼요(책등은 표지 왼쪽 끝 색으로 채워져요). 드라마·영화는 세로 포스터를 올리면 돼요.</p>
-      </div>
+      <label>표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
+      <div class="course-cover-guide" id="course-cover-guide">${COURSE_COVER_GUIDES[c?.kind || "book"] || COURSE_COVER_GUIDES.etc}</div>
       <div class="course-cover-editor${c?.coverKey ? "" : " hidden"}" id="course-cover-editor">
         <div class="course-cover-flat" id="course-cover-flat"${c?.coverKey ? ` data-photo-key="${escapeHtml(c.coverKey)}"` : ""}>
           <div class="course-cover-flat-line" id="course-cover-flat-line"></div>
         </div>
         <div class="course-cover-3d" id="course-cover-3d"></div>
       </div>
-      <label class="course-cover-spine${c?.coverKey ? "" : " hidden"}" id="course-cover-spine-row">책등 경계 <span id="course-cover-spine-value"></span>
+      <label class="course-cover-spine${c?.coverKey && isBookCourseKind(c.kind) ? "" : " hidden"}" id="course-cover-spine-row">책등 경계 <span id="course-cover-spine-value"></span>
         <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
       </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
@@ -1639,7 +1661,7 @@ async function handleCourseSubmit(e) {
     }
   }
   fields.coverKey = coverKey;
-  fields.coverSpineRatio = coverKey ? parseFloat(f.get("coverSpineRatio")) || 0 : null;
+  fields.coverSpineRatio = coverKey ? (isBookCourseKind(fields.kind) ? parseFloat(f.get("coverSpineRatio")) || 0 : 0) : null;
   fields.intro = (f.get("intro") || "").trim().slice(0, COURSE_INTRO_MAX) || null;
   if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
