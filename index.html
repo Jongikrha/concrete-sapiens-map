@@ -283,6 +283,11 @@
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
+      <!-- 추천 발자취 띠(2026-10-17) — 해시태그 줄 칩만으론 발자취가 눈에 안
+           띈다는 피드백. 표지가 보이는 한 줄로 툴바 바로 위에 둔다(js/course.js
+           renderCourseFeaturedStrip). 툴바 안에 있어서 툴바가 지워지는 화면
+           (기억산책/라디오/따라 걷기/계정 메뉴)에선 같이 사라진다. -->
+      <div class="course-featured hidden" id="course-featured"></div>
       <div class="bottom-toolbar-primary">
         <button class="tool-btn tool-btn--radio" id="btn-random">
           <span class="tool-btn-radio-icon" aria-hidden="true">
