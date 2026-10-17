@@ -6373,3 +6373,14 @@ button.story-place-line:hover {
     font-size: 13px;
   }
 }
+
+/* 긴 곡명/가수 흘려 보내기(js/marquee.js, 2026-10-17) — 넘치는 줄에만
+   .marquee가 붙는다. 움직이는 동안엔 "…" 대신 글자를 통째로 옮긴다. */
+.marquee {
+  text-overflow: clip;
+}
+
+.marquee-inner {
+  display: inline-block;
+  will-change: transform;
+}

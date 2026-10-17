@@ -936,6 +936,9 @@ function refreshRecallSongCard() {
     recallSongRenderedStoryId = story.id;
     document.getElementById("recall-song-title").textContent = story.musicTitle || "이 기억의 노래";
     document.getElementById("recall-song-artist").textContent = story.musicArtist || "";
+    // 긴 곡명/가수는 넘칠 때만 옆으로 흘려 보낸다(js/marquee.js)
+    applyMarquee(document.getElementById("recall-song-title"));
+    applyMarquee(document.getElementById("recall-song-artist"));
     document.getElementById("recall-song-wave").innerHTML = buildSongWaveBars(videoId, RECALL_SONG_WAVE_BARS);
     document.getElementById("recall-song-play").onclick = () => {
       if (getRecallSongState(story).isThisSong) toggleMiniPlayerPause();

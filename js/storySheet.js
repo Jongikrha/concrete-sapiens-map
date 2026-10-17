@@ -228,8 +228,13 @@ function stopMiniPlayer() {
 }
 
 function setMiniPlayerText(title, sub) {
-  document.getElementById("mini-player-title").textContent = title;
-  document.getElementById("mini-player-sub").textContent = sub;
+  const titleEl = document.getElementById("mini-player-title");
+  const subEl = document.getElementById("mini-player-sub");
+  titleEl.textContent = title;
+  subEl.textContent = sub;
+  // 긴 곡명/가수는 넘칠 때만 옆으로 흘려 보낸다(js/marquee.js)
+  applyMarquee(titleEl);
+  applyMarquee(subEl);
 }
 
 // ------------------------------------------------------------

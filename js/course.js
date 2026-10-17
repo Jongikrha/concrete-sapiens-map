@@ -507,6 +507,8 @@ function courseSongCardHtml(place) {
 function bindCourseSongCard(place) {
   const btn = document.getElementById("course-song-play");
   if (!btn) return;
+  // 긴 곡명/가수는 넘칠 때만 옆으로 흘려 보낸다(js/marquee.js)
+  document.querySelectorAll("#course-song .recall-song-title, #course-song .recall-song-artist").forEach((el) => applyMarquee(el));
   const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
   btn.onclick = () => {
     if (activeMiniPlayerVideoId === videoId) toggleMiniPlayerPause();
