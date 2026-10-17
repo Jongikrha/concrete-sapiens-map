@@ -44,7 +44,6 @@ async function loadPublishedCourses() {
   }
   // 공개된 코스가 없으면 첫 줄 발자취 버튼을 숨긴다(목록이 비어 보이지 않게)
   document.getElementById("btn-course").classList.toggle("hidden", publishedCourses.length === 0);
-  renderCourseBadges();
   openCourseFromLink();
 }
 
@@ -388,97 +387,6 @@ function bindArchiveCourseRow(panel, onLeave) {
   panel.querySelectorAll(".archive-course-cover[data-photo-key]").forEach(fillCoverSlot);
 }
 
-// ------------------------------------------------------------
-// 지도 위 발자취 장소 배지(2026-10-17) — 지도를 둘러보다 "여기가 『탁류』에
-// 나온 곳이네" 하고 우연히 마주치게 하는 입구. 첫 줄 발자취 버튼과 같은
-// 오렌지 원 + 발자국 아이콘(사진 기억의 별과 헷갈리지 않게, 추상 도형 말고
-// 알아볼 수 있는 모양으로).
-//
-// - 동네 단위(카카오 레벨 5 ≈ 250m 축척)로 확대했을 때만 보인다 — 축소
-//   화면에서 기억 점 사이에 섞이면 지저분하다(추천 띠가 "거슬린다"로 하루
-//   만에 걷힌 것과 같은 이유).
-// - 기억 점 클러스터에 넣지 않는다 — 넣으면 뭉친 점 안에 묻혀 안 보인다.
-// - 필터/시간여행/내 기억/기억산책·라디오/따라 걷기 중엔 숨긴다.
-// - 같은 자리에 기억 점이 있으면 점을 가리지 않게 오른쪽 위로 비켜 둔다.
-// - 누르면 작은 말풍선("<코스> 발자취 · 3/7 · 장소 이름")과 "여기서부터
-//   따라 걷기 ›" — 그 장소부터 바로 걷기가 시작된다.
-// ------------------------------------------------------------
-const COURSE_BADGE_MAX_LEVEL = 5;
-const COURSE_BADGE_NUDGE_METERS = 25;
-let courseBadgeOverlays = [];
-let courseBadgePopover = null;
-
-function clearCourseBadges() {
-  closeCourseBadgePopover();
-  courseBadgeOverlays.forEach((o) => o.setMap(null));
-  courseBadgeOverlays = [];
-}
-
-function renderCourseBadges() {
-  clearCourseBadges();
-  if (typeof map === "undefined" || !map || publishedCourses.length === 0) return;
-  const busy = courseModeOpen || recallSessionOpen || activeHashtagFilter || activeYearFilter !== null || activeSongFilter || sliderActive || myMemoryModeActive;
-  if (busy || map.getLevel() > COURSE_BADGE_MAX_LEVEL) return;
-  const groups = Storage.getGroupedByPlace();
-  publishedCourses.forEach((course) => {
-    course.places.forEach((p, i) => {
-      const nearMemory = groups.some((g) => Storage.isNear(p.lat, p.lng, g.lat, g.lng, COURSE_BADGE_NUDGE_METERS));
-      const el = document.createElement("button");
-      el.type = "button";
-      el.className = `course-map-badge${nearMemory ? " course-map-badge--nudged" : ""}`;
-      el.innerHTML = COURSE_CHIP_ICON;
-      el.setAttribute("aria-label", `${course.title} 발자취 · ${p.name}`);
-      el.onclick = (e) => {
-        e.stopPropagation();
-        openCourseBadgePopover(course, i);
-      };
-      courseBadgeOverlays.push(new kakao.maps.CustomOverlay({
-        map,
-        position: new kakao.maps.LatLng(p.lat, p.lng),
-        content: el,
-        clickable: true,
-        zIndex: 5,
-      }));
-    });
-  });
-}
-
-function openCourseBadgePopover(course, index) {
-  closeCourseBadgePopover();
-  clearSearchPin();
-  const p = course.places[index];
-  const el = document.createElement("div");
-  el.className = "course-map-pop";
-  el.innerHTML = `
-    <span class="course-map-pop-kicker">${COURSE_CHIP_ICON}${escapeHtml(course.title)} 발자취 · ${index + 1}/${course.places.length}</span>
-    <span class="course-map-pop-name">${escapeHtml(p.name)}</span>
-    <button type="button" class="course-map-pop-go">여기서부터 따라 걷기 <span aria-hidden="true">›</span></button>
-  `;
-  el.querySelector(".course-map-pop-go").onclick = (e) => {
-    e.stopPropagation();
-    Storage.logEvent(`course_map_badge_started:${course.slug}`);
-    clearCourseBadges();
-    startCourseWalk(course, index);
-  };
-  courseBadgePopover = new kakao.maps.CustomOverlay({
-    map,
-    position: new kakao.maps.LatLng(p.lat, p.lng),
-    content: el,
-    clickable: true,
-    yAnchor: 1,
-    zIndex: 30,
-  });
-  Storage.logEvent(`course_map_badge_clicked:${course.slug}`);
-}
-
-/** 말풍선이 떠 있었으면 닫고 true(지도 탭 처리에서 작성창을 열지 않게) */
-function closeCourseBadgePopover() {
-  if (!courseBadgePopover) return false;
-  courseBadgePopover.setMap(null);
-  courseBadgePopover = null;
-  return true;
-}
-
 function closeCourseChoice() {
   document.getElementById("course-choice-overlay").classList.add("hidden");
 }
@@ -497,7 +405,6 @@ function startCourseWalk(course, startIndex = 0) {
 
   activeCourse = course;
   courseModeOpen = true;
-  clearCourseBadges(); // 지도 위 발자취 배지는 번호 핀과 섞이지 않게 걷는다(끝나면 renderMarkers가 되살림)
   coursePhotoIndexByPlace.clear();
   enterRecallImmersiveChrome();
   drawCoursePath();

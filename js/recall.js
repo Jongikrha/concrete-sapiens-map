@@ -480,7 +480,6 @@ function openRecallSessionShell() {
   clusterer.clear();
   clearSearchPin();
   recallSessionOpen = true;
-  renderCourseBadges(); // 지도 위 발자취 배지도 걷어둔다(recallSessionOpen이면 안 그린다)
   enterRecallImmersiveChrome();
   if (recallScope === "songs") enterRecallNightMode();
   // 기억 라디오는 한때 ✕ 없이 "카드 밖 아무 데나 탭"으로 나가게 했다가
