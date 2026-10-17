@@ -16,7 +16,9 @@ const HELP_TOUR_STEPS = [
   "assets/tour/tour-2-compose.png",
   "assets/tour/tour-3-mymemory.png",
   "assets/tour/tour-4-radio.png",
-  "assets/tour/tour-5-timetravel.png",
+  // 하단 툴바에서 시간여행 버튼을 빼고 발자취를 첫 줄에 올리면서(2026-10-17)
+  // 마지막 장을 시간여행(tour-5-timetravel.png, 파일은 남겨둠) → 발자취로 바꿨다.
+  "assets/tour/tour-5-course.png",
 ];
 
 let helpTourStep = 0;
