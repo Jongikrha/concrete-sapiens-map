@@ -21,6 +21,10 @@ const HELP_TOUR_STEPS = [
   "assets/tour/tour-5-course.png",
 ];
 
+// 문의·협업 연락처 — 서비스를 알아보려는 사람이 여는 곳이라 여기에 상시로
+// 둔다(2026-10-17). 평소 화면엔 안 보여서 지도 위가 지저분해지지 않는다.
+const CONTACT_EMAIL = "hello@todoc.us";
+
 let helpTourStep = 0;
 
 function renderHelpTourStep() {
@@ -33,6 +37,7 @@ function renderHelpTourStep() {
     <button class="help-tour-hit help-tour-hit-close" id="help-tour-close" aria-label="닫기"></button>
     ${isFirst ? "" : `<button class="help-tour-hit help-tour-hit-prev" id="help-tour-prev" aria-label="이전"></button>`}
     <button class="help-tour-hit help-tour-hit-next ${isFirst ? "help-tour-hit-next--full" : ""}" id="help-tour-next" aria-label="${isLast ? "시작하기" : "다음"}"></button>
+    <p class="help-tour-contact">문의 · 협업 <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>
   `;
 
   panel.querySelector("#help-tour-close").onclick = closeHelpTour;

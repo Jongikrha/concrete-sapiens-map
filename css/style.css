@@ -320,6 +320,26 @@ body {
 #help-tour-overlay .composer-card {
   background: transparent;
   box-shadow: none;
+  /* 카드 아래에 붙는 연락처 줄(.help-tour-contact)이 잘리지 않게 */
+  overflow: visible;
+}
+
+/* 문의·협업 연락처 — 투명 버튼 위치가 패널 높이 %로 잡혀 있어서 패널
+   높이를 바꾸지 않게 카드 바로 아래 어두운 배경 위에 띄운다(2026-10-17). */
+.help-tour-contact {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.help-tour-contact a {
+  color: #fff;
+  text-decoration: underline;
 }
 
 #help-tour-panel {
@@ -3561,6 +3581,21 @@ button.story-place-line:hover {
   font-size: 12.5px;
   color: var(--cs-text-muted);
   margin: 16px 0 0;
+}
+
+.auth-contact-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--cs-text-muted);
+  word-break: keep-all;
+}
+
+.auth-contact-hint a,
+.course-list-footnote a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .auth-switch-link {

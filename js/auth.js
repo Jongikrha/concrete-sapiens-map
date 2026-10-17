@@ -200,6 +200,11 @@ const Auth = {
 // ------------------------------------------------------------
 // 가입/인증/로그인 오버레이 UI
 // ------------------------------------------------------------
+// 비밀번호 재설정 화면(forgot/reset) 맨 아래 — 스스로 재설정이 막혔을 때만
+// 쓰는 보조 연락처(2026-10-17). 로그인 첫 화면에 두면 직접 재설정할 수
+// 있는 사람도 메일부터 보내게 돼서 여기에만 둔다.
+const AUTH_CONTACT_HINT_HTML = `<p class="auth-contact-hint">메일이 오지 않거나 문제가 계속되면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>`;
+
 let authMode = "signup"; // "signup" | "verify" | "login" | "forgot" | "reset"
 let authError = "";
 let authBusy = false;
@@ -400,6 +405,7 @@ function renderAuthPanel() {
       <button class="btn-primary" id="auth-submit">확인</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
       <p class="auth-switch">코드를 받지 못했나요? <button class="auth-switch-link" id="auth-resend">다시 보내기</button></p>
+      ${AUTH_CONTACT_HINT_HTML}
     `;
     panel.querySelector("#auth-submit").onclick = handleVerifySubmit;
     panel.querySelector("#auth-resend").onclick = handleResendCode;
@@ -444,6 +450,7 @@ function renderAuthPanel() {
       <button class="btn-primary" id="auth-submit">재설정 코드 받기</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
       <p class="auth-switch">로그인으로 돌아가기 <button class="auth-switch-link" id="auth-goto-login">로그인</button></p>
+      ${AUTH_CONTACT_HINT_HTML}
     `;
     panel.querySelector("#auth-submit").onclick = handleForgotSubmit;
     panel.querySelector("#auth-goto-login").onclick = () => {

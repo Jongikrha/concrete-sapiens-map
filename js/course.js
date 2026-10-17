@@ -164,7 +164,7 @@ function openCourseChoice() {
         </div>
       `).join("")}
     </div>
-    <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 알려주세요.</p>
+    <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>
   `;
   document.getElementById("course-choice-close").onclick = closeCourseChoice;
   panel.querySelectorAll(".course-choice-btn[data-course-index]").forEach((btn) => {
