@@ -1795,19 +1795,60 @@ body {
   color: #fff;
 }
 
-/* 기억 라디오(.tool-btn--radio, 검정)와 같은 줄에서 같은 무게로
-   보이도록 크기/폰트는 맞추고, 색만 Signal Orange로 구분한다. */
+/* 발자취 — 기억 라디오(검정)와 같은 줄, 같은 크기로 "둘러보는 두 가지
+   방법"을 나란히 둔다(2026-10-17). 색은 종이 바탕 + 오렌지 원 안 발자국으로
+   라디오와 구분한다(아이콘 배지 모양은 라디오와 같게). */
+.tool-btn--course {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--cs-paper);
+  color: var(--cs-black);
+  border-color: var(--cs-gray);
+  padding: 10px 22px 10px 10px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(47, 48, 49, 0.18);
+}
+
+.tool-btn--course:hover {
+  background: #fff;
+}
+
+.tool-btn-course-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  color: #fff;
+}
+
+.tool-btn-course-icon svg {
+  display: block;
+}
+
+/* 기억 남기기 — 2026-10-17 첫 줄을 발자취에 내주고 아래 알약 가운데(시간여행
+   자리)로 옮겼다. 알약의 다른 버튼(.tool-btn--small, 투명)과 똑같으면 작성
+   진입로가 묻히므로(2026-09-08 문제 재발) 이것만 오렌지로 채우고 한 치수
+   키운다. .tool-btn--small은 일부러 안 붙인다(투명 배경이 덮어쓴다). */
 .tool-btn--write {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--cs-orange);
   color: #fff;
   border-color: var(--cs-orange);
-  padding: 10px 20px 10px 14px;
-  font-size: 15px;
+  padding: 7px 15px 7px 8px;
+  min-height: 36px;
+  font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 6px 20px rgba(255, 90, 54, 0.32);
+  box-shadow: 0 3px 10px rgba(255, 90, 54, 0.32);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .tool-btn--write:hover {
@@ -1832,7 +1873,7 @@ body {
 
 @media (max-width: 360px) {
   .tool-btn--radio,
-  .tool-btn--write {
+  .tool-btn--course {
     padding-left: 8px;
     padding-right: 14px;
     font-size: 13px;
@@ -5029,19 +5070,8 @@ button.story-place-line:hover {
 /* ------------------------------------------------------------
    발자취(코스) 따라 걷기 (js/course.js, 2026-10-13) — 셸/카드/이전·다음
    버튼은 기억산책(.recall-session/.recall-card)을 그대로 쓰고, 여기엔
-   코스에만 있는 것(칩, 번호 핀, 카드 내용, 코스 목록)만 둔다.
+   코스에만 있는 것(번호 핀, 카드 내용, 코스 목록)만 둔다.
    ------------------------------------------------------------ */
-
-/* "기억 아카이브"(주황 채움)보다 한 단계 조용하게 — 테두리만 주황.
-   앞에 발자국 아이콘이 붙는다 — js/course.js buildCourseChip */
-.course-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--cs-orange);
-  border-color: var(--cs-orange);
-  font-weight: 500;
-}
 
 .course-entry-icon {
   display: block;
@@ -6277,106 +6307,23 @@ button.story-place-line:hover {
   fill: currentColor;
 }
 
-/* 하단 툴바 위 추천 발자취 띠(2026-10-17, js/course.js renderCourseFeaturedStrip) —
-   기억 라디오/기억 남기기와 같은 버튼 모양이면 첫 줄 위계가 흐려져서,
-   표지가 보이는 얇은 종이 띠로 "볼거리"처럼 보이게 한다. 지도를 덜 가리도록
-   폭은 버튼 두 개 줄 정도로 묶는다. */
-.course-featured {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: 340px;
-  background: var(--cs-paper);
-  border: 1px solid var(--cs-gray);
-  border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(47, 48, 49, 0.16);
-  overflow: hidden;
-}
 
-.course-featured.hidden {
-  display: none;
-}
-
-.course-featured-main {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 4px 7px 8px;
-  border: 0;
-  background: none;
-  font-family: var(--font-sans);
-  color: var(--cs-black);
-  text-align: left;
-  cursor: pointer;
-}
-
-.course-featured-cover {
-  position: relative;
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 40px;
-  border-radius: 2px;
-  overflow: hidden;
-  background: var(--cs-black);
-  color: var(--cs-paper);
-  box-shadow: 0 2px 6px rgba(47, 48, 49, 0.25);
-}
-
-.course-featured-cover.course-cover--music {
-  width: 38px;
-  height: 38px;
-}
-
-.course-featured-text {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.course-featured-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--cs-orange);
-}
-
-.course-featured-kicker .course-entry-icon {
-  width: 12px;
-  height: 12px;
-}
-
-.course-featured-title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.course-featured-go {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--cs-orange);
-}
-
-.course-featured-close {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 34px;
-  border: 0;
-  background: none;
-  color: var(--cs-text-muted);
-  font-size: 12px;
-  cursor: pointer;
+/* 아주 좁은 폰(≤360px)에서 알약(내 주변 · 기억 남기기 · 내 기억)이 두 줄로
+   넘치지 않게 줄인다(2026-10-17 — 기억 남기기가 채운 버튼이 되며 넓어졌다).
+   .tool-btn--small보다 뒤에 와야 이긴다. */
+@media (max-width: 360px) {
+  .bottom-toolbar-secondary .tool-btn--small {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .tool-btn--write {
+    gap: 4px;
+    padding: 6px 11px 6px 6px;
+    font-size: 12px;
+  }
+  .tool-btn-write-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 13px;
+  }
 }

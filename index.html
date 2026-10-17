@@ -283,11 +283,6 @@
 
     <!-- 하단 컨트롤 -->
     <div class="bottom-toolbar">
-      <!-- 추천 발자취 띠(2026-10-17) — 해시태그 줄 칩만으론 발자취가 눈에 안
-           띈다는 피드백. 표지가 보이는 한 줄로 툴바 바로 위에 둔다(js/course.js
-           renderCourseFeaturedStrip). 툴바 안에 있어서 툴바가 지워지는 화면
-           (기억산책/라디오/따라 걷기/계정 메뉴)에선 같이 사라진다. -->
-      <div class="course-featured hidden" id="course-featured"></div>
       <div class="bottom-toolbar-primary">
         <button class="tool-btn tool-btn--radio" id="btn-random">
           <span class="tool-btn-radio-icon" aria-hidden="true">
@@ -295,12 +290,14 @@
           </span>
           기억 라디오
         </button>
-        <!-- 지도 빈 곳을 클릭하는 게 유일한 작성 진입로였는데, 시각적
-             신호가 전혀 없어 "어딜 눌러야 할지 모르겠다"는 문제가 있었다
-             (2026-09-08). 상시 노출되는 버튼으로 진입로를 명시한다. -->
-        <button class="tool-btn tool-btn--write" id="btn-write">
-          <span class="tool-btn-write-icon" aria-hidden="true">+</span>
-          기억 남기기
+        <!-- 발자취(2026-10-17) — 해시태그 줄 칩만으론 눈에 안 띄어서, 기억
+             라디오와 나란히 "둘러보는 두 가지 방법"으로 첫 줄에 올렸다. 그 자리에
+             있던 기억 남기기는 아래 알약 가운데로 옮겼다(시간여행 버튼 자리). -->
+        <button class="tool-btn tool-btn--course" id="btn-course">
+          <span class="tool-btn-course-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><g transform="rotate(-10 6.5 15)"><ellipse cx="6.5" cy="16.8" rx="3.3" ry="5" /><circle cx="3.9" cy="9.6" r="1.25" /><circle cx="6.5" cy="8.9" r="1.3" /><circle cx="9.1" cy="9.7" r="1.15" /></g><g transform="rotate(10 17.5 8)"><ellipse cx="17.5" cy="10" rx="3.3" ry="5" /><circle cx="14.9" cy="2.9" r="1.15" /><circle cx="17.5" cy="2.1" r="1.3" /><circle cx="20.1" cy="2.8" r="1.25" /></g></svg>
+          </span>
+          발자취
         </button>
       </div>
       <div class="bottom-toolbar-secondary">
@@ -308,9 +305,13 @@
           <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
           내 주변
         </button>
-        <button class="tool-btn tool-btn--small" id="btn-timeslider">
-          <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-          시간여행
+        <!-- 기억 남기기 — 지도 빈 곳 클릭만으론 작성 진입로가 안 보여서 상시
+             버튼으로 둔다(2026-09-08). 2026-10-17 첫 줄을 발자취에 내주고 알약
+             가운데로 옮기면서, 묻히지 않게 이것만 오렌지로 채우고 살짝 키운다.
+             원래 이 자리의 시간여행 버튼은 뺐다(기능 코드는 js/filters.js에 남아 있음). -->
+        <button class="tool-btn tool-btn--write" id="btn-write">
+          <span class="tool-btn-write-icon" aria-hidden="true">+</span>
+          기억 남기기
         </button>
         <button class="tool-btn tool-btn--small" id="btn-my-memory">
           <svg class="tool-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5S4 15.5 4 9.9A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8 2.9c0 5.6-8 10.6-8 10.6z"/></svg>

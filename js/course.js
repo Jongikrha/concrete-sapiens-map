@@ -42,8 +42,8 @@ async function loadPublishedCourses() {
     console.error("발자취 불러오기 실패", e);
     publishedCourses = [];
   }
-  renderHashtagChips();
-  renderCourseFeaturedStrip();
+  // 공개된 코스가 없으면 첫 줄 발자취 버튼을 숨긴다(목록이 비어 보이지 않게)
+  document.getElementById("btn-course").classList.toggle("hidden", publishedCourses.length === 0);
   openCourseFromLink();
 }
 
@@ -90,31 +90,14 @@ async function shareCourseLink(course, btn) {
   }
 }
 
-// 해시태그 줄 맨 앞의 "발자취" 칩(js/filters.js renderHashtagChips가 줄을
-// 새로 그릴 때마다 부른다). 해시태그/연도/곡 필터가 걸려 있으면 그쪽에서
-// 먼저 return해 칩이 안 생기고, 시간여행/내 기억 모드에선 해시태그 칩과
-// 똑같이 남아 있다(누르면 startCourseWalk가 그 모드들을 닫는다).
-//
-// 칩은 코스 이름 대신 발자국 아이콘 + "발자취" 하나로 두고, 누르면 코스가
-// 하나여도 목록부터 고른다(2026-10-13) — 잠깐 "<코스 이름> 따라 걷기"로
-// 칩에 바로 코스 이름을 띄웠는데, 다른 작품/인물 코스가 늘어나면 칩 하나가
-// 특정 작품을 대표하게 돼 어색하다는 피드백으로 되돌렸다. 아이콘은 추상
-// 도형 말고 알아볼 수 있는 맨발 발자국 두 개로 그렸다.
+// 발자국 아이콘 — 기억 아카이브 맨 위 "발자취" 줄에 쓴다. 추상 도형 말고
+// 알아볼 수 있는 맨발 발자국 두 개로 그렸다. (해시태그 줄 맨 앞 "발자취"
+// 칩은 2026-10-17 하단 툴바 첫 줄 발자취 버튼으로 대신하면서 뺐다.)
 const COURSE_CHIP_ICON = `
   <svg class="course-entry-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <g transform="rotate(-10 6.5 15)"><ellipse cx="6.5" cy="16.8" rx="3.3" ry="5" /><circle cx="3.9" cy="9.6" r="1.25" /><circle cx="6.5" cy="8.9" r="1.3" /><circle cx="9.1" cy="9.7" r="1.15" /></g>
     <g transform="rotate(10 17.5 8)"><ellipse cx="17.5" cy="10" rx="3.3" ry="5" /><circle cx="14.9" cy="2.9" r="1.15" /><circle cx="17.5" cy="2.1" r="1.3" /><circle cx="20.1" cy="2.8" r="1.25" /></g>
   </svg>`;
-
-function buildCourseChip() {
-  if (publishedCourses.length === 0) return null;
-  const chip = document.createElement("button");
-  chip.type = "button";
-  chip.className = "chip course-entry";
-  chip.innerHTML = `${COURSE_CHIP_ICON}<span>발자취</span>`;
-  chip.onclick = openCourseChoice;
-  return chip;
-}
 
 // 코스 목록(2026-10-13 시안) — 큰 제목 + "N개의 발자취" 배지, 코스마다
 // 표지·제목·부제·종류/장소 수·"둘러보기" 카드. 맨 앞 코스는 "지금
@@ -402,76 +385,6 @@ function bindArchiveCourseRow(panel, onLeave) {
   });
   // 준비중 표지는 사진이 없어 fillCoverSlot이 빈 칸으로 보고 지워버린다
   panel.querySelectorAll(".archive-course-cover[data-photo-key]").forEach(fillCoverSlot);
-}
-
-// ------------------------------------------------------------
-// 하단 툴바 위 추천 발자취 띠(2026-10-17) — 칩(해시태그 줄)과 아카이브 맨 위
-// 한 줄만으로는 처음 온 사람이 발자취를 거의 못 본다는 피드백. 기억 라디오/
-// 기억 남기기 버튼과 같은 모양의 버튼을 하나 더 두면 첫 줄 위계가 흐려져서,
-// 버튼 대신 표지가 보이는 얇은 띠 하나로 "볼거리"처럼 보이게 한다.
-//
-// 근처 기억 토스트가 "반복돼 보인다"는 피드백으로 하루 만에 사라졌던 일
-// (2026-08-18)이 있어서 ✕로 닫으면 일주일 동안 안 띄우고, 다 둘러본 코스는
-// 빼고 남은 코스 중에서 고른다(코스가 늘어나면 새로고침마다 바뀐다). 걷다
-// 만 코스는 "N곳 둘러봄 · 이어 걷기"로 알려준다.
-// ------------------------------------------------------------
-const COURSE_FEATURED_DISMISSED_KEY = "concrete_sapiens_course_featured_dismissed_at_v1";
-const COURSE_FEATURED_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
-let courseFeaturedPick = null; // 이번 방문에 띄울 코스(새로 그릴 때마다 바뀌지 않게)
-let courseFeaturedLogged = false; // 노출 기록은 방문당 한 번만(모드 전환마다 다시 그린다)
-
-function isCourseFeaturedSnoozed() {
-  const at = Number(localStorage.getItem(COURSE_FEATURED_DISMISSED_KEY)) || 0;
-  return Date.now() - at < COURSE_FEATURED_SNOOZE_MS;
-}
-
-function pickCourseFeatured() {
-  const unfinished = publishedCourses.filter((c) => !Storage.getCourseProgress(c).finished);
-  if (unfinished.length === 0) return null;
-  if (courseFeaturedPick && unfinished.includes(courseFeaturedPick)) return courseFeaturedPick;
-  courseFeaturedPick = unfinished[Math.floor(Math.random() * unfinished.length)];
-  return courseFeaturedPick;
-}
-
-function renderCourseFeaturedStrip() {
-  const el = document.getElementById("course-featured");
-  if (!el) return;
-  const course = isCourseFeaturedSnoozed() ? null : pickCourseFeatured();
-  // 필터/시간여행/내 기억 모드에선 그 모드의 화면에 집중하게 숨긴다(기억 아카이브 배너와 같은 기준)
-  const busy = activeHashtagFilter || activeYearFilter !== null || activeSongFilter || sliderActive || myMemoryModeActive;
-  if (!course || busy || courseModeOpen) {
-    el.classList.add("hidden");
-    return;
-  }
-  const { seenCount } = Storage.getCourseProgress(course);
-  el.innerHTML = `
-    <button type="button" class="course-featured-main" id="course-featured-main">
-      <span class="course-featured-cover${courseCoverKindClass(course)}">
-        ${course.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(course)}></span>` : COURSE_CHIP_ICON}
-      </span>
-      <span class="course-featured-text">
-        <span class="course-featured-kicker">${COURSE_CHIP_ICON}발자취${seenCount > 0 ? ` · ${seenCount}곳 둘러봄` : ""}</span>
-        <span class="course-featured-title">${escapeHtml(course.title)}</span>
-      </span>
-      <span class="course-featured-go">${seenCount > 0 ? "이어 걷기" : "따라 걷기"} <span aria-hidden="true">›</span></span>
-    </button>
-    <button type="button" class="course-featured-close" id="course-featured-close" aria-label="추천 발자취 닫기">✕</button>
-  `;
-  el.querySelectorAll(".course-choice-cover-img").forEach(fillCoverSlot);
-  document.getElementById("course-featured-main").onclick = () => {
-    Storage.logEvent(`course_featured_opened:${course.slug}`);
-    openCourseDetail(course);
-  };
-  document.getElementById("course-featured-close").onclick = () => {
-    localStorage.setItem(COURSE_FEATURED_DISMISSED_KEY, String(Date.now()));
-    Storage.logEvent(`course_featured_dismissed:${course.slug}`);
-    el.classList.add("hidden");
-  };
-  el.classList.remove("hidden");
-  if (!courseFeaturedLogged) {
-    courseFeaturedLogged = true;
-    Storage.logEvent(`course_featured_shown:${course.slug}`);
-  }
 }
 
 function closeCourseChoice() {
@@ -1166,8 +1079,6 @@ function endCourseWalk() {
   activeCourse = null;
   courseIndex = -1;
   renderMarkers();
-  // 둘러본 수가 바뀌었으니 띠 문구(이어 걷기/다 본 코스는 빼기)를 다시 그린다
-  renderCourseFeaturedStrip();
   // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)
   maybeShowPendingWelcomeOverlay();
 }

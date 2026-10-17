@@ -173,8 +173,6 @@ function logVisitKind() {
 // 다른 필터로 보는 것뿐이라 "기억 아카이브" 하나로 합쳤다(오늘의 기억
 // 칩은 제거, js/filters.js renderHashtagChips 참고).
 function renderMemoryArchiveEntry() {
-  // 추천 발자취 띠도 같은 시점(필터/시간여행/내 기억 모드 전환)에 숨기고 다시 띄운다
-  renderCourseFeaturedStrip();
   const el = document.getElementById("memory-archive-entry");
   if (!el) return;
   // searchAreaActive는 마커를 걸러내지 않고 반짝임 효과만 주는 상태라
@@ -563,7 +561,10 @@ function bindUIEvents() {
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-write").onclick = handleWriteFabClick;
   document.getElementById("btn-random").onclick = startMemoryRadio;
-  document.getElementById("btn-timeslider").onclick = toggleSlider;
+  document.getElementById("btn-course").onclick = () => {
+    Storage.logEvent("course_toolbar_clicked");
+    openCourseChoice();
+  };
   document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;
   document.getElementById("time-slider-close").onclick = closeSlider;
   document.getElementById("time-slider-mode-cumulative").onclick = () => setSliderMode("cumulative");
