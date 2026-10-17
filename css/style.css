@@ -1891,9 +1891,20 @@ body {
   line-height: 1;
 }
 
+/* 첫 줄 두 버튼(기억 라디오 · 발자취)은 글자 수가 달라도 같은 폭으로 둔다
+   (2026-10-17 요청) — 둘러보는 두 방법이 같은 위계로 보이게. 폭은 더 긴
+   "기억 라디오"에 맞추고 내용은 가운데 정렬. 아래 좁은 화면 규칙이 이걸
+   덮어써야 해서 그보다 앞에 둔다. */
+.tool-btn--radio,
+.tool-btn--course {
+  width: 148px;
+  justify-content: center;
+}
+
 @media (max-width: 360px) {
   .tool-btn--radio,
   .tool-btn--course {
+    width: 124px;
     padding-left: 8px;
     padding-right: 14px;
     font-size: 13px;
