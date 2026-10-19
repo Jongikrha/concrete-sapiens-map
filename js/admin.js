@@ -647,15 +647,17 @@ async function renderVisitsTab() {
   clearDeviceFilterBanner();
   document.getElementById("admin-content").innerHTML = `<p class="empty-state">불러오는 중...</p>`;
   const allPageViews = await Storage.listPageViews();
-  const appEvents = await Storage.listAppEvents();
+  const allAppEvents = await Storage.listAppEvents();
   const myDeviceId = Storage.getDeviceId();
   const excludedRecords = await Storage.listExcludedDevices();
   const excludedDeviceIds = excludedRecords.map((r) => r.deviceId);
-  // 방문 수 집계에서만 제외한다 — AppEvent는 deviceId가 없어 못 거르고,
-  // 인기 기억 Top10(viewCount)도 별도 카운터라 범위 밖(2026-08-25).
+  // 방문 수와 이벤트(발자취 반응·전환율 등) 집계에서 뺀다. AppEvent는
+  // 2026-10-19부터 deviceId를 남겨서, 그 전 이벤트는 못 거르고 그대로 센다.
+  // 인기 기억 Top10(viewCount)은 별도 카운터라 범위 밖(2026-08-25).
   // viewCount는 2026-10-19부터 "브라우저당 1번·작성자 본인 제외"로 센다
   // (storage.js incrementViewCount) — 그 전 값은 열 때마다 +1이라 더 크다.
   const pageViews = allPageViews.filter((pv) => !excludedDeviceIds.includes(pv.deviceId));
+  const appEvents = allAppEvents.filter((e) => !e.deviceId || !excludedDeviceIds.includes(e.deviceId));
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
   const funnelHtml = buildFunnelHtml(appEvents);
@@ -718,7 +720,7 @@ async function renderVisitsTab() {
 
   document.getElementById("admin-content").innerHTML = `
     <div class="admin-section-title">내 방문 제외</div>
-    <p class="empty-state">이 브라우저 기기 ID: <code>${escapeHtml(myDeviceId)}</code> — 아래에 추가하면 방문 수 집계에서 빠집니다.</p>
+    <p class="empty-state">이 브라우저 기기 ID: <code>${escapeHtml(myDeviceId)}</code> — 아래에 추가하면 방문 수·이벤트 집계에서 빠집니다.</p>
     <form class="banned-word-form" id="excluded-device-form">
       <input type="text" id="excluded-device-input" placeholder="제외할 기기 ID" value="${escapeHtml(myDeviceId)}" />
       <button type="submit" class="btn-primary">제외</button>

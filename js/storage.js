@@ -691,7 +691,7 @@ const Storage = {
    */
   logEvent(type) {
     if (!client || this.isAutomatedBrowser()) return;
-    client.models.AppEvent.create({ type })
+    client.models.AppEvent.create({ type, deviceId: this.getDeviceId() })
       .catch((e) => console.error("이벤트 로그 기록 실패", type, e));
   },
 
