@@ -2209,7 +2209,14 @@ body {
 .search-area-card-inner,
 .search-results,
 .recall-card,
-.bulk-prompt-box {
+.bulk-prompt-box,
+/* 발자취 소개 창·마무리 장소 목록·아카이브 발자취 줄, 작성 마법사 태그
+   단계의 글 미리보기 — 네이티브 스크롤바가 그대로 보여 못생겼다는
+   피드백(2026-10-19)으로 같이 숨긴다(썸 없이, 스크롤만 된다). */
+.course-detail-scroll,
+.course-outro-places,
+.archive-course-items,
+.wizard-tags-memory-preview {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -2219,7 +2226,11 @@ body {
 .search-area-card-inner::-webkit-scrollbar,
 .search-results::-webkit-scrollbar,
 .recall-card::-webkit-scrollbar,
-.bulk-prompt-box::-webkit-scrollbar {
+.bulk-prompt-box::-webkit-scrollbar,
+.course-detail-scroll::-webkit-scrollbar,
+.course-outro-places::-webkit-scrollbar,
+.archive-course-items::-webkit-scrollbar,
+.wizard-tags-memory-preview::-webkit-scrollbar {
   display: none;
 }
 
