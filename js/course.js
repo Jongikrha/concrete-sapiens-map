@@ -65,7 +65,7 @@ function openCourseFromLink() {
 }
 
 function buildCourseUrl(slug) {
-  return `${window.location.origin}${window.location.pathname}?course=${encodeURIComponent(slug)}`;
+  return `${window.location.origin}${window.location.pathname}?course=${encodeURIComponent(slug)}&from=course_link`;
 }
 
 // 소개 카드의 "공유하기" — 폰에선 OS 공유 시트(카카오톡 등)를, 안 되는

@@ -572,6 +572,8 @@ const STANDALONE_EVENT_LABELS = [
 // "auth_cancelled:signup") — 종류가 열려 있어 고정 목록 대신 접두사로 묶어
 // 세부 항목별 개수를 보여준다.
 const PREFIXED_EVENT_GROUPS = [
+  // 유입 경로(2026-10-19, js/app.js logVisitSource) — 탭(세션)당 1회.
+  { prefix: "visit_source:", label: "유입 경로" },
   { prefix: "auth_cancelled:", label: "가입/로그인 화면 취소" },
   { prefix: "signup_failed:", label: "가입 실패" },
   { prefix: "kakao_failed:", label: "카카오 로그인 시작 실패" },

@@ -49,6 +49,7 @@ async function initApp() {
   Storage.markVisitAndGetUnseenThreshold();
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   logVisitKind();
+  logVisitSource();
   renderHashtagChips();
   renderMarkers();
   renderMemoryArchiveEntry();
@@ -165,6 +166,63 @@ function logVisitKind() {
   // 환경은 비밀번호 자동완성이 약하고 저장공간도 일반 브라우저와 분리돼
   // 있어 가입 전환에 불리하다. 비중을 보려고 따로 센다(2026-10-06).
   if (/Instagram/i.test(navigator.userAgent)) Storage.logEvent("visit_inapp_instagram");
+}
+
+/** 어디서 들어왔는지(유입 경로)를 AppEvent "visit_source:<경로>"로 남긴다
+ * (2026-10-19) — 어느 채널이 방문을 만드는지 몰라서. 우선순위는 링크에
+ * 붙인 ?from= 꼬리표(공유 링크·카드 QR·홍보 링크 ?from=insta 등) → 인앱
+ * 브라우저(카톡 등은 referrer가 비어서 UA로) → referrer 도메인 → direct.
+ * 새로고침으로 부풀지 않게 탭(세션)당 한 번만 센다. ?from=은 읽은 뒤
+ * 주소창에서 지워서, 이 주소를 그대로 다시 퍼뜨려도 꼬리표가 안 따라간다. */
+const VISIT_SOURCE_LOGGED_KEY = "concrete_sapiens_visit_source_logged";
+const REFERRER_SOURCES = [
+  [/(^|\.)google\./, "google"],
+  [/(^|\.)naver\.com$/, "naver"],
+  [/(^|\.)daum\.net$/, "daum"],
+  [/(^|\.)kakao\.com$/, "kakao"],
+  [/(^|\.)instagram\.com$/, "instagram"],
+  [/(^|\.)threads\.(net|com)$/, "threads"],
+  [/(^|\.)facebook\.com$/, "facebook"],
+  [/(^|\.)(t\.co|twitter\.com|x\.com)$/, "x"],
+  [/(^|\.)youtube\.com$/, "youtube"],
+];
+
+function detectVisitSource() {
+  const from = new URLSearchParams(window.location.search).get("from");
+  if (from && /^[a-z0-9_-]{1,30}$/i.test(from)) return from.toLowerCase();
+  const ua = navigator.userAgent;
+  if (/KAKAOTALK/i.test(ua)) return "kakaotalk_app";
+  if (/Instagram/i.test(ua)) return "instagram_app";
+  if (/NAVER\(inapp/i.test(ua)) return "naver_app";
+  if (/FBAN|FBAV/.test(ua)) return "facebook_app";
+  if (/Line\//.test(ua)) return "line_app";
+  let host = "";
+  try {
+    host = document.referrer ? new URL(document.referrer).hostname : "";
+  } catch (_) {}
+  if (!host || host === window.location.hostname) return "direct";
+  const known = REFERRER_SOURCES.find(([re]) => re.test(host));
+  return known ? known[1] : `ref_${host}`;
+}
+
+function logVisitSource() {
+  try {
+    if (!sessionStorage.getItem(VISIT_SOURCE_LOGGED_KEY)) {
+      Storage.logEvent(`visit_source:${detectVisitSource()}`);
+      sessionStorage.setItem(VISIT_SOURCE_LOGGED_KEY, "1");
+    }
+  } catch (_) {
+    // sessionStorage 차단 환경 — 집계 보조라 건너뛴다
+  }
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("from")) {
+      url.searchParams.delete("from");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    }
+  } catch (_) {
+    // 주소 정리는 부가 기능 — 실패해도 부팅(마커 렌더링 등)을 막지 않는다
+  }
 }
 
 // 예전엔 "N개의 기억이 쌓였습니다"라는 숫자 배너였다 — 첫인상을 끄는
