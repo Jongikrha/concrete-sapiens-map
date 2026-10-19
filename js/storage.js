@@ -602,9 +602,14 @@ const Storage = {
     return target;
   },
 
+  // 작성자에게 "N명이 읽었어요"로 보여주는 값이라(2026-10-19, storySheet.js
+  // story-read-caption) 대략 "읽은 사람 수"가 되게 센다 — 내 글은 안 세고,
+  // 이 브라우저에서 이미 읽은 기억(markStoriesRead)은 다시 안 센다. 그전엔
+  // 시트를 열 때마다 무조건 +1이라 작성자 본인 조회·재열람까지 섞여 있었다.
   incrementViewCount(storyId) {
     const target = _cache.find((s) => s.id === storyId);
     if (!target) return null;
+    if (this.isMyStory(storyId) || loadReadStoryIds().has(storyId)) return target;
     target.viewCount = (target.viewCount || 0) + 1;
     if (client && !this.isAutomatedBrowser()) {
       client.models.Story.update({ id: storyId, viewCount: target.viewCount })

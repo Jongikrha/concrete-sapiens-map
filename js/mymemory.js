@@ -148,6 +148,7 @@ async function refreshNotificationBadge() {
     if (recalledDot) recalledDot.classList.add("hidden");
     if (overlapDot) overlapDot.classList.add("hidden");
     renderOverlapFeed([]);
+    renderReadSummary(0);
     _pendingNotifState = null;
     return;
   }
@@ -165,11 +166,13 @@ async function refreshNotificationBadge() {
   const currentOverlapIds = new Set();
   const overlapStoriesById = new Map();
   let hasNewReaction = false;
+  let newReadCount = 0;
   let seenUpdated = false;
 
   myStories.forEach((story) => {
     const reactionCount = story.reactionCount || 0;
-    perStoryState[story.id] = { reactionCount };
+    const viewCount = story.viewCount || 0;
+    perStoryState[story.id] = { reactionCount, viewCount };
 
     const prev = seen[story.id];
     if (!prev) {
@@ -177,10 +180,18 @@ async function refreshNotificationBadge() {
       // 기능 이전부터 카드에 이미 보이던 값이라, 과거 활동이 한꺼번에
       // "새 알림"으로 안 터지게 지금 값을 그대로 기준값으로 조용히
       // 저장한다.
-      seen[story.id] = { reactionCount };
+      seen[story.id] = { reactionCount, viewCount };
       seenUpdated = true;
-    } else if (reactionCount > prev.reactionCount) {
-      hasNewReaction = true;
+    } else {
+      if (reactionCount > prev.reactionCount) hasNewReaction = true;
+      // viewCount는 2026-10-19에 추가 — 그 전에 저장된 기록엔 없어서
+      // 지금 값을 조용히 기준선으로 삼는다(과거 조회수가 한꺼번에 안 뜨게).
+      if (prev.viewCount === undefined) {
+        prev.viewCount = viewCount;
+        seenUpdated = true;
+      } else if (viewCount > prev.viewCount) {
+        newReadCount += viewCount - prev.viewCount;
+      }
     }
 
     // 반경 1km 안의 "다른 사람" 기억 — 내가 같은 장소/근처에 또 다른 내
@@ -221,6 +232,16 @@ async function refreshNotificationBadge() {
     .slice(0, 5)
     .map((s) => ({ storyId: s.id, text: buildOverlapMessage(s), year: Storage.getStoryYear(s) }));
   renderOverlapFeed(messages);
+  renderReadSummary(newReadCount);
+}
+
+// 계정 메뉴 맨 위 한 줄 — 지난번 메뉴를 연 이후 내 기억을 새로 읽은 사람 수.
+// 점은 안 켜고, 메뉴를 열었을 때만 보이는 조용한 문구다(css 주석 참고).
+function renderReadSummary(count) {
+  const el = document.getElementById("account-menu-read-summary");
+  if (!el) return;
+  el.textContent = count > 0 ? `지난번 이후 ${count}명이 내 기억을 읽었어요` : "";
+  el.classList.toggle("hidden", count === 0);
 }
 
 // 계정 메뉴를 열어야 "확인했다"로 치고 스냅샷을 저장한다 — 아바타만

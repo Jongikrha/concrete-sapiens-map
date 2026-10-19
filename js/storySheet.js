@@ -942,6 +942,7 @@ function renderStoryItem(story, options = {}) {
         <button class="share-btn" data-id="${story.id}">↗ 기억 전하기</button>
       </div>
       ${reactionLabel ? `<p class="reaction-count-caption">${escapeHtml(reactionLabel)}</p>` : ""}
+      ${isMine && story.viewCount > 0 ? `<p class="story-read-caption">${story.viewCount}명이 이 기억을 읽었어요</p>` : ""}
 
       <div class="share-panel-inline hidden" id="share-panel-${story.id}">
         ${renderSharePrivacyBox()}

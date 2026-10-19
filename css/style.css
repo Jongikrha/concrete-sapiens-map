@@ -604,6 +604,15 @@ body {
    문제가 있었다(2026-08-27). 목록 자체에 높이 제한 + 스크롤을 줘서
    "로그아웃"을 포함한 나머지 메뉴 항목이 항상 이 목록 바로 아래
    고정된 위치에 오게 한다. */
+/* "지난번 이후 N명이 내 기억을 읽었어요" 한 줄(2026-10-19, mymemory.js
+   renderReadSummary) — 점(알림)은 안 켠다. 읽힘은 자주 늘어서 점까지
+   켜면 근처 기억 토스트처럼 피로해진다. */
+.account-menu-read-summary {
+  margin: 0 4px 10px;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
 .account-menu-overlap-feed {
   display: flex;
   flex-direction: column;
@@ -2512,6 +2521,17 @@ body {
   margin: -10px 0 16px;
   font-size: 12px;
   color: var(--cs-text-muted);
+}
+
+/* 작성자 본인에게만 보이는 "N명이 읽었어요"(2026-10-19) — 반응이 없어도
+   누군가 읽고 갔다는 걸 알게 해 다시 쓰고 싶게 만드는 신호. */
+.story-read-caption {
+  margin: -10px 0 16px;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+}
+.reaction-count-caption + .story-read-caption {
+  margin-top: -12px;
 }
 
 /* ------------------------------------------------------------
