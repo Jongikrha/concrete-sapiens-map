@@ -3743,9 +3743,9 @@ button.story-place-line:hover {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* 표지 4권(실제 코스 + 준비중 3권)이 상자 폭에 고르게 퍼지게 —
-     넘치면 그때만 옆으로 스크롤 */
-  flex: 1 1 0;
+  /* 한 칸은 상자 폭의 1/4까지 — 코스가 적어도 표지 하나가 가운데로
+     떠 있지 않고 왼쪽부터 놓이게. 넘치면 그때만 옆으로 스크롤 */
+  flex: 0 1 25%;
   min-width: 56px;
   padding: 0;
   border: none;
@@ -3772,27 +3772,6 @@ button.story-place-line:hover {
   object-fit: cover;
   /* 책등+앞표지 이미지면 왼쪽 책등이 잘려 나가고 앞표지만 보이게 */
   object-position: right center;
-}
-
-/* 준비 중 예고 */
-.archive-course-item--soon {
-  cursor: default;
-}
-
-/* 준비중 표지 — 파스텔 색(js/course.js ARCHIVE_COMING_SOON) 위 흰 글씨 */
-.archive-course-item--soon .archive-course-cover {
-  position: relative;
-}
-
-.archive-course-cover-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-maruburi);
-  font-size: 11.5px;
-  color: #fff;
 }
 
 .archive-course-title {
@@ -5896,8 +5875,7 @@ button.story-place-line:hover {
 /* ------------------------------------------------------------
    발자취 목록(js/course.js openCourseChoice) — 시안(2026-10-13): 큰 제목 +
    "N개의 발자취" 배지, 코스 카드(표지·제목·부제·종류/장소 수·둘러보기).
-   맨 앞 코스는 연한 주황 바탕과 "지금 둘러보세요"로 강조하고, 준비 중
-   예고 카드는 흐리게.
+   맨 앞 코스는 연한 주황 바탕과 "지금 둘러보세요"로 강조.
 ------------------------------------------------------------ */
 .course-list-card {
   max-width: 640px;
@@ -5971,10 +5949,6 @@ button.story-place-line:hover {
   border-color: #ffc9b8;
 }
 
-.course-choice-item--soon {
-  cursor: default;
-}
-
 .course-choice-cover {
   position: relative;
   display: block;
@@ -6000,7 +5974,7 @@ button.story-place-line:hover {
   object-position: right center;
 }
 
-/* 표지가 없을 때(준비 중 예고 포함) — 색 바탕에 제목을 세로 표지처럼 */
+/* 표지가 없을 때 — 색 바탕에 제목을 세로 표지처럼 */
 .course-choice-cover-text {
   position: absolute;
   inset: 0;
@@ -6010,18 +5984,6 @@ button.story-place-line:hover {
   line-height: 1.3;
   color: #fff;
   word-break: keep-all;
-}
-
-.course-choice-cover--soon-0 {
-  background: linear-gradient(170deg, #9fb7c9 0%, #6f8aa3 55%, #3f5468 100%);
-}
-
-.course-choice-cover--soon-1 {
-  background: linear-gradient(170deg, #c79a6b 0%, #8f5f3d 55%, #5b3a26 100%);
-}
-
-.course-choice-item--soon .course-choice-cover {
-  opacity: 0.75;
 }
 
 .course-choice-text {
@@ -6043,10 +6005,6 @@ button.story-place-line:hover {
   font-size: 20px;
   font-weight: 600;
   color: var(--cs-black);
-}
-
-.course-choice-item--soon .course-choice-title {
-  color: var(--cs-text-muted);
 }
 
 .course-choice-author {
@@ -6074,10 +6032,6 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-.course-choice-item--soon .course-choice-meta {
-  color: var(--cs-text-muted);
-}
-
 .course-choice-btn {
   display: inline-flex;
   align-items: center;
@@ -6098,12 +6052,6 @@ button.story-place-line:hover {
   border-color: var(--cs-orange);
   background: var(--cs-orange);
   color: #fff;
-}
-
-.course-choice-btn--soon {
-  border-style: dashed;
-  color: var(--cs-text-muted);
-  cursor: default;
 }
 
 .course-list-footnote {

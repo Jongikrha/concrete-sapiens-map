@@ -101,15 +101,7 @@ const COURSE_CHIP_ICON = `
 
 // 코스 목록(2026-10-13 시안) — 큰 제목 + "N개의 발자취" 배지, 코스마다
 // 표지·제목·부제·종류/장소 수·"둘러보기" 카드. 맨 앞 코스는 "지금
-// 둘러보세요"로 강조한다. 공개 코스가 아직 하나뿐이라 다음 콘텐츠 예고
-// (COURSES_COMING_SOON)를 "준비 중"으로 아래에 붙인다 — 실제 코스가
-// 아니라 코드에 적어둔 안내라 작품 이름은 밝히지 않고(표지 "준비 중",
-// 제목 "새로운 콘텐츠 준비 중") 어떤 종류가 올지만 소개 글로 귀띔한다.
-// 실제 코스가 공개되면 여기서 하나씩 지운다.
-const COURSES_COMING_SOON = [
-  { description: "드라마와 영화 속 그 장면의 장소를 따라 걷는 길을 준비하고 있어요.", kind: "drama" },
-  { description: "한 사람이 지나온 길을 따라 걷는 발자취를 준비하고 있어요.", kind: "person" },
-];
+// 둘러보세요"로 강조한다. (2026-10-19 "준비 중" 예고 카드는 뺐다.)
 
 const COURSE_LIST_BOOKS_ICON = `
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
@@ -150,19 +142,6 @@ function openCourseChoice() {
           <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
         </div>
       `).join("")}
-      ${COURSES_COMING_SOON.map((c, i) => `
-        <div class="course-choice-item course-choice-item--soon">
-          <span class="course-choice-cover course-choice-cover--soon course-choice-cover--soon-${i % 2}">
-            <span class="course-choice-cover-text">준비 중</span>
-          </span>
-          <span class="course-choice-text">
-            <span class="course-choice-title">새로운 콘텐츠 준비 중</span>
-            <span class="course-choice-desc">${escapeHtml(c.description)}</span>
-            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 준비 중</span>
-          </span>
-          <span class="course-choice-btn course-choice-btn--soon">준비 중</span>
-        </div>
-      `).join("")}
     </div>
     <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>
   `;
@@ -174,7 +153,7 @@ function openCourseChoice() {
     };
   });
   // 카드 어디를 눌러도 둘러보기와 같게(버튼만 누르기엔 폰에서 작다)
-  panel.querySelectorAll(".course-choice-item:not(.course-choice-item--soon)").forEach((item) => {
+  panel.querySelectorAll(".course-choice-item").forEach((item) => {
     const btn = item.querySelector(".course-choice-btn");
     item.onclick = (e) => {
       if (e.target !== btn && !btn.contains(e.target)) btn.click();
@@ -331,16 +310,8 @@ function closeCourseDetail() {
 // 이미 둘러볼 거리를 찾는 중이라 칩보다 발자취를 발견하기 좋다. 기억
 // 목록 사이에 코스 장소를 섞지는 않는다(아카이브는 사람들이 직접 남긴
 // 기억만 모인 곳이라는 성격을 지키려고). 표지를 누르면 그 코스 소개 화면,
-// "발자취 ›"를 누르면 코스 목록. 옆에는 앞으로 올 종류(영상 콘텐츠/인물/
-// 도서)마다 "준비중" 표지를 한 권씩 세워 책장이 채워지는 느낌을 준다
-// (눌리지 않음). 표지 색은 실제 코스 표지가 돋보이게 연한 파스텔로.
-// 실제 코스가 공개될 때마다 해당 종류를 빼면 된다.
+// "발자취 ›"를 누르면 코스 목록. (2026-10-19 "준비중" 표지는 뺐다.)
 // ------------------------------------------------------------
-const ARCHIVE_COMING_SOON = [
-  { title: "영상 콘텐츠", hex: "#A9CDD9" },
-  { title: "인물", hex: "#B1C3DF" },
-  { title: "도서", hex: "#E5B1A1" },
-];
 
 function buildArchiveCourseRowHtml() {
   if (publishedCourses.length === 0) return "";
@@ -355,12 +326,6 @@ function buildArchiveCourseRowHtml() {
             ${c.coverKey ? `<span class="archive-course-cover${courseCoverKindClass(c)}" ${courseCoverSlotAttrs(c)}></span>` : ""}
             <span class="archive-course-title">${escapeHtml(c.title)}</span>
           </button>
-        `).join("")}
-        ${ARCHIVE_COMING_SOON.map((c) => `
-          <span class="archive-course-item archive-course-item--soon">
-            <span class="archive-course-cover" style="background:${c.hex}"><span class="archive-course-cover-text">준비중</span></span>
-            <span class="archive-course-title">${c.title}</span>
-          </span>
         `).join("")}
       </div>
     </div>`;
@@ -383,7 +348,6 @@ function bindArchiveCourseRow(panel, onLeave) {
       openCourseDetail(course, { fromList: true });
     };
   });
-  // 준비중 표지는 사진이 없어 fillCoverSlot이 빈 칸으로 보고 지워버린다
   panel.querySelectorAll(".archive-course-cover[data-photo-key]").forEach(fillCoverSlot);
 }
 
