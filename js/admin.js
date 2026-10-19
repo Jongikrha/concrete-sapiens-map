@@ -597,6 +597,37 @@ function buildEventCountsHtml(appEvents) {
   return standalone + prefixed;
 }
 
+// 체류시간·이어서 읽기(2026-10-19) — app.js startDwellTracking이 남기는
+// "dwell:<구간>:<on|off>", "reads:<구간>:<on|off>"를 이어서 읽기를 보는
+// 기기(on)와 안 보는 기기(off)로 나눠 비율로 보여준다.
+const DWELL_LABELS = ["0-30s", "30s-2m", "2-5m", "5-15m", "15m+"];
+const READS_LABELS = ["0", "1", "2-3", "4-9", "10+"];
+const CONTINUE_KIND_LABELS = { song: "같은 노래", year: "같은 해", tag: "같은 태그" };
+
+function buildDwellStatsHtml(appEvents) {
+  const counts = {};
+  appEvents.forEach((e) => {
+    counts[e.type] = (counts[e.type] || 0) + 1;
+  });
+  const row = (prefix, labels, variant, title) => {
+    const total = labels.reduce((sum, l) => sum + (counts[`${prefix}:${l}:${variant}`] || 0), 0);
+    if (!total) return `<div class="top-story-row"><span>${title}</span><span>기록 없음</span></div>`;
+    const parts = labels.map((l) => `${l} ${Math.round(((counts[`${prefix}:${l}:${variant}`] || 0) / total) * 100)}%`).join(" · ");
+    return `<div class="top-story-row"><span>${title}<small class="empty-state">${parts}</small></span><span>${total}구간</span></div>`;
+  };
+  const shown = counts.continue_reading_shown || 0;
+  const clicks = Object.keys(CONTINUE_KIND_LABELS).map((k) => ({ k, n: counts[`continue_reading_clicked:${k}`] || 0 }));
+  const clickTotal = clicks.reduce((sum, c) => sum + c.n, 0);
+  const clickParts = clicks.map((c) => `${CONTINUE_KIND_LABELS[c.k]} ${c.n}`).join(" · ");
+  return `
+    ${row("dwell", DWELL_LABELS, "on", "머문 시간 — 이어서 읽기 보는 기기")}
+    ${row("dwell", DWELL_LABELS, "off", "머문 시간 — 안 보는 기기")}
+    ${row("reads", READS_LABELS, "on", "연 기억 카드 수 — 이어서 읽기 보는 기기")}
+    ${row("reads", READS_LABELS, "off", "연 기억 카드 수 — 안 보는 기기")}
+    <div class="top-story-row"><span>이어서 읽기 — 노출 ${shown} → 클릭 ${clickTotal}<small class="empty-state">${clickParts}</small></span><span>${shown > 0 ? Math.round((clickTotal / shown) * 100) : 0}%</span></div>
+  `;
+}
+
 // 발자취별 반응(2026-10-19) — course.js가 남기는 "course_<단계>:<slug>"
 // 이벤트를 코스마다 단계별로 센다. 발자취가 사람을 끌어오는지(링크 유입·
 // 공유), 끝까지 걷게 만드는지(시작→완료) 보려는 표.
@@ -739,6 +770,8 @@ async function renderVisitsTab() {
     <div class="admin-section-title">어제·오늘 많이 연 기기</div>
     <p class="empty-state">같은 기기가 여러 번 열면 여기 위로 올라와요. 내 다른 브라우저(카톡 안 브라우저, 휴대폰 등)면 바로 제외하세요.</p>
     ${topDevicesHtml}
+    <div class="admin-section-title">체류시간 · 이어서 읽기 (화면이 보이던 구간 단위 · 2026-10-19~)</div>
+    ${buildDwellStatsHtml(appEvents)}
     <div class="admin-section-title">발자취 반응 (전체 기간 · 발자취 버튼 ${appEvents.filter((e) => e.type === "course_toolbar_clicked").length}회)</div>
     ${courseStatsHtml}
     <div class="admin-section-title">인기 기억 Top 10</div>

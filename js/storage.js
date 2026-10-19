@@ -1614,6 +1614,19 @@ const Storage = {
     localStorage.setItem(READ_STORIES_KEY, JSON.stringify([...set]));
   },
 
+  isStoryRead(storyId) {
+    return loadReadStoryIds().has(storyId);
+  },
+
+  /** 어드민 로그인으로 통계 제외 목록에 자동 등록된 브라우저인지(ensureDeviceExcluded). */
+  isExcludedAdminDevice() {
+    try {
+      return localStorage.getItem(ADMIN_DEVICE_EXCLUDED_KEY) === this.getDeviceId();
+    } catch (e) {
+      return false;
+    }
+  },
+
   /**
    * 오늘의 질문 — 날짜 문자열을 시드로 DAILY_PROMPTS 중 하나를 결정론적으로
    * 고른다(같은 날 여러 번 불러도 항상 같은 질문). 자정을 하루 경계로 쓴다

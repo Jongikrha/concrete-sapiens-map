@@ -133,6 +133,8 @@ function openSheet(group, options = {}) {
   sheetReturnTo = options.returnTo || null;
   sheetHighlightStoryId = options.highlightStoryId || null;
   sheetJustPostedStoryId = options.justPostedStoryId || null;
+  continueReadingShownLogged = false;
+  continueAnchorStoryId = options.highlightStoryId || null;
   // scrollIntoView를 걸려면 시트가 먼저 화면에 붙어(display 전환) 레이아웃을
   // 가진 상태여야 한다 — renderSheetContent(내부에서 스크롤 처리)보다
   // hidden 해제가 먼저 와야 한다.
@@ -148,6 +150,7 @@ function openSheet(group, options = {}) {
   Storage.markStoriesRead(group.stories.map((s) => s.id));
   refreshMarkerDotForGroup(group);
   Storage.logEvent("story_card_opened");
+  countCardOpenForDwell();
 }
 
 function closeSheet() {
@@ -371,6 +374,28 @@ function renderSheetContent(group) {
 
   const addressCaption = Storage.getGroupAddressCaption(group);
 
+  const continuePicks = isContinueReadingEnabled() ? pickContinueReadingStories(group) : [];
+  const continueReadingHtml = continuePicks.length
+    ? `
+      <div class="continue-reading">
+        <div class="continue-reading-title">이어서 읽기</div>
+        ${continuePicks
+          .map(
+            ({ story, kind, label }) => `
+              <div class="continue-reading-item" data-continue-id="${story.id}" data-continue-kind="${kind}">
+                <p class="continue-reading-label">${escapeHtml(label)}</p>
+                ${renderRecentListItem(story)}
+              </div>`
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+  if (continuePicks.length && !continueReadingShownLogged) {
+    continueReadingShownLogged = true;
+    Storage.logEvent("continue_reading_shown");
+  }
+
   content.innerHTML = `
     ${sheetReturnTo ? `<button class="sheet-back-link" id="sheet-back-link">← ${escapeHtml(sheetReturnTo.label)}</button>` : ""}
     <div class="story-spot-header">
@@ -417,11 +442,19 @@ function renderSheetContent(group) {
         <div class="story-list">${nearbyListHtml}</div>
       `
       : ""}
+    ${continueReadingHtml}
     <button class="btn-primary btn-add-story" id="btn-add-story">나도 이곳에 기억 남기기</button>
   `;
 
   content.querySelectorAll(".sort-btn").forEach((btn) => {
     btn.onclick = () => { currentSort = btn.dataset.sort; renderSheetContent(group); };
+  });
+
+  content.querySelectorAll(".continue-reading-item[data-continue-id]").forEach((item) => {
+    item.onclick = () => {
+      Storage.logEvent(`continue_reading_clicked:${item.dataset.continueKind}`);
+      navigateToStoryFromList(item.dataset.continueId, sheetReturnTo);
+    };
   });
 
   bindStoryItemEvents(content, {
@@ -488,6 +521,82 @@ function renderSheetContent(group) {
     }
     sheetHighlightStoryId = null;
   }
+}
+
+// ------------------------------------------------------------
+// 이어서 읽기(2026-10-19) — 시트 맨 아래에 다음에 읽을 기억을 최대 3개
+// 붙인다. 기억 하나를 다 읽으면 닫는 것 말고 할 일이 없어서 거기서
+// 이탈하던 지점. 같은 노래 → 같은 해 다른 곳 → 같은 해시태그 순으로
+// 고르고, 안 읽은 기억을 먼저 쓴다. 정렬·반응 등으로 다시 그려도 바뀌지
+// 않게 무작위 대신 장소 키 기준 해시로 고른다.
+//
+// 체류시간에 실제로 효과가 있는지 보려고 기기 ID로 반반 나눠 절반에게만
+// 보여준다(app.js 체류시간 계측의 :on/:off). 어드민 기기는 통계에서 빠지니
+// 항상 보이게 한다. 효과가 확인되면 isContinueReadingEnabled를 true로.
+// ------------------------------------------------------------
+const CONTINUE_READING_MAX = 3;
+let continueReadingShownLogged = false;
+// sheetHighlightStoryId는 첫 렌더에서 소비돼 비워지므로 기준 기억은 따로
+// 들고 있는다 — 반응·정렬로 다시 그려도 고른 기억이 바뀌지 않게.
+let continueAnchorStoryId = null;
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+function isContinueReadingEnabled() {
+  if (Storage.isExcludedAdminDevice()) return true;
+  return hashString(Storage.getDeviceId()) % 2 === 0;
+}
+
+function pickContinueReadingStories(group) {
+  const seenIds = new Set(group.stories.map((s) => s.id));
+  const pool = Storage.getVisibleStories().filter((s) => !seenIds.has(s.id));
+  // 지금 걸린 해시태그·연도·노래 필터에 안 맞는 기억은 눌러도 시트가 안
+  // 열린다(navigateToStoryFromList → applyActiveFilterToGroup). 노래 필터는
+  // 검사 한 번이 전체 순회라, 후보를 다 거르지 않고 고를 때만 검사한다.
+  const passesFilter = (s) => applyActiveFilterToGroup({ stories: [s] }).stories.length > 0;
+  const order = (list) =>
+    [...list].sort(
+      (a, b) =>
+        Storage.isStoryRead(a.id) - Storage.isStoryRead(b.id) ||
+        hashString(group.key + a.id) - hashString(group.key + b.id)
+    );
+  // 목록에서 특정 기억을 눌러 들어왔으면 그 기억을 기준으로 삼는다.
+  const anchors = order(group.stories);
+  const highlighted = group.stories.find((s) => s.id === continueAnchorStoryId);
+  if (highlighted) anchors.unshift(highlighted);
+
+  const picks = [];
+  const take = (kind, label, candidates) => {
+    if (picks.length >= CONTINUE_READING_MAX) return;
+    const story = order(candidates).find((s) => !picks.some((p) => p.story.id === s.id) && passesFilter(s));
+    if (story) picks.push({ story, kind, label });
+  };
+
+  const withSong = anchors.find((s) => s.musicTitle);
+  if (withSong) {
+    const key = Storage.normalizeSongKey(withSong.musicArtist, withSong.musicTitle);
+    take("song", "같은 노래가 흐르던 기억", pool.filter((s) => s.musicTitle && Storage.normalizeSongKey(s.musicArtist, s.musicTitle) === key));
+  }
+
+  const year = anchors.map((s) => Storage.getStoryYear(s)).find((y) => y !== null);
+  if (year !== undefined) {
+    take(
+      "year",
+      `${year}년, 다른 곳에서`,
+      pool.filter(
+        (s) => Storage.getStoryYear(s) === year && Storage._distanceMeters(group.lat, group.lng, s.lat, s.lng) > NEARBY_STORIES_RADIUS_METERS
+      )
+    );
+  }
+
+  const tag = anchors.flatMap((s) => s.hashtags || [])[0];
+  if (tag) take("tag", `같은 ${tag.startsWith("#") ? tag : `#${tag}`}`, pool.filter((s) => (s.hashtags || []).includes(tag)));
+
+  return picks;
 }
 
 // 사진 URL은 presigned라 매번 새로 만들어야 하지만(PhotoUpload.getUrl 참고),

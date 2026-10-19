@@ -2894,6 +2894,34 @@ button.story-place-line:hover {
   background: rgba(61, 133, 119, 0.1);
 }
 
+/* 이어서 읽기(2026-10-19, storySheet.js pickContinueReadingStories) — 시트
+   맨 아래에 다음에 읽을 기억. 항목은 기억 아카이브 목록(.recent-item)을
+   그대로 쓰고, 왜 이 기억인지 한 줄만 위에 붙인다. */
+.continue-reading {
+  margin: 28px 0 0;
+}
+
+.continue-reading-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-text-muted);
+  margin: 0 0 10px;
+}
+
+.continue-reading-label {
+  font-size: 12px;
+  color: var(--cs-orange);
+  margin: 0 0 6px 2px;
+}
+
+.continue-reading-item + .continue-reading-item {
+  margin-top: 14px;
+}
+
+.continue-reading-item .recent-item {
+  margin: 0;
+}
+
 .spot-banner--nearby .spot-banner-title {
   color: var(--cs-teal);
 }

@@ -50,6 +50,7 @@ async function initApp() {
   Storage.logPageView(new URLSearchParams(window.location.search).get("story"));
   logVisitKind();
   logVisitSource();
+  startDwellTracking();
   renderHashtagChips();
   renderMarkers();
   renderMemoryArchiveEntry();
@@ -223,6 +224,43 @@ function logVisitSource() {
   } catch (_) {
     // 주소 정리는 부가 기능 — 실패해도 부팅(마커 렌더링 등)을 막지 않는다
   }
+}
+
+/** 체류시간 계측(2026-10-19) — 화면이 보이던 구간 하나가 끝날 때(다른 앱·탭으로
+ * 가거나 닫을 때) 그 구간의 길이와 그동안 연 기억 카드 수를 구간값으로 남긴다.
+ * 같은 탭으로 돌아오면 새 구간으로 센다. 탭을 닫는 순간의 전송은 브라우저가
+ * 끊을 수 있어 일부 빠질 수 있다. 끝의 :on/:off는 이어서 읽기를 보는
+ * 기기인지(storySheet.js isContinueReadingEnabled) — 둘을 비교하려는 것. */
+const DWELL_BUCKETS = [[30, "0-30s"], [120, "30s-2m"], [300, "2-5m"], [900, "5-15m"], [Infinity, "15m+"]];
+const READS_BUCKETS = [[0, "0"], [1, "1"], [3, "2-3"], [9, "4-9"], [Infinity, "10+"]];
+let dwellSegmentStart = null;
+let dwellCardCount = 0;
+
+function countCardOpenForDwell() {
+  dwellCardCount++;
+}
+
+function bucketOf(buckets, value) {
+  return buckets.find(([max]) => value <= max)[1];
+}
+
+function startDwellTracking() {
+  // 첫 구간은 부팅(데이터 로딩)을 기다린 시간까지 포함해 페이지를 연 순간부터 잰다.
+  dwellSegmentStart = document.visibilityState === "visible" ? performance.timeOrigin : null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      dwellSegmentStart = Date.now();
+      dwellCardCount = 0;
+      return;
+    }
+    if (dwellSegmentStart === null) return;
+    const seconds = (Date.now() - dwellSegmentStart) / 1000;
+    dwellSegmentStart = null;
+    if (seconds < 1) return; // 잠깐 깜빡인 전환은 세지 않는다
+    const variant = isContinueReadingEnabled() ? "on" : "off";
+    Storage.logEvent(`dwell:${bucketOf(DWELL_BUCKETS, seconds)}:${variant}`);
+    Storage.logEvent(`reads:${bucketOf(READS_BUCKETS, dwellCardCount)}:${variant}`);
+  });
 }
 
 // 예전엔 "N개의 기억이 쌓였습니다"라는 숫자 배너였다 — 첫인상을 끄는
