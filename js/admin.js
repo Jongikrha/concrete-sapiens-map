@@ -597,6 +597,43 @@ function buildEventCountsHtml(appEvents) {
   return standalone + prefixed;
 }
 
+// 발자취별 반응(2026-10-19) — course.js가 남기는 "course_<단계>:<slug>"
+// 이벤트를 코스마다 단계별로 센다. 발자취가 사람을 끌어오는지(링크 유입·
+// 공유), 끝까지 걷게 만드는지(시작→완료) 보려는 표.
+const COURSE_FUNNEL_STEPS = [
+  { type: "course_detail_opened", label: "소개" },
+  { type: "course_started", label: "시작" },
+  { type: "course_completed", label: "완료" },
+  { type: "course_write", label: "기억 남김" },
+  { type: "course_shared", label: "공유" },
+  { type: "course_link_opened", label: "링크 유입" },
+];
+
+function buildCourseStatsHtml(appEvents, courseList) {
+  const bySlug = {};
+  appEvents.forEach((e) => {
+    const i = e.type.indexOf(":");
+    if (i < 0 || !e.type.startsWith("course_")) return;
+    const step = e.type.slice(0, i);
+    const slug = e.type.slice(i + 1);
+    ((bySlug[slug] ||= {})[step] = (bySlug[slug][step] || 0) + 1);
+  });
+  const slugs = Object.keys(bySlug);
+  if (!slugs.length) return `<p class="empty-state">아직 발자취 기록이 없습니다.</p>`;
+  const titleOf = (slug) => courseList?.find((c) => c.slug === slug)?.title || slug;
+  const opened = (slug) => bySlug[slug].course_detail_opened || 0;
+  return slugs
+    .sort((a, b) => opened(b) - opened(a))
+    .map((slug) => {
+      const c = bySlug[slug];
+      const started = c.course_started || 0;
+      const rate = started > 0 ? ` · 완주 ${Math.round(((c.course_completed || 0) / started) * 100)}%` : "";
+      const steps = COURSE_FUNNEL_STEPS.map((st) => `${st.label} ${c[st.type] || 0}`).join(" · ");
+      return `<div class="top-story-row"><span>${escapeHtml(titleOf(slug))}<small class="empty-state">${steps}${rate}</small></span></div>`;
+    })
+    .join("");
+}
+
 function computeReturningVisitRate(appEvents) {
   const first = appEvents.filter((e) => e.type === "visit_first").length;
   const returning = appEvents.filter((e) => e.type === "visit_returning").length;
@@ -614,10 +651,20 @@ async function renderVisitsTab() {
   const excludedDeviceIds = excludedRecords.map((r) => r.deviceId);
   // 방문 수 집계에서만 제외한다 — AppEvent는 deviceId가 없어 못 거르고,
   // 인기 기억 Top10(viewCount)도 별도 카운터라 범위 밖(2026-08-25).
+  // viewCount는 2026-10-19부터 "브라우저당 1번·작성자 본인 제외"로 센다
+  // (storage.js incrementViewCount) — 그 전 값은 열 때마다 +1이라 더 크다.
   const pageViews = allPageViews.filter((pv) => !excludedDeviceIds.includes(pv.deviceId));
   const dailyCounts = buildDailyVisitCounts(pageViews);
   const maxCount = Math.max(1, ...dailyCounts.map((d) => d.count));
   const funnelHtml = buildFunnelHtml(appEvents);
+  if (courses === null) {
+    try {
+      await loadCourses();
+    } catch (e) {
+      courses = null; // 제목 없이 slug로만 보여준다
+    }
+  }
+  const courseStatsHtml = buildCourseStatsHtml(appEvents, courses);
   const eventCountsHtml = buildEventCountsHtml(appEvents);
   const returningRate = computeReturningVisitRate(appEvents);
 
@@ -688,6 +735,8 @@ async function renderVisitsTab() {
     <div class="admin-section-title">어제·오늘 많이 연 기기</div>
     <p class="empty-state">같은 기기가 여러 번 열면 여기 위로 올라와요. 내 다른 브라우저(카톡 안 브라우저, 휴대폰 등)면 바로 제외하세요.</p>
     ${topDevicesHtml}
+    <div class="admin-section-title">발자취 반응 (전체 기간 · 발자취 버튼 ${appEvents.filter((e) => e.type === "course_toolbar_clicked").length}회)</div>
+    ${courseStatsHtml}
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
     <div class="admin-section-title">기능별 전환율</div>
