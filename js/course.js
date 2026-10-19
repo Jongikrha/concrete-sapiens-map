@@ -756,7 +756,17 @@ function renderCourseCard() {
     body = `
       <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · 장소 ${total}곳을 모두 둘러봤어요</p>
       <h2 class="course-card-title">이 길 위에 당신의 기억도 있나요?</h2>
-      <p class="story-content">지나온 곳 어딘가에 얽힌 기억이 있다면 지도에 남겨주세요.</p>
+      <div class="course-outro-places">
+        ${activeCourse.places
+          .map(
+            (p, i) => `
+          <button type="button" class="course-outro-place" data-index="${i}">
+            <span class="course-outro-place-num">${i + 1}</span>
+            <span class="course-outro-place-name">${escapeHtml(p.name)}</span>
+          </button>`
+          )
+          .join("")}
+      </div>
     `;
   } else {
     const place = activeCourse.places[courseIndex];
@@ -778,7 +788,7 @@ function renderCourseCard() {
     `;
   }
 
-  const nextLabel = isIntro ? "따라 걷기 시작" : isOutro ? "내 기억 남기기" : isLast ? "다 둘러봤어요" : "다음 장소로";
+  const nextLabel = isIntro ? "따라 걷기 시작" : isOutro ? "다른 곳에 남기기" : isLast ? "다 둘러봤어요" : "다음 장소로";
   card.innerHTML = `
     ${body}
     <div class="recall-card-nav">
@@ -795,7 +805,12 @@ function renderCourseCard() {
   card.classList.add("recall-card--visible");
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
-  document.getElementById("course-card-next-btn").onclick = isOutro ? writeMemoryAfterCourse : () => showCourseStep(courseIndex + 1);
+  document.getElementById("course-card-next-btn").onclick = isOutro ? () => writeMemoryAfterCourse(null) : () => showCourseStep(courseIndex + 1);
+  if (isOutro) {
+    card.querySelectorAll(".course-outro-place").forEach((btn) => {
+      btn.onclick = () => writeMemoryAfterCourse(activeCourse.places[Number(btn.dataset.index)]);
+    });
+  }
   if (isIntro) {
     document.getElementById("course-card-share").onclick = (e) => shareCourseLink(activeCourse, e.currentTarget);
     card.querySelectorAll(".course-intro-cover").forEach(fillCoverSlot);
@@ -1056,12 +1071,17 @@ function renderCoursePlacePhoto(place) {
 
 // 작성 폼(.overlay, z-index 100)이 이 화면(.recall-session, 110) 아래에
 // 깔리므로 따라 걷기를 마치고 작성 폼을 연다. 이미 코스를 다 본 뒤라 끊길
-// 흐름이 없다. 위치는 마지막 장소로 시작하고, 마법사 첫 단계에서 바꿀 수 있다.
-function writeMemoryAfterCourse() {
-  const place = activeCourse.places[activeCourse.places.length - 1];
-  Storage.logEvent(`course_write:${activeCourse.slug}`);
+// 흐름이 없다. 마무리 카드에서 고른 장소(위치+이름 미리 채움)로 시작한다
+// (2026-10-19 — 예전엔 마지막 장소로만 시작해서, 중간 장소에 얽힌 기억은
+// 마법사 첫 단계에서 위치를 직접 옮겨야 했다). "다른 곳에 남기기"(place
+// null)는 마지막 장소 위치에서 이름 없이 시작해 첫 단계에서 옮긴다.
+// 실제로 게시까지 했는지는 composer.js publishStory가 course_write_posted로 센다.
+function writeMemoryAfterCourse(place) {
+  const slug = activeCourse.slug;
+  const start = place || activeCourse.places[activeCourse.places.length - 1];
+  Storage.logEvent(`course_write:${slug}`);
   endCourseWalk();
-  startFreePinComposer(place.lat, place.lng);
+  startFreePinComposer(start.lat, start.lng, "", { placeName: place ? place.name : null, courseSlug: slug });
 }
 
 function endCourseWalk() {

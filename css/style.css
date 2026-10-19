@@ -5442,6 +5442,64 @@ button.story-place-line:hover {
   margin-top: 0;
 }
 
+/* 마무리 카드의 장소 목록(2026-10-19) — 눌러서 그 장소로 기억 남기기를
+   시작한다. 장소가 많아도 아래 "다른 곳에 남기기" 버튼이 밀려나지 않게
+   목록 높이를 제한한다. */
+.course-outro-places {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0 20px;
+  /* 다섯 번째 항목이 반쯤 보이게 해서 아래로 더 있다는 걸 알린다 */
+  max-height: 262px;
+  overflow-y: auto;
+}
+
+.course-outro-place {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(47, 48, 49, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  color: var(--cs-text-main);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--cs-transition-fast), background var(--cs-transition-fast);
+}
+
+.course-outro-place:hover,
+.course-outro-place:focus-visible {
+  border-color: var(--recall-coral, var(--cs-orange));
+  background: #fff;
+}
+
+.course-outro-place-num {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--recall-coral, var(--cs-orange));
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.course-outro-place-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
 .course-card-kicker-icon {
   flex-shrink: 0;
   width: 16px;

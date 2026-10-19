@@ -604,7 +604,9 @@ const COURSE_FUNNEL_STEPS = [
   { type: "course_detail_opened", label: "소개" },
   { type: "course_started", label: "시작" },
   { type: "course_completed", label: "완료" },
-  { type: "course_write", label: "기억 남김" },
+  { type: "course_write", label: "기억 쓰기 시작" },
+  // 실제 게시까지 간 수(2026-10-19~) — 그 전엔 "쓰기 시작"만 셌다.
+  { type: "course_write_posted", label: "게시" },
   { type: "course_shared", label: "공유" },
   { type: "course_link_opened", label: "링크 유입" },
 ];

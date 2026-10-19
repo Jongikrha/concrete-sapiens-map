@@ -15,7 +15,10 @@ const MAX_HASHTAGS = 7;
 // ------------------------------------------------------------
 // 자유 핀 작성 시작 — 주소를 먼저 조회한 뒤 작성 화면을 연다
 // ------------------------------------------------------------
-function startFreePinComposer(lat, lng, prefillContent) {
+// options.placeName: 장소 이름 미리 채움, options.courseSlug: 발자취 마무리
+// 카드에서 왔는지(게시 시 course_write_posted로 센다) — 둘 다 js/course.js
+// writeMemoryAfterCourse 전용(2026-10-19).
+function startFreePinComposer(lat, lng, prefillContent, options = {}) {
   openComposer({
     lat,
     lng,
@@ -24,6 +27,8 @@ function startFreePinComposer(lat, lng, prefillContent) {
     address: "주소 확인 중...",
     isFreePin: true,
     prefillContent: prefillContent || "",
+    customName: options.placeName ? trimToNonSpaceLimit(options.placeName, CONFIG.MAX_PLACE_NAME_LENGTH) : null,
+    fromCourseSlug: options.courseSlug || null,
   });
 
   reverseGeocode(lat, lng).then(({ address, buildingName }) => {
@@ -1497,6 +1502,7 @@ function openComposerWizard(pin) {
       onFail: () => showToast("entry-toast", "기억이 저장되지 않았어요. 잠시 후 다시 시도해주세요.", 3000),
     });
     Storage.logEvent("composer_submitted");
+    if (pin.fromCourseSlug) Storage.logEvent(`course_write_posted:${pin.fromCourseSlug}`);
     const currentUser = Auth.getCurrentUser();
     if (currentUser) {
       Storage.recordStoryAuthor(postedStory.id, currentUser.userId, currentUser.email);
