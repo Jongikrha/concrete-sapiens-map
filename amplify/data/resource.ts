@@ -207,6 +207,10 @@ const schema = a.schema({
   AppEvent: a
     .model({
       type: a.string().required(),
+      // 어느 기기가 남긴 이벤트인지(2026-10-19) — 어드민 방문 탭에서
+      // AdminExcludedDevice(내 기기)를 발자취 반응·전환율에서도 빼려고.
+      // 그 전 이벤트는 비어 있어 거르지 못하고 그대로 센다.
+      deviceId: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
