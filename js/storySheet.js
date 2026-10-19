@@ -1001,9 +1001,11 @@ function renderSharePrivacyBox() {
   `;
 }
 
-function buildStoryUrl(publicId) {
+// from: 어떤 공유 경로로 들어왔는지 유입 집계용 꼬리표(js/app.js
+// logVisitSource) — 링크 복사는 "link", 카드 이미지 QR은 "card".
+function buildStoryUrl(publicId, from = "link") {
   const base = `${window.location.origin}${window.location.pathname}`;
-  return `${base}?story=${publicId}`;
+  return `${base}?story=${publicId}&from=${from}`;
 }
 
 // 장소(스팟) 단위 공유 링크 — 개별 기억이 아니라 그 장소에 쌓인 기억
@@ -1011,9 +1013,9 @@ function buildStoryUrl(publicId) {
 // 의 ?place= 처리와 짝을 이룬다). group.key는 Storage._groupKeyFor가 만드는
 // "place:<placeId>" 또는 "pin:<lat>,<lng>" 형식이라 그대로 노출해도
 // 안전하지만(작성자 신원과 무관), ':'/',' 때문에 인코딩은 해둔다.
-function buildPlaceUrl(groupKey) {
+function buildPlaceUrl(groupKey, from = "link") {
   const base = `${window.location.origin}${window.location.pathname}`;
-  return `${base}?place=${encodeURIComponent(groupKey)}`;
+  return `${base}?place=${encodeURIComponent(groupKey)}&from=${from}`;
 }
 
 function toggleSharePanel(storyId) {
@@ -1123,13 +1125,60 @@ function drawShareCardBrandFooter(ctx, canvas, marginX) {
   ctx.fillText("CONCRETE SAPIENS", marginX, footerY + 120);
   ctx.font = "400 24px sans-serif";
   ctx.fillStyle = "#B9B9B5";
-  ctx.fillText("MEMORY MAP", marginX, footerY + 150);
+  // 주소를 같이 적는다(2026-10-19) — 카드 이미지만 공유되고 링크는 안
+  // 따라가서(shareStoryCard 참고), 받은 사람이 사이트를 찾아올 길이 없었다.
+  ctx.fillText(`MEMORY MAP · ${window.location.host}`, marginX, footerY + 150);
   return footerY;
+}
+
+// 카드 오른쪽 아래 QR 코드 — 찍으면 그 기억/장소로 바로 연다. ?from=card로
+// 카드 이미지를 통한 유입을 따로 센다(js/app.js logVisitSource). QR
+// 라이브러리는 카드를 만들 때만 필요해서 그때 처음 불러온다.
+let qrLibPromise = null;
+function loadQrLib() {
+  if (typeof qrcode === "function") return Promise.resolve();
+  qrLibPromise ||= new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "js/vendor/qrcode-generator-1.4.4.js";
+    script.onload = resolve;
+    script.onerror = () => {
+      qrLibPromise = null;
+      reject(new Error("QR 라이브러리 로드 실패"));
+    };
+    document.head.appendChild(script);
+  });
+  return qrLibPromise;
+}
+
+async function drawShareCardQr(ctx, canvas, marginX, url) {
+  try {
+    await loadQrLib();
+  } catch (e) {
+    // QR 없이도 카드 하단에 주소가 적혀 있으니 그대로 진행
+    return;
+  }
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  const count = qr.getModuleCount();
+  const quiet = 2;
+  const cell = Math.floor(176 / (count + quiet * 2));
+  const tile = cell * (count + quiet * 2);
+  const x = canvas.width - marginX - tile;
+  const y = canvas.height - 40 - tile;
+  ctx.fillStyle = "#F4F3EF";
+  ctx.fillRect(x, y, tile, tile);
+  ctx.fillStyle = "#2F3031";
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect(x + (c + quiet) * cell, y + (r + quiet) * cell, cell, cell);
+    }
+  }
 }
 
 // 인스타그램 스토리에 그대로 채워지는 9:16 세로 카드. 연도·장소·인용구는
 // 콘텐츠 길이에 따라 세로 위치가 밀리고, CTA/로고는 항상 하단에 고정한다.
-function generateShareCard(story) {
+async function generateShareCard(story) {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1920;
@@ -1210,13 +1259,14 @@ function generateShareCard(story) {
   ctx.fillText("열어보세요", marginX, footerY + 52);
 
   drawShareCardBrandFooter(ctx, canvas, marginX);
+  await drawShareCardQr(ctx, canvas, marginX, buildStoryUrl(story.publicId, "card"));
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
 
 // 장소(스팟) 단위 공유 카드 — 개별 기억 인용구는 작성자 동의 없이 노출하지
 // 않는 원칙이라(2026-08-18), 큰 숫자(개수)와 연도 범위만 보여준다.
-function generatePlaceShareCard(group) {
+async function generatePlaceShareCard(group) {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1920;
@@ -1275,6 +1325,7 @@ function generatePlaceShareCard(group) {
   ctx.fillText("열어보세요", marginX, footerY + 52);
 
   drawShareCardBrandFooter(ctx, canvas, marginX);
+  await drawShareCardQr(ctx, canvas, marginX, buildPlaceUrl(group.key, "card"));
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
