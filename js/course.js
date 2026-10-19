@@ -131,7 +131,7 @@ function openCourseChoice() {
       <button class="composer-close-btn" id="course-choice-close" aria-label="닫기">✕</button>
     </div>
     <div class="course-list-subrow">
-      <p class="course-list-subtitle">책과 장소를 따라 도시를 걸어보세요.</p>
+      <p class="course-list-subtitle">이야기가 머문 장소를 따라 도시를 걸어보세요.</p>
       <span class="course-list-badge">${COURSE_LIST_BOOKS_ICON}${publishedCourses.length}개의 발자취</span>
     </div>
     <div class="course-choice-list">
