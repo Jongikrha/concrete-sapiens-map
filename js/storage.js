@@ -23,6 +23,8 @@
 const LEGACY_REACTED_KEY = "concrete_sapiens_reacted_v1";
 const LEGACY_SHARED_KEY = "concrete_sapiens_shared_v1";
 const DEVICE_ID_KEY = "concrete_sapiens_device_id";
+// 이 브라우저 기기 ID를 방문 통계 제외 목록에 이미 넣었는지(값 = 넣은 기기 ID).
+const ADMIN_DEVICE_EXCLUDED_KEY = "concrete_sapiens_admin_device_excluded";
 const LAST_VISIT_KEY = "concrete_sapiens_last_visit_v1";
 const READ_STORIES_KEY = "concrete_sapiens_read_stories_v1";
 // 전체 스토리 목록 로컬 캐시(2026-09-02) — 부팅 시마다 서버에서 전체 목록을
@@ -718,6 +720,34 @@ const Storage = {
 
   async removeExcludedDevice(id) {
     await client.models.AdminExcludedDevice.delete({ id });
+  },
+
+  /**
+   * 어드민 계정으로 로그인한 브라우저를 방문 통계 제외 목록에 자동으로
+   * 넣는다(2026-10-19). 브라우저 데이터가 지워지면 기기 ID가 새로 생겨
+   * 손으로 제외해 둔 ID와 어긋나는 일이 있어서 — 아이폰 크롬이 새 ID로
+   * 다시 집계된 사례. 제외는 deviceId 기준이라 로그인 전 방문 기록도
+   * 같이 빠진다. 이 브라우저에서 한 번 넣고 나면 다시 넣지 않는다 —
+   * 어드민이 칩을 ✕로 지운 경우 그 결정을 존중하기 위함.
+   */
+  async ensureDeviceExcluded() {
+    if (!client) return;
+    const deviceId = this.getDeviceId();
+    if (localStorage.getItem(ADMIN_DEVICE_EXCLUDED_KEY) === deviceId) return;
+    try {
+      const { data, errors } = await client.models.AdminExcludedDevice.list({
+        filter: { deviceId: { eq: deviceId } },
+        authMode: "userPool",
+      });
+      if (errors?.length) throw errors;
+      if (!data?.length) {
+        const created = await client.models.AdminExcludedDevice.create({ deviceId }, { authMode: "userPool" });
+        if (created.errors?.length) throw created.errors;
+      }
+      localStorage.setItem(ADMIN_DEVICE_EXCLUDED_KEY, deviceId);
+    } catch (e) {
+      console.error("어드민 기기 자동 제외 실패", e);
+    }
   },
 
   /**

@@ -165,6 +165,8 @@ async function bootAdminClient() {
   client = generateClient({ authMode: "userPool" });
   Storage._setClient(client);
   await Storage.refresh();
+  // 어드민 페이지에 로그인한 브라우저도 방문 통계에서 자동 제외(2026-10-19).
+  await Storage.ensureDeviceExcluded();
 
   currentUsername = (await getCurrentUser()).username;
 

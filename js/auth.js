@@ -81,6 +81,19 @@ const Auth = {
     // 바뀌는 지점은 init/signIn/confirmSignUp뿐이라 여기 한 곳에서만
     // 갱신하면 충분하다(signOut은 별도로 직접 호출).
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
+    if (this._currentUser) this._excludeDeviceIfAdmin();
+  },
+
+  // 어드민 계정이면 이 브라우저를 방문 통계에서 자동 제외(storage.js
+  // ensureDeviceExcluded 참고). 백그라운드로 돌려 로그인 흐름을 막지 않는다.
+  async _excludeDeviceIfAdmin() {
+    try {
+      const session = await this._sdk.fetchAuthSession();
+      const groups = session.tokens?.idToken?.payload?.["cognito:groups"] || [];
+      if (groups.includes("Admins")) await Storage.ensureDeviceExcluded();
+    } catch (_) {
+      // 통계 보조 기능이라 실패해도 무시
+    }
   },
 
   isLoggedIn() {
