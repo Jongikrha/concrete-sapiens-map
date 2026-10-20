@@ -54,9 +54,10 @@ function handleAnyScroll(e) {
 
 // 기억 카드 시트(.sheet-scroll)와 회상 세션 카드(.recall-card — 기억산책/
 // 기억 라디오 공통)에서는 스크롤바를 아예 보이지 않게 한다(2026-10-01
-// 요청). 스크롤 자체는 그대로 된다.
+// 요청). 스크롤 자체는 그대로 된다. 발자취 목록(#course-choice-panel)도
+// 소개 창처럼 썸 없이(2026-10-20).
 function isFadeScrollbarSuppressed(el) {
-  return el.matches(".sheet-scroll, .recall-card");
+  return el.matches(".sheet-scroll, .recall-card, #course-choice-panel");
 }
 
 // "지금까지 쌓인 기억" 등 헤더(제목+닫기 버튼)가 스크롤 컨테이너 맨 위에
