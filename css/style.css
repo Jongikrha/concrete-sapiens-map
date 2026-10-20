@@ -5272,6 +5272,72 @@ button.story-place-line:hover {
   object-fit: cover;
 }
 
+/* 지도 위 발자취 배지(js/course.js renderCourseBadges) — 따라 걷기 로고 핀과
+   같은 아이보리 원 + 주황 점을 한 치수 작게(34px). 원은 기억 별을 피해
+   놓이므로 점에서 떨어진 쪽(위/옆/아래)에 뜰 수 있고, 장소에 기억 별이
+   있으면 점 없이 원만 뜬다. 틀(.course-map-badge)은 크기 0, 원점이 장소. */
+.course-map-badge {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.course-map-badge-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  box-shadow: 0 1px 3px rgba(47, 48, 49, 0.25);
+  pointer-events: none;
+}
+
+.course-map-badge-logo {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 1.5px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: #FBF8F2;
+  color: var(--cs-orange);
+  box-shadow: 0 0 0 0.5px rgba(47, 48, 49, 0.2), 0 2px 5px rgba(47, 48, 49, 0.11);
+  cursor: pointer;
+}
+
+/* 누르는 영역을 조금 넓힌다(옆 기억 별과 3px 이상 떨어져 있어 그만큼만) */
+.course-map-badge-logo::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+}
+
+.course-map-badge-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.course-map-badge-logo--fill img {
+  padding: 0;
+  object-fit: cover;
+}
+
 .course-pin--logo.course-pin--active {
   transform: scale(1.4);
   filter: drop-shadow(0 0 0.5px rgba(47, 48, 49, 0.28)) drop-shadow(0 4px 10px rgba(47, 48, 49, 0.18));

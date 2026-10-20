@@ -285,6 +285,10 @@ function initMap() {
   placesService = new kakao.maps.services.Places();
   geocoderService = new kakao.maps.services.Geocoder();
 
+  // 지도 위 발자취 배지는 동네 단위로 확대했을 때만, 배율마다 기억 별을
+  // 피할 자리를 다시 찾는다(js/course.js renderCourseBadges)
+  kakao.maps.event.addListener(map, "zoom_changed", renderCourseBadges);
+
   kakao.maps.event.addListener(map, "click", (mouseEvent) => {
     if (recallSessionOpen || courseModeOpen) return;
     clearSearchPin();
@@ -517,6 +521,8 @@ function renderMarkers() {
   highlightedMarker = null;
   // 발자취 따라 걷기 중엔 기억 점을 걷어둔다(js/course.js startCourseWalk) —
   // 그사이 다른 흐름이 다시 그려도 번호 핀 위로 점이 섞여 올라오지 않게.
+  // 발자취 배지도 모드 전환 때마다 같이 다시 그린다(필터/내 기억 등에선 숨김).
+  renderCourseBadges();
   if (courseModeOpen) return;
 
   let groups = Storage.getGroupedByPlace();

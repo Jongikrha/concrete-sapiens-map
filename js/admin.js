@@ -640,6 +640,8 @@ const COURSE_FUNNEL_STEPS = [
   { type: "course_write_posted", label: "게시" },
   { type: "course_shared", label: "공유" },
   { type: "course_link_opened", label: "링크 유입" },
+  // 지도 위 발자취 배지를 눌러 시작한 수(2026-10-20~)
+  { type: "course_map_badge_clicked", label: "지도 배지" },
 ];
 
 function buildCourseStatsHtml(appEvents, courseList) {

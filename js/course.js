@@ -44,6 +44,7 @@ async function loadPublishedCourses() {
   }
   // 공개된 코스가 없으면 첫 줄 발자취 버튼을 숨긴다(목록이 비어 보이지 않게)
   document.getElementById("btn-course").classList.toggle("hidden", publishedCourses.length === 0);
+  renderCourseBadges();
   openCourseFromLink();
 }
 
@@ -369,6 +370,7 @@ function startCourseWalk(course, startIndex = 0) {
 
   activeCourse = course;
   courseModeOpen = true;
+  clearCourseBadges(); // 지도 위 발자취 배지도 걷는다(끝나면 renderMarkers가 되살림)
   coursePhotoIndexByPlace.clear();
   enterRecallImmersiveChrome();
   drawCoursePath();
@@ -570,13 +572,14 @@ function hydrateCoursePinLogo(el, logoKey) {
   });
 }
 
-// 배경까지 채운 로고(픽셀 90% 이상 불투명 — 예: 종이 질감 위 <탁류>)는 흰
-// 여백 없이 말풍선을 꽉 채우고, 꼬리도 로고 아래쪽 색으로 칠한다. 흰 여백
-// 안에 로고만 가운데 떠 보인다는 피드백(2026-10-15). 투명 배경 로고는 그대로.
-// 모서리만 보지 않는 건, 어드민 업로드(resizeLogoFile)가 왼쪽 위 색과 비슷한
-// 종이 부분을 반투명하게 지워 모서리 알파가 낮게 남기 때문이다 — 그 반투명
-// 자리는 말풍선 바탕을 같은 색으로 깔아 메운다.
+// 배경까지 채운 로고(픽셀 90% 이상 불투명 — 예: 종이 질감 위 <탁류>)는
+// 동그라미를 꽉 채운다(2026-10-15 흰 여백 안에 로고만 떠 보인다는 피드백,
+// 2026-10-20 원형). 투명 배경 로고는 여백을 두고 담는다.
 function fillPinLogoIfOpaque(slot, img) {
+  if (isOpaqueLogoImage(img)) slot.classList.add("course-pin-logo--fill");
+}
+
+function isOpaqueLogoImage(img) {
   try {
     const w = img.naturalWidth;
     const h = img.naturalHeight;
@@ -588,21 +591,130 @@ function fillPinLogoIfOpaque(slot, img) {
     const all = ctx.getImageData(0, 0, w, h).data;
     let opaque = 0;
     for (let i = 3; i < all.length; i += 4) if (all[i] > 200) opaque++;
-    if (opaque < (all.length / 4) * 0.9) return;
-    // 꼬리 색 = 아래 가장자리 가운데 띠의 평균 색
-    const band = ctx.getImageData(Math.round(w * 0.4), h - 3, Math.max(1, Math.round(w * 0.2)), 3).data;
-    let r = 0, g = 0, b = 0;
-    const n = band.length / 4;
-    for (let i = 0; i < band.length; i += 4) {
-      r += band[i];
-      g += band[i + 1];
-      b += band[i + 2];
-    }
-    slot.style.setProperty("--pin-tail", `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`);
-    slot.classList.add("course-pin-logo--fill");
+    return opaque >= (all.length / 4) * 0.9;
   } catch {
-    // 픽셀을 못 읽으면(캔버스 오염) 흰 말풍선 그대로
+    return false; // 픽셀을 못 읽으면(캔버스 오염) 투명 로고처럼
   }
+}
+
+// ------------------------------------------------------------
+// 지도 위 발자취 배지(2026-10-20 재도입) — 지도를 둘러보다 "여기가 『탁류』에
+// 나온 곳이네" 하고 마주치게 하는 입구. 따라 걷기 핀과 같은 아이보리 원
+// (코스 로고) + 주황 점을 한 치수 작게 그린다. 누르면 그 장소부터 바로
+// 따라 걷기(10-17 첫 시도의 텍스트 말풍선 단계는 예쁘지 않다고 뺐다).
+//
+// 사람들이 남긴 기억이 먼저다 — 첫 시도 때 잠실주공5단지에서 『콘크리트
+// 사피엔스』 배지가 기억 별들을 덮었다. 그래서 화면 픽셀 기준으로:
+// - 원은 기억 별을 덮지 않는 자리(위 → 옆 → 아래, 두 거리)에만 놓고,
+//   빈 자리가 없으면 이 배율에선 그리지 않는다(더 확대하면 자리가 난다).
+// - 같은 코스 장소가 화면에서 붙어 있으면 배지 하나만(먼저 오는 장소).
+// - 장소 바로 위에 기억 별이 있으면 주황 점은 뺀다(별 위에 점이 얹히지 않게).
+// - 배지끼리도 겹치지 않는다.
+// 동네 단위(카카오 레벨 5 이하)에서만, 필터·내 기억·회상·따라 걷기 중엔 숨긴다.
+// ------------------------------------------------------------
+const COURSE_BADGE_MAX_LEVEL = 5;
+const COURSE_BADGE_RADIUS_PX = 17; // 원 지름 34px
+const COURSE_BADGE_MEMORY_RADIUS_PX = 13; // 기억 별(가장 큰 tier 선택 상태 25px) 반지름
+const COURSE_BADGE_DOT_RADIUS_PX = 5;
+const COURSE_BADGE_GAP_PX = 3;
+const COURSE_BADGE_MERGE_PX = 64;
+// 원 중심을 놓아볼 자리(장소 기준) — 위가 기본, 막히면 오른쪽 위·왼쪽 위·옆·아래 순,
+// 가까운 거리부터
+const COURSE_BADGE_SLOTS = [28, 46].flatMap((d) =>
+  [-90, -45, -135, 0, 180, 45, 135, 90].map((deg) => ({
+    dx: Math.round(Math.cos((deg * Math.PI) / 180) * d),
+    dy: Math.round(Math.sin((deg * Math.PI) / 180) * d),
+  }))
+);
+let courseBadgeOverlays = [];
+// 로고가 꽉 찬 이미지인지(픽셀 검사)는 로고마다 한 번만 — URL은 만료가 있어
+// 매번 resolveStoryPhotoUrl로 받는다
+const courseLogoFillCache = new Map();
+
+function clearCourseBadges() {
+  courseBadgeOverlays.forEach((o) => o.setMap(null));
+  courseBadgeOverlays = [];
+}
+
+function renderCourseBadges() {
+  clearCourseBadges();
+  if (typeof map === "undefined" || !map || publishedCourses.length === 0) return;
+  const busy = courseModeOpen || recallSessionOpen || activeHashtagFilter || activeYearFilter !== null || activeSongFilter || sliderActive || myMemoryModeActive;
+  if (busy || map.getLevel() > COURSE_BADGE_MAX_LEVEL) return;
+
+  const proj = map.getProjection();
+  const toPx = (lat, lng) => proj.containerPointFromCoords(new kakao.maps.LatLng(lat, lng));
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const memories = Storage.getGroupedByPlace().map((g) => toPx(g.lat, g.lng));
+  const circles = []; // 이미 놓은 배지 원 중심
+  const dots = []; // 이미 놓은 주황 점
+
+  const fits = (c) =>
+    memories.every((m) => dist(m, c) >= COURSE_BADGE_RADIUS_PX + COURSE_BADGE_MEMORY_RADIUS_PX + COURSE_BADGE_GAP_PX) &&
+    circles.every((o) => dist(o, c) >= COURSE_BADGE_RADIUS_PX * 2 + COURSE_BADGE_GAP_PX) &&
+    dots.every((d) => dist(d, c) >= COURSE_BADGE_RADIUS_PX + COURSE_BADGE_DOT_RADIUS_PX + COURSE_BADGE_GAP_PX);
+
+  publishedCourses.forEach((course) => {
+    const shown = [];
+    course.places.forEach((p, i) => {
+      const pt = toPx(p.lat, p.lng);
+      if (shown.some((s) => dist(s, pt) < COURSE_BADGE_MERGE_PX)) return;
+      const slot = COURSE_BADGE_SLOTS.find((s) => fits({ x: pt.x + s.dx, y: pt.y + s.dy }));
+      if (!slot) return;
+      const showDot = !memories.some((m) => dist(m, pt) < COURSE_BADGE_MEMORY_RADIUS_PX + COURSE_BADGE_DOT_RADIUS_PX);
+      shown.push(pt);
+      circles.push({ x: pt.x + slot.dx, y: pt.y + slot.dy });
+      if (showDot) dots.push(pt);
+      courseBadgeOverlays.push(new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(p.lat, p.lng),
+        content: courseBadgeEl(course, i, slot, showDot),
+        xAnchor: 0,
+        yAnchor: 0,
+        clickable: true,
+        zIndex: 1,
+      }));
+    });
+  });
+}
+
+// 크기 0인 틀의 원점이 장소 — 주황 점은 원점에, 원은 slot만큼 떨어진 자리에
+function courseBadgeEl(course, index, slot, showDot) {
+  const el = document.createElement("div");
+  el.className = "course-map-badge";
+  el.innerHTML = `
+    ${showDot ? `<span class="course-map-badge-dot"></span>` : ""}
+    <button type="button" class="course-map-badge-logo" style="left:${slot.dx}px;top:${slot.dy}px"
+      aria-label="${escapeHtml(course.title)} 발자취 · ${escapeHtml(course.places[index].name)}">${COURSE_CHIP_ICON}</button>`;
+  const btn = el.querySelector(".course-map-badge-logo");
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    Storage.logEvent(`course_map_badge_clicked:${course.slug}`);
+    startCourseWalk(course, index);
+  };
+  if (course.logoKey) hydrateCourseBadgeLogo(btn, course.logoKey);
+  return el;
+}
+
+function hydrateCourseBadgeLogo(btn, logoKey) {
+  resolveStoryPhotoUrl(logoKey).then(async (url) => {
+    if (!url) return; // 못 받으면 발자국 아이콘 그대로
+    if (!courseLogoFillCache.has(logoKey)) {
+      courseLogoFillCache.set(logoKey, new Promise((resolve) => {
+        const probe = new Image();
+        probe.crossOrigin = "anonymous";
+        probe.onload = () => resolve(isOpaqueLogoImage(probe));
+        probe.onerror = () => resolve(false);
+        probe.src = url;
+      }));
+    }
+    const fill = await courseLogoFillCache.get(logoKey);
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = url;
+    btn.classList.toggle("course-map-badge-logo--fill", fill);
+    btn.replaceChildren(img);
+  });
 }
 
 function fitCourseBounds({ folded = false } = {}) {
