@@ -6200,14 +6200,40 @@ button.story-place-line:hover {
   margin-top: 0;
 }
 
-.course-detail-back {
-  padding: 4px 0;
+/* 윗줄 "목록"(회색)·"공유하기"(연한 주황) 알약 버튼(2026-10-21) — 글자만 있던
+   버튼을 아이콘 + 알약으로, 폰에서도 누르기 쉽게 */
+.course-detail-back,
+.course-detail-top-actions .course-card-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px 10px 12px;
   border: none;
-  background: none;
+  border-radius: var(--cs-radius-chip);
   font-family: inherit;
   font-size: 14px;
-  color: var(--cs-text-muted);
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
+  transition: background var(--cs-transition-fast);
+}
+
+.course-detail-back {
+  background: var(--cs-map-gray);
+  color: var(--cs-text-main);
+}
+
+.course-detail-back:hover {
+  background: #dcdbd5;
+}
+
+.course-detail-top-actions .course-card-share {
+  background: rgba(255, 90, 54, 0.12);
+  color: #E64F2D;
+}
+
+.course-detail-top-actions .course-card-share:hover {
+  background: rgba(255, 90, 54, 0.2);
 }
 
 .course-detail-body {
@@ -6220,6 +6246,7 @@ button.story-place-line:hover {
 
 .course-detail-body--no-cover {
   grid-template-columns: 1fr;
+  padding-top: 18px; /* 알약 버튼 줄과 붙어 보이지 않게 */
 }
 
 .course-detail-book .book3d,
