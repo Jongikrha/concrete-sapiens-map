@@ -312,6 +312,12 @@ function fillCoverSlot(slot) {
 // 카드(showCourseStep(-1))는 책 소개를 담기엔 좁았다. 따라 걷기는 첫
 // 장소부터 시작하고, 첫 장소에서 "이전"을 누르면 전체 경로 카드가 나온다.
 // ------------------------------------------------------------
+// 소개 화면 윗줄(2026-10-21) — "목록"(회색 알약), "공유하기"(연한 주황 알약), ✕(회색 원).
+// 글자(‹ ✕)로 흉내 내지 않고 선 아이콘으로 그린다.
+const COURSE_DETAIL_BACK_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m14.5 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+const COURSE_DETAIL_SHARE_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 15V4m0 0L8.2 7.8M12 4l3.8 3.8M6 11.5v6.2A1.8 1.8 0 0 0 7.8 19.5h8.4a1.8 1.8 0 0 0 1.8-1.8v-6.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+const COURSE_DETAIL_CLOSE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>`;
+
 function openCourseDetail(course, { fromList = false } = {}) {
   const panel = document.getElementById("course-detail-panel");
   // 지난번에 걷다 만 코스면 보던 장소부터 이어 걷기(2026-10-16) — 바로
@@ -324,11 +330,11 @@ function openCourseDetail(course, { fromList = false } = {}) {
   panel.innerHTML = `
     <div class="course-detail-scroll">
       <div class="course-detail-top">
-        ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
+        ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">${COURSE_DETAIL_BACK_ICON}<span>목록</span></button>` : "<span></span>"}
         <div class="course-detail-top-actions">
           ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
-          ${isCoursePreview(course) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>`}
-          <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">✕</button>
+          ${isCoursePreview(course) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-detail-share">${COURSE_DETAIL_SHARE_ICON}<span>공유하기</span></button>`}
+          <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">${COURSE_DETAIL_CLOSE_ICON}</button>
         </div>
       </div>
       <div class="course-detail-body${course.coverKey ? "" : " course-detail-body--no-cover"}">

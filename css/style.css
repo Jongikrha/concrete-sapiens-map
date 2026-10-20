@@ -6193,21 +6193,61 @@ button.story-place-line:hover {
 .course-detail-top-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
 }
 
 .course-detail-top-actions .course-card-link {
   margin-top: 0;
 }
 
-.course-detail-back {
-  padding: 4px 0;
+/* 윗줄 버튼(2026-10-21) — "목록"·"공유하기" 알약, ✕ 회색 원. 높이 36px로 맞춰
+   폰에서도 누르기 쉽게 한다 */
+.course-detail-back,
+.course-detail-top-actions .course-card-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px 0 10px;
   border: none;
-  background: none;
+  border-radius: var(--cs-radius-chip);
   font-family: inherit;
-  font-size: 14px;
-  color: var(--cs-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
+  transition: background var(--cs-transition-fast);
+}
+
+.course-detail-back {
+  background: #ECEBE8;
+  color: var(--cs-text-main);
+}
+
+.course-detail-back:hover {
+  background: #E2E1DD;
+}
+
+.course-detail-top-actions .course-card-share {
+  padding-left: 12px;
+  background: rgba(255, 90, 54, 0.14);
+  color: #E8451F;
+}
+
+.course-detail-top-actions .course-card-share:hover {
+  background: rgba(255, 90, 54, 0.22);
+}
+
+.course-detail-top-actions .composer-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ECEBE8;
+  color: var(--cs-text-main);
+}
+
+.course-detail-top-actions .composer-close-btn:hover {
+  background: #E2E1DD;
 }
 
 .course-detail-body {
@@ -6220,6 +6260,7 @@ button.story-place-line:hover {
 
 .course-detail-body--no-cover {
   grid-template-columns: 1fr;
+  padding-top: 18px; /* 윗줄 버튼과 붙어 보이지 않게 */
 }
 
 .course-detail-book .book3d,
@@ -6327,6 +6368,10 @@ button.story-place-line:hover {
     justify-items: center;
     gap: 22px;
     padding: 0;
+  }
+
+  .course-detail-body--no-cover {
+    padding-top: 18px;
   }
 
   .course-detail-book .book3d,
