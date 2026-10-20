@@ -6265,7 +6265,12 @@ button.story-place-line:hover {
 
 .course-detail-book .book3d,
 .course-detail-book .cover-art {
-  --book-w: 190px;
+  --book-w: 178px; /* 190→178: 윗줄 버튼과 표지 사이를 띄울 높이를 번다(2026-10-21) */
+}
+
+/* 윗줄 버튼(목록·공유하기·✕)과 표지가 붙어 보이지 않게 */
+.course-detail-book {
+  margin-top: 14px;
 }
 
 .course-detail-text {
@@ -6376,7 +6381,11 @@ button.story-place-line:hover {
 
   .course-detail-book .book3d,
   .course-detail-book .cover-art {
-    --book-w: 128px;
+    --book-w: 120px;
+  }
+
+  .course-detail-book {
+    margin-top: 16px;
   }
 
   .course-detail-text {

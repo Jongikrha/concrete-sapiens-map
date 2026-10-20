@@ -345,7 +345,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
           <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
           ${course.description ? `<p class="course-detail-subtitle">${escapeHtml(course.description)}</p>` : ""}
           ${course.intro ? `<p class="course-detail-intro">${escapeHtml(course.intro)}</p>` : ""}
-          <p class="course-detail-tagline">콘텐츠 속 장소를 따라 걸으며, 지역의 서사를 직접 만나보세요.</p>
+          <p class="course-detail-tagline">장소를 따라 걸으며, 지역의 서사를 만나보세요.</p>
         </div>
       </div>
     </div>
