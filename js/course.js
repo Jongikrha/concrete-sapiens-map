@@ -35,17 +35,70 @@ let courseMapFolded = false;
 // 같은 사진을 보여준다(js/course.js renderCoursePlacePhoto). 걷기를 새로 시작하면 비운다.
 const coursePhotoIndexByPlace = new Map();
 
-async function loadPublishedCourses() {
-  try {
-    publishedCourses = await Storage.fetchPublishedCourses();
-  } catch (e) {
-    console.error("발자취 불러오기 실패", e);
-    publishedCourses = [];
+// 목록을 못 받은 것(네트워크·서버 오류)과 공개된 코스가 없는 것을 구분한다
+// (2026-10-20) — 예전엔 둘 다 빈 목록이라, QR·공유 링크로 들어온 첫 방문자가
+// 잠깐 끊긴 네트워크 때문에 "이 발자취는 지금 볼 수 없어요"를 보고 돌아갔다.
+// 두 번까지 자동으로 다시 받아 보고, 그래도 안 되면 실패로 안내하며, 발자취
+// 버튼을 눌러 다시 시도하거나 네트워크가 돌아오면(online) 이어서 불러온다.
+let coursesLoadFailed = false;
+let courseLoadInFlight = null;
+let courseLinkHandled = false;
+const COURSE_LOAD_RETRY_DELAYS = [1500, 4000];
+
+async function fetchCoursesWithRetry() {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await Storage.fetchPublishedCourses();
+    } catch (e) {
+      console.error("발자취 불러오기 실패", e);
+      if (attempt >= COURSE_LOAD_RETRY_DELAYS.length) throw e;
+      await new Promise((resolve) => setTimeout(resolve, COURSE_LOAD_RETRY_DELAYS[attempt]));
+    }
   }
-  // 공개된 코스가 없으면 첫 줄 발자취 버튼을 숨긴다(목록이 비어 보이지 않게)
-  document.getElementById("btn-course").classList.toggle("hidden", publishedCourses.length === 0);
-  renderCourseBadges();
-  openCourseFromLink();
+}
+
+function loadPublishedCourses() {
+  if (courseLoadInFlight) return courseLoadInFlight;
+  courseLoadInFlight = (async () => {
+    try {
+      publishedCourses = await fetchCoursesWithRetry();
+      coursesLoadFailed = false;
+    } catch (e) {
+      publishedCourses = [];
+      coursesLoadFailed = true;
+    }
+    // 공개된 코스가 없으면 첫 줄 발자취 버튼을 숨긴다(목록이 비어 보이지 않게).
+    // 못 받은 경우엔 버튼을 보여 둬서 눌러 다시 시도할 수 있게 한다.
+    document.getElementById("btn-course").classList.toggle("hidden", publishedCourses.length === 0 && !coursesLoadFailed);
+    renderCourseBadges();
+    if (coursesLoadFailed) {
+      if (!courseLinkHandled && new URLSearchParams(window.location.search).get("course")) {
+        showToast("entry-toast", "발자취를 불러오지 못했어요. 네트워크를 확인해 주세요", 4000);
+        maybeShowPendingWelcomeOverlay();
+      }
+    } else {
+      openCourseFromLink();
+    }
+  })().finally(() => {
+    courseLoadInFlight = null;
+  });
+  return courseLoadInFlight;
+}
+
+// 상단 툴바 "발자취" 버튼 — 목록을 못 받은 상태면 다시 받아 본 뒤 연다.
+async function handleCourseToolbarClick() {
+  Storage.logEvent("course_toolbar_clicked");
+  if (coursesLoadFailed) {
+    showToast("entry-toast", "발자취를 다시 불러오는 중이에요", 2000);
+    await loadPublishedCourses();
+    if (coursesLoadFailed) {
+      showToast("entry-toast", "아직 불러오지 못했어요. 잠시 후 다시 눌러 주세요", 3000);
+      return;
+    }
+    // 이 사이에 공유 링크 코스가 소개 화면으로 열렸으면 그 위에 목록을 겹쳐 열지 않는다
+    if (publishedCourses.length === 0 || isCourseLayerVisible()) return;
+  }
+  openCourseChoice();
 }
 
 // 공유 링크(?course=<slug>)로 들어오면 그 코스의 소개 화면을 바로 연다(2026-10-13) —
@@ -53,16 +106,53 @@ async function loadPublishedCourses() {
 // js/app.js가 이 파라미터가 있으면 기본 랜딩(오늘 올라온 기억)과 첫 방문
 // 환영 모달을 건너뛴다 — 환영 모달은 발자취를 나갈 때 띄운다(endCourseWalk).
 function openCourseFromLink() {
-  const slug = new URLSearchParams(window.location.search).get("course");
+  if (courseLinkHandled) return;
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get("course");
   if (!slug) return;
+  courseLinkHandled = true;
   const course = publishedCourses.find((c) => c.slug === slug);
   if (!course) {
+    // 공개 전 시안은 ?preview=1 링크를 가진 사람만 본다(아래)
+    if (params.get("preview") === "1") {
+      openCoursePreviewFromLink(slug);
+      return;
+    }
     showToast("entry-toast", "이 발자취는 지금 볼 수 없어요", 3000);
     maybeShowPendingWelcomeOverlay();
     return;
   }
   Storage.logEvent(`course_link_opened:${course.slug}`);
   openCourseDetail(course);
+}
+
+// 비공개 시안 미리보기(2026-10-20) — 작가·출판사에게 "공개 전에 먼저 보여드리는"
+// 링크: /?course=<slug>&preview=1. 목록·지도 배지·아카이브엔 나오지 않고 이 링크로만
+// 열린다. 조회 권한 자체는 코스 데이터가 공개 읽기라 서버가 막아주지 않는다(링크를 아는
+// 사람만 본다는 약속이므로 slug를 추측하기 어렵게 지을 것). 시안을 둘러보는 동안의
+// 이벤트는 발자취 통계에 섞이지 않게 남기지 않는다(js/app.js가 부팅 때 같은
+// 플래그를 켠다). 공개된 코스에 preview=1이 붙은 경우는 그대로 열리되 집계만 빠진다.
+async function openCoursePreviewFromLink(slug) {
+  let course = null;
+  try {
+    const all = await Storage.fetchPublishedCourses({ includeDrafts: true });
+    course = all.find((c) => c.slug === slug) || null;
+  } catch (e) {
+    courseLinkHandled = false; // 네트워크 문제 — 다시 불러올 때 이어서 연다
+    showToast("entry-toast", "시안을 불러오지 못했어요. 네트워크를 확인해 주세요", 4000);
+    maybeShowPendingWelcomeOverlay();
+    return;
+  }
+  if (!course) {
+    showToast("entry-toast", "이 발자취는 지금 볼 수 없어요", 3000);
+    maybeShowPendingWelcomeOverlay();
+    return;
+  }
+  openCourseDetail(course);
+}
+
+function isCoursePreview(course) {
+  return course.isPublished === false;
 }
 
 function buildCourseUrl(slug) {
@@ -163,6 +253,7 @@ function openCourseChoice() {
   panel.querySelectorAll(".course-choice-cover-img").forEach(fillCoverSlot);
   panel.scrollTop = 0;
   document.getElementById("course-choice-overlay").classList.remove("hidden");
+  syncCourseNav();
 }
 
 // 목록 카드 "장소 20곳" 뒤에 붙는 진행 표시 — 다 본 코스는 "다 둘러봄",
@@ -236,13 +327,14 @@ function openCourseDetail(course, { fromList = false } = {}) {
         ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">‹ 목록</button>` : "<span></span>"}
         <div class="course-detail-top-actions">
           ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
-          <button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>
+          ${isCoursePreview(course) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-detail-share">공유하기</button>`}
           <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">✕</button>
         </div>
       </div>
       <div class="course-detail-body${course.coverKey ? "" : " course-detail-body--no-cover"}">
         ${course.coverKey ? `<div class="course-detail-book" id="course-detail-book"></div>` : ""}
         <div class="course-detail-text">
+          ${isCoursePreview(course) ? `<p class="course-detail-preview-note">시안 미리보기 · 아직 공개 전인 발자취예요</p>` : ""}
           <p class="course-detail-kicker">발자취 · 장소 ${course.places.length}곳</p>
           <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
           ${course.description ? `<p class="course-detail-subtitle">${escapeHtml(course.description)}</p>` : ""}
@@ -282,7 +374,8 @@ function openCourseDetail(course, { fromList = false } = {}) {
     closeCourseDetail();
     openCourseChoice();
   };
-  document.getElementById("course-detail-share").onclick = (e) => shareCourseLink(course, e.currentTarget);
+  const detailShare = document.getElementById("course-detail-share");
+  if (detailShare) detailShare.onclick = (e) => shareCourseLink(course, e.currentTarget);
   document.getElementById("course-detail-start").onclick = () => {
     // 처음부터 시작하면(처음 보거나 지난번에 다 본 코스) 둘러본 수도 새로 센다
     if (resumeIndex === null) Storage.resetCourseProgress(course.id);
@@ -300,10 +393,12 @@ function openCourseDetail(course, { fromList = false } = {}) {
   panel.scrollTop = 0;
   document.getElementById("course-detail-overlay").classList.remove("hidden");
   Storage.logEvent(`course_detail_opened:${course.slug}`);
+  syncCourseNav();
 }
 
 function closeCourseDetail() {
   document.getElementById("course-detail-overlay").classList.add("hidden");
+  syncCourseNav();
 }
 
 // ------------------------------------------------------------
@@ -354,10 +449,20 @@ function bindArchiveCourseRow(panel, onLeave) {
 
 function closeCourseChoice() {
   document.getElementById("course-choice-overlay").classList.add("hidden");
+  syncCourseNav();
 }
 
 function startCourseWalk(course, startIndex = 0) {
-  if (recallSessionOpen || courseModeOpen) return;
+  if (courseModeOpen) return;
+  if (recallSessionOpen) {
+    // 기억산책 중에 지도 배지·가보고 싶은 곳에서 들어오면 말없이 무시하지 말고 이유를 알린다.
+    // 이 화면(.recall-session, 110)이 일반 토스트(60)를 덮어서 맨 위로 올린다.
+    const toast = document.getElementById("entry-toast");
+    toast.classList.add("entry-toast--over");
+    showToast("entry-toast", "기억산책을 마친 뒤에 발자취를 걸을 수 있어요", 2600);
+    setTimeout(() => toast.classList.remove("entry-toast--over"), 3200);
+    return;
+  }
   clearFilters();
   closeSlider();
   closeMyMemoryMode();
@@ -382,6 +487,7 @@ function startCourseWalk(course, startIndex = 0) {
   // 누른 거라 첫 장소부터, "이어 걷기"면 지난번 보던 장소부터 보여준다.
   stopMiniPlayer();
   showCourseStep(startIndex, { deferMusic: true });
+  syncCourseNav();
 }
 
 // 음악은 기억 라디오처럼 내용과 따로 흐른다(2026-10-13) — 처음엔 코스
@@ -825,8 +931,14 @@ function renderCourseCard() {
       </div>
       <div class="course-card-links">
         ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
-        <button type="button" class="course-card-link course-card-share" id="course-card-share">공유하기</button>
+        ${isCoursePreview(activeCourse) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-card-share">공유하기</button>`}
       </div>
+    `;
+  } else if (isOutro && isCoursePreview(activeCourse)) {
+    body = `
+      <p class="course-card-kicker">${escapeHtml(activeCourse.title)} · 장소 ${total}곳</p>
+      <h2 class="course-card-title">시안 미리보기를 마쳤어요</h2>
+      <p class="story-content">공개 전에는 기억을 남길 수 없어요. 고칠 점은 보내주신 분께 알려주세요.</p>
     `;
   } else if (isOutro) {
     body = `
@@ -864,7 +976,7 @@ function renderCourseCard() {
     `;
   }
 
-  const nextLabel = isIntro ? "따라 걷기 시작" : isOutro ? "다른 곳에 남기기" : isLast ? "다 둘러봤어요" : "다음 장소로";
+  const nextLabel = isIntro ? "따라 걷기 시작" : isOutro ? (isCoursePreview(activeCourse) ? "닫기" : "다른 곳에 남기기") : isLast ? "다 둘러봤어요" : "다음 장소로";
   card.innerHTML = `
     ${body}
     <div class="recall-card-nav">
@@ -881,14 +993,17 @@ function renderCourseCard() {
   card.classList.add("recall-card--visible");
 
   document.getElementById("course-card-prev-btn").onclick = () => showCourseStep(courseIndex - 1);
-  document.getElementById("course-card-next-btn").onclick = isOutro ? () => writeMemoryAfterCourse(null) : () => showCourseStep(courseIndex + 1);
+  document.getElementById("course-card-next-btn").onclick = isOutro
+    ? (isCoursePreview(activeCourse) ? endCourseWalk : () => writeMemoryAfterCourse(null))
+    : () => showCourseStep(courseIndex + 1);
   if (isOutro) {
     card.querySelectorAll(".course-outro-place").forEach((btn) => {
       btn.onclick = () => writeMemoryAfterCourse(activeCourse.places[Number(btn.dataset.index)]);
     });
   }
   if (isIntro) {
-    document.getElementById("course-card-share").onclick = (e) => shareCourseLink(activeCourse, e.currentTarget);
+    const cardShare = document.getElementById("course-card-share");
+    if (cardShare) cardShare.onclick = (e) => shareCourseLink(activeCourse, e.currentTarget);
     card.querySelectorAll(".course-intro-cover").forEach(fillCoverSlot);
   }
   if (!isIntro && !isOutro) {
@@ -1177,11 +1292,114 @@ function endCourseWalk() {
   activeCourse = null;
   courseIndex = -1;
   renderMarkers();
+  syncCourseNav();
   // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)
   maybeShowPendingWelcomeOverlay();
 }
 
+// ------------------------------------------------------------
+// 뒤로가기(2026-10-20) — 발자취 화면(목록·소개·따라 걷기)은 오버레이라 주소가
+// 바뀌지 않는다. 그래서 폰에서 뒤로가기(안드로이드 버튼, 아이폰 스와이프)를 누르면
+// 걷기를 끝내는 게 아니라 사이트에서 나가 버렸다. 발자취 화면이 하나라도 열려 있는
+// 동안 history 항목 하나를 쌓아 두고, 뒤로가기가 오면 그 화면들을 닫는다. 화면
+// 사이를 옮길 땐(목록→소개→걷기) 한 항목을 그대로 쓰고, 마지막 화면이 닫히면(✕·ESC·
+// 걷기 종료) 쌓아 둔 항목을 직접 되돌려 뒤로가기 한 번이 사이트 이탈이 되지 않게 한다.
+// 닫기→열기가 같은 틱에 이어질 수 있어 마이크로태스크로 모아 최종 상태만 본다.
+// ------------------------------------------------------------
+let courseNavPushed = false;
+let courseNavIgnorePop = 0;
+
+function isCourseLayerVisible() {
+  return (
+    courseModeOpen ||
+    !document.getElementById("course-detail-overlay").classList.contains("hidden") ||
+    !document.getElementById("course-choice-overlay").classList.contains("hidden")
+  );
+}
+
+function syncCourseNav() {
+  queueMicrotask(() => {
+    const visible = isCourseLayerVisible();
+    if (visible && !courseNavPushed) {
+      try {
+        history.pushState({ csCourseLayer: true }, "", window.location.href);
+        courseNavPushed = true;
+      } catch (e) {
+        // history를 못 쓰는 환경 — 예전처럼 뒤로가기는 브라우저 기본 동작
+      }
+    } else if (!visible && courseNavPushed) {
+      courseNavPushed = false;
+      courseNavIgnorePop++;
+      history.back();
+    }
+  });
+}
+
+function handleCoursePopState() {
+  if (courseNavIgnorePop > 0) {
+    courseNavIgnorePop--; // 우리가 쌓은 항목을 직접 되돌릴 때 온 이벤트
+    return;
+  }
+  if (!courseNavPushed) return;
+  courseNavPushed = false; // 사용자가 뒤로가기로 이미 항목을 지났다
+  if (courseModeOpen) endCourseWalk();
+  if (!document.getElementById("course-detail-overlay").classList.contains("hidden")) {
+    closeCourseDetail();
+    maybeShowPendingWelcomeOverlay();
+  }
+  closeCourseChoice();
+}
+
+// ESC — 열려 있는 가장 위 발자취 화면을 닫는다. 처리했으면 true(js/app.js 전역 핸들러).
+function handleCourseEscape() {
+  if (courseModeOpen) {
+    endCourseWalk();
+    return true;
+  }
+  if (!document.getElementById("course-detail-overlay").classList.contains("hidden")) {
+    closeCourseDetail();
+    maybeShowPendingWelcomeOverlay();
+    return true;
+  }
+  if (!document.getElementById("course-choice-overlay").classList.contains("hidden")) {
+    closeCourseChoice();
+    return true;
+  }
+  return false;
+}
+
+// 장소 카드 좌우 스와이프(2026-10-20) — 스토리처럼 밀어서 이전/다음. 사진 캐러셀과
+// 노래 카드 위에서 시작한 제스처는 그쪽 동작을 위해 건드리지 않고, 세로 스크롤이
+// 큰 움직임은 무시한다.
+function bindCourseCardSwipe() {
+  const card = document.getElementById("course-card");
+  let startX = null;
+  let startY = 0;
+  card.addEventListener("touchstart", (e) => {
+    const blocked = e.touches.length !== 1 || e.target.closest(".course-photo-carousel, .recall-song");
+    startX = blocked ? null : e.touches[0].clientX;
+    startY = blocked ? 0 : e.touches[0].clientY;
+  }, { passive: true });
+  card.addEventListener("touchcancel", () => { startX = null; }, { passive: true });
+  card.addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    startX = null;
+    if (!courseModeOpen || courseMapFolded) return;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const total = activeCourse.places.length;
+    if (dx < 0 && courseIndex < total) showCourseStep(courseIndex + 1);
+    else if (dx > 0 && courseIndex > -1) showCourseStep(courseIndex - 1);
+  }, { passive: true });
+}
+
 function bindCourseEvents() {
+  window.addEventListener("popstate", handleCoursePopState);
+  window.addEventListener("online", () => {
+    if (coursesLoadFailed) loadPublishedCourses();
+  });
+  bindCourseCardSwipe();
   document.getElementById("course-exit-btn").onclick = endCourseWalk;
   document.getElementById("course-fold-bar").onclick = () => showCourseStep(courseIndex);
   bindOverlayClickToClose("course-choice-overlay", closeCourseChoice);

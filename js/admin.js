@@ -1747,11 +1747,13 @@ async function handleCourseAction(action, courseId) {
   const course = courses.find((c) => c.id === courseId);
   if (action === "copy-link") {
     // 메인 사이트에서 이 코스를 바로 여는 공유 링크(js/course.js openCourseFromLink).
-    // 비공개 코스는 링크로도 안 열린다.
-    const url = `${window.location.origin}/?course=${encodeURIComponent(course.slug)}`;
+    // 비공개 코스는 일반 링크로 안 열리므로 시안 미리보기 링크(&preview=1)를 준다 —
+    // 링크를 아는 사람만 볼 수 있고 방문·반응 집계에는 잡히지 않는다.
+    const base = `${window.location.origin}/?course=${encodeURIComponent(course.slug)}`;
+    const url = course.isPublished ? base : `${base}&preview=1`;
     try {
       await navigator.clipboard.writeText(url);
-      alert(`링크를 복사했어요.\n${url}${course.isPublished ? "" : "\n\n아직 비공개라 공개해야 열려요."}`);
+      alert(`링크를 복사했어요.\n${url}${course.isPublished ? "" : "\n\n아직 비공개라 시안 미리보기 링크예요. 링크를 아는 사람은 누구나 볼 수 있으니 허락받을 분께만 보내세요."}`);
     } catch (e) {
       prompt("아래 링크를 복사해주세요.", url);
     }

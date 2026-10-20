@@ -6521,3 +6521,20 @@ button.story-place-line:hover {
   display: inline-block;
   will-change: transform;
 }
+
+/* 기억산책 화면(.recall-session, 110) 위에서도 보여야 하는 알림(js/course.js startCourseWalk) */
+.entry-toast.entry-toast--over {
+  z-index: 140;
+}
+
+/* 비공개 시안 미리보기 안내(js/course.js openCourseDetail) — 공개된 코스와 헷갈리지 않게 */
+.course-detail-preview-note {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--cs-orange);
+  border-radius: var(--cs-radius-chip);
+  font-size: 12px;
+  font-weight: 600;
+  color: #C93E1C;
+}

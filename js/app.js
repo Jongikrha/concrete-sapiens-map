@@ -38,6 +38,15 @@ async function initApp() {
   // 여전히 서버 응답을 기다려야 하므로, 파라미터 없는 기본 랜딩(오늘 올라온
   // 기억)만 캐시가 있으면 즉시 처리한다.
   const params = new URLSearchParams(window.location.search);
+  // 비공개 시안 미리보기 링크(?course=…&preview=1, js/course.js)는 방문·반응 집계에서
+  // 빼고 검색엔진에도 안 잡히게 한다. 첫 로그가 남기 전에 켜야 해서 부팅 맨 앞에 둔다.
+  if (params.get("preview") === "1") {
+    Storage.eventsSuppressed = true;
+    const robots = document.createElement("meta");
+    robots.name = "robots";
+    robots.content = "noindex";
+    document.head.appendChild(robots);
+  }
   const isDeepLink = !!(params.get("story") || params.get("place") || params.get("course"));
   const landedFromCache = !isDeepLink && Storage.getAllStories().length > 0;
   if (landedFromCache) handleInitialEntry();
@@ -657,10 +666,7 @@ function bindUIEvents() {
   document.getElementById("btn-my-location").onclick = goToMyLocation;
   document.getElementById("btn-write").onclick = handleWriteFabClick;
   document.getElementById("btn-random").onclick = startMemoryRadio;
-  document.getElementById("btn-course").onclick = () => {
-    Storage.logEvent("course_toolbar_clicked");
-    openCourseChoice();
-  };
+  document.getElementById("btn-course").onclick = handleCourseToolbarClick;
   document.getElementById("btn-my-memory").onclick = toggleMyMemoryMode;
   document.getElementById("time-slider-close").onclick = closeSlider;
   document.getElementById("time-slider-mode-cumulative").onclick = () => setSliderMode("cumulative");
@@ -683,6 +689,7 @@ function bindUIEvents() {
     if (e.key === "Escape") {
       if (sheetOpen) closeSheetToUnfiltered();
       else if (!document.getElementById("auth-overlay").classList.contains("hidden")) cancelAuthOverlay();
+      else if (handleCourseEscape()) { /* 발자취 화면 하나를 닫았다 */ }
       else if (!document.getElementById("mymemory-overlay").classList.contains("hidden")) closeMyMemoryList();
       else if (!document.getElementById("changepw-overlay").classList.contains("hidden")) closeChangePasswordPanel();
       else if (!document.getElementById("composer-overlay").classList.contains("hidden")) closeComposer();
