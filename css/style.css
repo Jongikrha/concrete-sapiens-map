@@ -5206,72 +5206,66 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-/* 코스 로고 배지(로고가 있을 때 물방울 대신) — 붉은 테두리 없이 흰
-   말풍선에 로고만 담고, 아래 작은 꼬리가 장소를 가리킨다. 로고 비율
-   (가로로 긴 글자 로고도)에 맞춰 배지 폭이 따라간다. */
-/* 2026-10-20 다듬기 — 크기 44→36px(약 18% 축소), 연한 아이보리 바탕,
-   외곽선 대신 4px 액자, 그림자는 절반으로. 그림자가 옅어져 밝은 땅 위에서
-   윤곽이 흐려지지 않게 0.5px 번짐 그림자로 테두리처럼 보이지 않는 윤곽을
-   잡는다. 모서리는 동심원 규칙(바깥 10 = 안 6 + 여백 4)으로 맞춘다. */
+/* 코스 로고 배지(로고가 있을 때 물방울 대신) — 아이보리 동그라미 안에
+   로고를 담고, 그 아래 주황 점이 장소를 가리킨다. 2026-10-20 말풍선에서
+   원형으로 통일(표지 그림처럼 보이게, 로고 파일은 원형에 맞춰 다시 올리는
+   전제). 그림자는 옅게 두고 0.5px 번짐 그림자로 밝은 땅 위 윤곽만 잡는다.
+   버튼 아래 끝 = 주황 점 가운데라 yAnchor 1 그대로 점이 장소에 놓인다. */
 .course-pin--logo {
   --pin-bg: #FBF8F2;
   width: auto;
   height: auto;
-  padding-bottom: 5px; /* 꼬리 자리 */
+  padding-bottom: 9px; /* 동그라미와 점 사이 4px + 점 반지름 5px */
   filter: drop-shadow(0 0 0.5px rgba(47, 48, 49, 0.28)) drop-shadow(0 2px 5px rgba(47, 48, 49, 0.11));
 }
 
-/* 겉모습은 36px로 줄였어도 누르는 영역은 44px 언저리로 유지 */
+/* 누르는 영역은 겉모습보다 조금 넓게 */
 .course-pin--logo::before {
   content: "";
   position: absolute;
   inset: -4px;
 }
 
-.course-pin-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  height: 36px;
-  padding: 4px 7px;
-  box-sizing: border-box;
-  border-radius: 10px;
-  background: var(--pin-bg);
-}
-
-.course-pin-logo::after {
+/* 장소를 가리키는 주황 점(흰 테두리) */
+.course-pin--logo::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: -5px;
   width: 10px;
-  height: 6px;
+  height: 10px;
+  box-sizing: border-box;
   transform: translateX(-50%);
-  background: var(--pin-bg);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--cs-orange);
 }
 
+.course-pin-logo {
+  display: block;
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--pin-bg);
+}
+
+/* 투명 배경 로고 — 동그라미 안에 잘리지 않게 여백을 두고 담는다 */
 .course-pin-logo img {
   display: block;
-  height: 28px;
-  width: auto;
-  max-width: 66px;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 50%;
   object-fit: contain;
 }
 
-/* 배경까지 채운 로고(js/course.js fillPinLogoIfOpaque) — 표지 그림처럼
-   아이보리 액자(여백 4px) 안에 모서리 6px로 담는다. 예전엔 말풍선을 꽉
-   채우고 꼬리를 로고 아래쪽 색(--pin-tail)으로 칠했지만, 외곽선 없는
-   액자형으로 통일하면서 꼬리도 액자색을 따른다. */
-.course-pin-logo--fill {
-  padding: 4px;
-}
-
+/* 배경까지 채운 로고(js/course.js fillPinLogoIfOpaque) — 동그라미를 꽉
+   채운다. 가운데 기준으로 잘리니 원형에 맞춰 만든 파일이 가장 잘 보인다. */
 .course-pin-logo--fill img {
-  height: 28px;
-  max-width: 90px;
-  border-radius: 6px;
+  padding: 0;
   object-fit: cover;
 }
 

@@ -515,9 +515,9 @@ function drawCoursePath() {
     // 동그라미+숫자는 카카오맵의 지하철 출구 번호(①②)와 똑같아 보여서,
     // 기억 남기기 완료 화면의 핀(js/composer.js .wizard-done-pin)과 같은
     // 물방울 모양 안에 숫자를 넣는다.
-    // 로고가 있는 코스는 물방울 대신 로고만 담은 흰 말풍선 배지로 그린다
-    // (주황 물방울 안에 로고를 넣었더니 로고가 작고 붉은 테두리만 눈에
-    // 띈다는 피드백, 2026-10-13).
+    // 로고가 있는 코스는 물방울 대신 로고를 담은 동그라미 + 주황 점으로
+    // 그린다(주황 물방울 안에 로고를 넣었더니 로고가 작고 붉은 테두리만
+    // 눈에 띈다는 피드백 2026-10-13, 말풍선→원형 2026-10-20).
     el.className = activeCourse.logoKey ? "course-pin course-pin--logo" : "course-pin";
     el.dataset.seq = String(i + 1);
     el.innerHTML = activeCourse.logoKey ? `<span class="course-pin-logo"></span>` : numberPinHtml(i + 1);
