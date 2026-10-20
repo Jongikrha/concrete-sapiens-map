@@ -120,7 +120,7 @@ function openCourseChoice() {
   panel.innerHTML = `
     <div class="course-list-header">
       <h2 class="course-list-title">발자취</h2>
-      <button class="composer-close-btn" id="course-choice-close" aria-label="닫기">✕</button>
+      <button class="daily-prompt-close" id="course-choice-close" aria-label="닫기">✕</button>
     </div>
     <div class="course-list-subrow">
       <p class="course-list-subtitle">이야기가 머문 장소를 따라 도시를 걸어보세요.</p>

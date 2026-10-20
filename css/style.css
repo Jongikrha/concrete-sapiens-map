@@ -4260,7 +4260,9 @@ button.story-place-line:hover {
   height: 10px;
 }
 
-#recall-choice-panel .daily-prompt-close {
+/* 발자취 목록 ✕도 기억 라디오 첫 화면(채널 고르기)과 같은 모양(2026-10-20) */
+#recall-choice-panel .daily-prompt-close,
+#course-choice-panel .daily-prompt-close {
   font-size: 22px;
   color: var(--cs-black);
 }
