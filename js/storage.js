@@ -167,7 +167,9 @@ let _mySharedIds = null;
 // placeId → { courseId, createdAt, recordId(Promise) }. 위와 같은 패턴.
 let _myPlaceWishes = null;
 
-async function fetchAll(modelName) {
+// strict: 조회 오류를 빈 목록으로 삼키지 않고 던진다 — "데이터가 없음"과 "못 받음"을
+// 구분해야 하는 곳(발자취 목록)에서 쓴다. 기본은 예전처럼 오류를 로그만 남기고 받은 만큼 돌려준다.
+async function fetchAll(modelName, { strict = false } = {}) {
   const items = [];
   let nextToken = null;
   do {
@@ -177,6 +179,7 @@ async function fetchAll(modelName) {
     });
     if (errors) {
       console.error(`${modelName} 목록 조회 실패`, errors);
+      if (strict) throw new Error(`${modelName} 목록 조회 실패`);
       break;
     }
     items.push(...data);
@@ -186,6 +189,10 @@ async function fetchAll(modelName) {
 }
 
 const Storage = {
+  // true면 logEvent가 아무것도 남기지 않는다 — 비공개 시안 미리보기(?preview=1)로
+  // 둘러보는 동안의 반응이 발자취 통계에 섞이지 않게(js/course.js).
+  eventsSuppressed: false,
+
   async init() {
     // 지난 방문 때 캐시해둔 목록이 있으면 네트워크 응답을 기다리지 않고
     // 먼저 그려둔다 — map.js가 이미 로드돼 있어야 하는데, app.js가
@@ -633,7 +640,7 @@ const Storage = {
    * 못 읽는다). 실패해도 지도 사용에는 영향 없으니 fire-and-forget.
    */
   logPageView(storyId) {
-    if (!client || this.isAutomatedBrowser()) return;
+    if (!client || this.isAutomatedBrowser() || this.eventsSuppressed) return;
     let deviceInfo = null;
     try {
       const standalone = window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -690,7 +697,7 @@ const Storage = {
    * PageView와 같은 write-only/fire-and-forget 패턴(2026-08-21).
    */
   logEvent(type) {
-    if (!client || this.isAutomatedBrowser()) return;
+    if (!client || this.isAutomatedBrowser() || this.eventsSuppressed) return;
     client.models.AppEvent.create({ type, deviceId: this.getDeviceId() })
       .catch((e) => console.error("이벤트 로그 기록 실패", type, e));
   },
@@ -1056,15 +1063,20 @@ const Storage = {
    * 비공개 코스도 API로는 읽히지만(amplify/data/resource.ts Course 주석)
    * 화면에서는 여기서 걸러 숨긴다.
    */
-  async fetchPublishedCourses() {
+  async fetchPublishedCourses({ includeDrafts = false } = {}) {
     if (!client) return [];
-    const [courses, places] = await Promise.all([fetchAll("Course"), fetchAll("CoursePlace")]);
+    // 조회가 실패하면 던진다(js/course.js loadPublishedCourses가 재시도·안내) — 빈
+    // 목록으로 삼키면 "공개된 발자취가 없음"과 구분이 안 된다.
+    const [courses, places] = await Promise.all([
+      fetchAll("Course", { strict: true }),
+      fetchAll("CoursePlace", { strict: true }),
+    ]);
     const placesByCourse = {};
     places.forEach((p) => {
       (placesByCourse[p.courseId] ||= []).push(p);
     });
     return courses
-      .filter((c) => c.isPublished && placesByCourse[c.id]?.length)
+      .filter((c) => (includeDrafts || c.isPublished) && placesByCourse[c.id]?.length)
       .map((c) => ({ ...c, places: placesByCourse[c.id].sort((a, b) => a.seq - b.seq) }))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
   },
