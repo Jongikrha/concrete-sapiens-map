@@ -1331,7 +1331,7 @@ function courseFormHtml() {
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}
-      <p class="field-hint">지도 위 장소 핀에 번호 대신 들어가요. 배경과 여백은 올릴 때 자동으로 잘라내요. 없으면 번호로 보여요.<br />말풍선을 꽉 채우려면 여백을 뺀 로고 자체를 <b>가로:세로 5:2(예: 250×100px)</b>로 만들어주세요 — 말풍선 안 로고 자리가 최대 80×32px라, 이보다 가로로 더 길면 위아래가 비어요.</p>
+      <p class="field-hint">지도 위 장소 핀(동그라미)에 번호 대신 들어가요. 없으면 번호로 보여요.<br /><b>정사각형</b>으로 만들고 글자·핵심 그림은 <b>가운데 원 안쪽</b>에 두세요 — 올릴 때 가운데를 정사각형으로 자르고, 핀에서는 동그랗게 잘려 보여요. 배경까지 꽉 찬 이미지가 가장 선명해요.</p>
       <label>표지(선택)<input type="file" name="cover" id="course-cover-input" accept="image/*" /></label>
       <div class="course-cover-guide" id="course-cover-guide">${COURSE_COVER_GUIDES[c?.kind || "book"] || COURSE_COVER_GUIDES.etc}</div>
       <div class="course-cover-editor${c?.coverKey ? "" : " hidden"}" id="course-cover-editor">
@@ -1415,60 +1415,29 @@ function placeFormHtml() {
   `;
 }
 
-// 코스 로고 — 지도 핀 배지에 작게 들어가므로 (1) 가장자리 배경색(왼쪽 위
-// 픽셀 기준)과 비슷한 픽셀은 투명하게 지우고 (2) 남은 내용만 남도록 여백을
-// 잘라낸 뒤 (3) 긴 변 256px로 줄여 PNG(투명 유지)로 만든다. 흰 배경에 여백이
-// 넓은 로고를 올렸더니 배지 안에서 글자가 가운데 조그맣게만 보였다(2026-10-13).
+// 코스 로고 — 지도 핀이 동그라미라(2026-10-20) 가운데를 정사각형으로 잘라
+// 192px PNG로 줄인다(투명 배경 로고는 투명 그대로). 예전엔 왼쪽 위 색과
+// 비슷한 픽셀을 투명하게 지우고 여백을 잘라냈는데, 표지 그림 같은 로고는
+// 종이·하늘 부분이 반투명하게 뚫려 흐릿해 보이고, 그 때문에 꽉 채운
+// 로고로 인식되지 않아 동그라미 안에 작게 떠 보였다.
 function resizeLogoFile(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const s0 = Math.min(1, 1024 / Math.max(img.width, img.height));
-      const w = Math.round(img.width * s0);
-      const h = Math.round(img.height * s0);
-      const work = document.createElement("canvas");
-      work.width = w;
-      work.height = h;
-      const ctx = work.getContext("2d");
-      ctx.drawImage(img, 0, 0, w, h);
-      const data = ctx.getImageData(0, 0, w, h);
-      const px = data.data;
-      const [br, bg, bb, ba] = px;
-      let minX = w, minY = h, maxX = -1, maxY = -1;
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const k = (y * w + x) * 4;
-          if (ba > 200) {
-            const d = Math.max(Math.abs(px[k] - br), Math.abs(px[k + 1] - bg), Math.abs(px[k + 2] - bb));
-            // 배경과 아주 가까우면 투명, 경계(안티에일리어싱)는 거리만큼 반투명
-            if (d < 16) px[k + 3] = 0;
-            else if (d < 48) px[k + 3] = Math.round(px[k + 3] * (d - 16) / 32);
-          }
-          if (px[k + 3] > 24) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-          }
-        }
-      }
-      ctx.putImageData(data, 0, 0);
-      if (maxX < 0) {
+      const side = Math.min(img.width, img.height);
+      if (!side) {
         reject(new Error("로고에서 내용을 찾지 못했어요."));
         return;
       }
-      const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
-      const cx = Math.max(0, minX - pad);
-      const cy = Math.max(0, minY - pad);
-      const cw = Math.min(w, maxX + pad + 1) - cx;
-      const ch = Math.min(h, maxY + pad + 1) - cy;
-      const scale = Math.min(1, 256 / Math.max(cw, ch));
+      const size = Math.min(192, side);
       const out = document.createElement("canvas");
-      out.width = Math.round(cw * scale);
-      out.height = Math.round(ch * scale);
-      out.getContext("2d").drawImage(work, cx, cy, cw, ch, 0, 0, out.width, out.height);
+      out.width = size;
+      out.height = size;
+      out
+        .getContext("2d")
+        .drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
       out.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("로고를 처리할 수 없어요."))), "image/png");
     };
     img.onerror = () => {

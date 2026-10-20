@@ -5207,7 +5207,8 @@ button.story-place-line:hover {
 }
 
 /* 코스 로고 배지(로고가 있을 때 물방울 대신) — 아이보리 동그라미 안에
-   로고를 담고, 그 아래 주황 점이 장소를 가리킨다. 2026-10-20 말풍선에서
+   로고를 담고(테두리 2px — 3px은 여백이 커 보인다는 피드백),
+   그 아래 주황 점이 장소를 가리킨다. 2026-10-20 말풍선에서
    원형으로 통일(표지 그림처럼 보이게, 로고 파일은 원형에 맞춰 다시 올리는
    전제). 그림자는 옅게 두고 0.5px 번짐 그림자로 밝은 땅 위 윤곽만 잡는다.
    버튼 아래 끝 = 주황 점 가운데라 yAnchor 1 그대로 점이 장소에 놓인다. */
@@ -5245,7 +5246,7 @@ button.story-place-line:hover {
   display: block;
   width: 40px;
   height: 40px;
-  padding: 3px;
+  padding: 2px;
   box-sizing: border-box;
   border-radius: 50%;
   background: var(--pin-bg);
@@ -5256,7 +5257,7 @@ button.story-place-line:hover {
   display: block;
   width: 100%;
   height: 100%;
-  padding: 3px;
+  padding: 2px;
   box-sizing: border-box;
   border-radius: 50%;
   object-fit: contain;
