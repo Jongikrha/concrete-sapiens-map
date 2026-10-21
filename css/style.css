@@ -3755,9 +3755,10 @@ button.story-place-line:hover {
 }
 
 .archive-course-cover {
+  --archive-cover-w: 56px;
   display: block;
   width: 100%;
-  max-width: 56px;
+  max-width: var(--archive-cover-w);
   aspect-ratio: 2 / 3;
   border-radius: 2px;
   overflow: hidden;
@@ -6558,9 +6559,11 @@ button.story-place-line:hover {
   aspect-ratio: 1 / 1;
 }
 
-/* 아카이브 줄에선 세로 표지들 사이에서 키가 작으니 아래로 붙여 제목 높이를 맞춘다 */
+/* 아카이브 줄에선 정사각형 앨범 커버를 세로 표지(2:3) 칸 한가운데에 놓는다 — 위아래로
+   (칸 높이 − 커버 높이) / 2 = 폭의 1/4씩 띄워서, 아래로 붙이지 않고도 제목이 다른 코스
+   제목과 같은 높이에서 시작한다(2026-10-21) */
 .archive-course-cover.course-cover--music {
-  margin-top: auto;
+  margin: calc(var(--archive-cover-w) / 4) 0;
 }
 
 /* 따라 걷기 화면 안의 "가보고 싶어요" 알림 — 카드가 아래를 덮어서 위쪽에.
