@@ -85,6 +85,19 @@ function loadPublishedCourses() {
   return courseLoadInFlight;
 }
 
+// 웰컴 모달의 "발자취 걷기" — 목록을 아직 받는 중이면 기다렸다가 연다. 툴바 버튼과 달리
+// course_toolbar_clicked는 남기지 않는다(웰컴에서 온 클릭은 welcome_course_clicked로 센다).
+async function openCourseChoiceFromWelcome() {
+  if (courseLoadInFlight) await courseLoadInFlight;
+  else if (coursesLoadFailed) await loadPublishedCourses();
+  if (coursesLoadFailed) {
+    showToast("entry-toast", "발자취를 불러오지 못했어요. 잠시 후 발자취 버튼을 눌러 주세요", 3500);
+    return;
+  }
+  if (publishedCourses.length === 0 || isCourseLayerVisible()) return;
+  openCourseChoice();
+}
+
 // 상단 툴바 "발자취" 버튼 — 목록을 못 받은 상태면 다시 받아 본 뒤 연다.
 async function handleCourseToolbarClick() {
   Storage.logEvent("course_toolbar_clicked");

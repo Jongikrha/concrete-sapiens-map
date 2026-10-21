@@ -4427,7 +4427,7 @@ button.story-place-line:hover {
    (2026-08-22 디자인 레퍼런스 반영, X 닫기 버튼은 아예 없앴다 — 클릭 시
    바깥 배경을 눌러 닫는 기존 동작은 그대로 유지). */
 #welcome-panel .daily-prompt-header {
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 }
 
 #welcome-panel .daily-prompt-quote {
@@ -4439,36 +4439,93 @@ button.story-place-line:hover {
   margin-bottom: 24px;
 }
 
-#welcome-panel .daily-prompt-hint {
-  font-size: 14.5px;
-  line-height: 1.6;
+/* 환영 모달 행동 카드(2026-10-21) — 발자취(주황)·기억 남기기(흰 카드) 두 장을 같은 크기로 */
+#welcome-panel .daily-prompt-quote {
+  margin-bottom: 12px;
 }
 
-#welcome-panel .daily-prompt-hint strong {
-  color: var(--cs-black);
+.welcome-sub {
+  margin: 0 0 22px;
+  font-size: 14.5px;
+  color: var(--cs-text-muted);
+}
+
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.welcome-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--cs-gray);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--cs-text-main);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--cs-transition-fast), border-color var(--cs-transition-fast);
+}
+
+.welcome-action:hover {
+  border-color: var(--cs-black);
+}
+
+.welcome-action--primary {
+  border-color: var(--cs-orange);
+  background: var(--cs-orange);
+  color: var(--cs-paper);
+}
+
+.welcome-action--primary:hover {
+  border-color: #e64f2d;
+  background: #e64f2d;
+}
+
+.welcome-action-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(47, 48, 49, 0.07);
+}
+
+.welcome-action--primary .welcome-action-icon {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.welcome-action-icon .course-entry-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.welcome-action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.welcome-action-text b {
+  font-size: 16px;
   font-weight: 700;
 }
 
-/* PC 화면은 카드가 넓어서 자연 줄바꿈만으로는 목업처럼 세 줄로 안
-   끊긴다 — 모바일은 좁은 폭 덕분에 이미 비슷하게 끊기므로 그대로
-   두고, PC에서만 강제로 끊는다(2026-08-22). */
-.welcome-hint-break {
-  display: none;
+.welcome-action-text small {
+  font-size: 12.5px;
+  opacity: 0.8;
 }
 
-@media (min-width: 600px) {
-  .welcome-hint-break {
-    display: block;
-  }
-}
-
-/* 좁은 화면에서는 32px 제목이 강제 줄바꿈(<br>)과 만나 한 줄이 또 한 번
-   꺾여 3줄로 어색하게 잘린다(2026-08-22 확인, 375px 기준) — 줄이 딱
-   두 줄로 떨어지도록 살짝만 축소. */
-@media (max-width: 420px) {
-  #welcome-panel .daily-prompt-quote {
-    font-size: 20px;
-  }
+#welcome-panel .btn-secondary {
+  margin-top: 14px;
 }
 
 .btn-secondary {

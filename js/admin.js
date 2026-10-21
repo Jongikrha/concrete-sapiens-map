@@ -535,7 +535,8 @@ function buildTopDevices(pageViews, dayKeys, limit = 10) {
 const FUNNEL_PAIRS = [
   { label: "이맘때 기억", openType: "throwback_opened", confirmType: "throwback_confirmed" },
   { label: "작성 폼", openType: "composer_opened", confirmType: "composer_submitted" },
-  { label: "웰컴 모달 → 내 위치에 기억 남기기", openType: "welcome_shown", confirmType: "welcome_write_clicked" },
+  { label: "웰컴 모달 → 기억 남기기", openType: "welcome_shown", confirmType: "welcome_write_clicked" },
+  { label: "웰컴 모달 → 발자취 걷기", openType: "welcome_shown", confirmType: "welcome_course_clicked" },
   // 가입 퍼널(2026-10-06) — 가입 화면 노출 → 가입 버튼 → 가입 완료.
   { label: "가입 화면 → 가입 버튼 누름", openType: "auth_shown", confirmType: "signup_submitted" },
   { label: "가입 버튼 → 가입 완료", openType: "signup_submitted", confirmType: "signup_succeeded" },
