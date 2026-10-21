@@ -2108,6 +2108,20 @@ function pickSearchResult(index) {
   bindNonSpaceLimits(newForm);
 }
 
+// 유튜브 영상을 다른 사이트(우리 미니 플레이어)에서 틀 수 있는지(2026-10-21) —
+// 퍼가기를 꺼둔 영상은 oEmbed가 401, 지워졌거나 비공개면 404를 준다. 둘 다
+// 지도에서 소리가 안 나므로 저장 전에 알린다. 네트워크 실패처럼 알 수 없으면
+// 막지 않는다(true). 서울 1995 첫 곡이 이래서 코스 전체가 무음이었다.
+async function isYoutubeEmbeddable(videoId) {
+  try {
+    const watchUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
+    const res = await fetch(`https://www.youtube.com/oembed?url=${watchUrl}&format=json`);
+    return !(res.status === 401 || res.status === 403 || res.status === 404);
+  } catch (e) {
+    return true;
+  }
+}
+
 async function handlePlaceSubmit(e) {
   e.preventDefault();
   const f = new FormData(e.target);
@@ -2122,6 +2136,14 @@ async function handlePlaceSubmit(e) {
   if (youtubeUrl && !Storage.extractYoutubeVideoId(youtubeUrl)) {
     alert("유튜브 링크를 알아볼 수 없어요. 영상 주소를 그대로 붙여넣어 주세요.");
     return;
+  }
+  const changedSong = youtubeUrl && Storage.extractYoutubeVideoId(youtubeUrl) !== Storage.extractYoutubeVideoId(existing?.youtubeUrl || "");
+  if (changedSong && !(await isYoutubeEmbeddable(Storage.extractYoutubeVideoId(youtubeUrl)))) {
+    const ok = confirm(
+      "이 영상은 유튜브에서 다른 사이트 재생을 막아뒀거나 지워진 영상이라 지도에서 소리가 안 나요.\n" +
+        "같은 곡의 다른 영상(공식 음원·뮤직비디오 등)으로 바꾸는 걸 권해요. 그래도 저장할까요?",
+    );
+    if (!ok) return;
   }
   // 사진 칸 순서대로 — 새로 고른 사진만 올리고, 1번은 예전 필드에, 나머지는
   // extraPhotos에 담는다(Storage.getCoursePlacePhotos와 반대 방향).
