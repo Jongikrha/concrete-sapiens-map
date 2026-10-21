@@ -19,6 +19,11 @@
         "Admins": {
           "precedence": 0
         }
+      },
+      {
+        "Curators": {
+          "precedence": 1
+        }
       }
     ],
     "mfa_configuration": "NONE",
@@ -1191,6 +1196,13 @@
               "isRequired": true,
               "attributes": []
             },
+            "authorId": {
+              "name": "authorId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "createdAt": {
               "name": "createdAt",
               "isArray": false,
@@ -1246,6 +1258,28 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create"
+                    ],
+                    "groups": [
+                      "Curators"
+                    ]
+                  },
+                  {
+                    "provider": "userPools",
+                    "ownerField": "authorId",
+                    "allow": "owner",
+                    "operations": [
+                      "read",
+                      "update",
+                      "delete"
+                    ],
+                    "identityClaim": "sub"
                   }
                 ]
               }
@@ -1254,6 +1288,90 @@
           "primaryKeyInfo": {
             "isCustomPrimaryKey": false,
             "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "CourseApproval": {
+          "name": "CourseApproval",
+          "fields": {
+            "courseId": {
+              "name": "courseId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "CourseApprovals",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "courseId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "public",
+                    "provider": "identityPool",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "private",
+                    "provider": "identityPool",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "groups": [
+                      "Admins"
+                    ],
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "courseId",
             "sortKeyFieldNames": []
           }
         },
@@ -1389,6 +1507,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "authorId": {
+              "name": "authorId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "createdAt": {
               "name": "createdAt",
               "isArray": false,
@@ -1444,6 +1569,28 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create"
+                    ],
+                    "groups": [
+                      "Curators"
+                    ]
+                  },
+                  {
+                    "provider": "userPools",
+                    "ownerField": "authorId",
+                    "allow": "owner",
+                    "operations": [
+                      "read",
+                      "update",
+                      "delete"
+                    ],
+                    "identityClaim": "sub"
                   }
                 ]
               }
@@ -1626,6 +1773,13 @@
               "type": "Boolean",
               "isRequired": true,
               "attributes": []
+            },
+            "isCurator": {
+              "name": "isCurator",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": true,
+              "attributes": []
             }
           }
         }
@@ -1690,6 +1844,26 @@
             },
             "isAdmin": {
               "name": "isAdmin",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": true
+            }
+          }
+        },
+        "adminSetUserCurator": {
+          "name": "adminSetUserCurator",
+          "isArray": false,
+          "type": "Boolean",
+          "isRequired": false,
+          "arguments": {
+            "username": {
+              "name": "username",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "isCurator": {
+              "name": "isCurator",
               "isArray": false,
               "type": "Boolean",
               "isRequired": true

@@ -15,6 +15,7 @@ import {
 // 그 뒤에서만 호출되므로 그룹 재확인은 하지 않는다. 다만 관리자가 자기
 // 자신을 정지/삭제/강등해서 스스로 잠기는 사고는 여기서 막는다.
 const ADMINS_GROUP = 'Admins';
+const CURATORS_GROUP = 'Curators';
 const client = new CognitoIdentityProviderClient({});
 const userPoolId = process.env.USER_POOL_ID as string;
 
@@ -22,12 +23,12 @@ function getAttribute(user: UserType, name: string): string | undefined {
   return user.Attributes?.find((a) => a.Name === name)?.Value;
 }
 
-async function listAdminUsernames(): Promise<Set<string>> {
+async function listGroupUsernames(groupName: string): Promise<Set<string>> {
   const names = new Set<string>();
   let nextToken: string | undefined;
   do {
     const res = await client.send(
-      new ListUsersInGroupCommand({ UserPoolId: userPoolId, GroupName: ADMINS_GROUP, NextToken: nextToken })
+      new ListUsersInGroupCommand({ UserPoolId: userPoolId, GroupName: groupName, NextToken: nextToken })
     );
     (res.Users || []).forEach((u) => u.Username && names.add(u.Username));
     nextToken = res.NextToken;
@@ -36,7 +37,10 @@ async function listAdminUsernames(): Promise<Set<string>> {
 }
 
 async function adminListUsers() {
-  const adminUsernames = await listAdminUsernames();
+  const [adminUsernames, curatorUsernames] = await Promise.all([
+    listGroupUsernames(ADMINS_GROUP),
+    listGroupUsernames(CURATORS_GROUP),
+  ]);
   const users: UserType[] = [];
   let paginationToken: string | undefined;
   do {
@@ -55,6 +59,7 @@ async function adminListUsers() {
     status: u.UserStatus || 'UNKNOWN',
     createdAt: u.UserCreateDate ? u.UserCreateDate.toISOString() : '',
     isAdmin: adminUsernames.has(u.Username as string),
+    isCurator: curatorUsernames.has(u.Username as string),
   }));
 }
 
@@ -72,7 +77,7 @@ function assertNotSelf(callerUsername: string, targetUsername: string) {
 type AdminUsersEvent = {
   fieldName: string;
   identity?: { username?: string };
-  arguments: { username?: string; enabled?: boolean; isAdmin?: boolean; password?: string };
+  arguments: { username?: string; enabled?: boolean; isAdmin?: boolean; isCurator?: boolean; password?: string };
 };
 
 const handler = async (event: AdminUsersEvent) => {
@@ -112,6 +117,16 @@ const handler = async (event: AdminUsersEvent) => {
       const Command = isAdmin ? AdminAddUserToGroupCommand : AdminRemoveUserFromGroupCommand;
       await client.send(
         new Command({ UserPoolId: userPoolId, Username: username, GroupName: ADMINS_GROUP })
+      );
+      return true;
+    }
+
+    case 'adminSetUserCurator': {
+      const { username, isCurator } = args;
+      if (!username) throw new Error('username이 필요합니다.');
+      const Command = isCurator ? AdminAddUserToGroupCommand : AdminRemoveUserFromGroupCommand;
+      await client.send(
+        new Command({ UserPoolId: userPoolId, Username: username, GroupName: CURATORS_GROUP })
       );
       return true;
     }

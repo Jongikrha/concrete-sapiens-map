@@ -264,8 +264,33 @@ const schema = a.schema({
       intro: a.string(),
       // 코스 목록 정렬용(작을수록 앞)
       sortOrder: a.integer(),
+      // 작가 코스(authorId 있음)에선 "공개 요청" 뜻이다 — 실제로 지도에
+      // 보이려면 CourseApproval도 있어야 한다(아래 주석).
       isPublished: a.boolean().required(),
+      // 이 코스를 만든 작가 계정의 Cognito sub(2026-10-21) — 비어 있으면
+      // 운영자(Admins)가 만든 코스. 작가(Curators 그룹)는 만들 수만 있고,
+      // 수정·삭제는 authorId가 자기 sub인 코스만 된다. 만들 때 작가 화면이
+      // 직접 채운다(create는 그룹 규칙으로 허용돼 owner 자동 채움이 없음).
+      authorId: a.string(),
     })
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated('identityPool').to(['read']),
+      allow.group('Admins'),
+      allow.group('Curators').to(['create']),
+      allow.ownerDefinedIn('authorId').identityClaim('sub').to(['read', 'update', 'delete']),
+    ]),
+
+  // 작가 코스 공개 승인(2026-10-21) — 작가는 Course.isPublished를 스스로
+  // 바꿀 수 있어서(필드 단위 권한은 Gen2 배포 실패 사례가 있어 안 씀,
+  // StoryAuthor 주석 참고) 승인은 관리자만 쓰는 별도 모델로 분리했다.
+  // 지도에는 isPublished && (운영자 코스 || 이 레코드가 있음)인 코스만
+  // 보인다(js/storage.js fetchPublishedCourses). 레코드가 있으면 승인됨.
+  CourseApproval: a
+    .model({
+      courseId: a.string().required(),
+    })
+    .identifier(['courseId'])
     .authorization((allow) => [
       allow.guest().to(['read']),
       allow.authenticated('identityPool').to(['read']),
@@ -317,11 +342,17 @@ const schema = a.schema({
       youtubeUrl: a.string(),
       musicArtist: a.string(),
       musicTitle: a.string(),
+      // 장소가 속한 코스의 authorId를 그대로 복사한다(2026-10-21, Course 주석).
+      // 작가는 아무 courseId로나 장소를 만들 수 있어서, 화면은 authorId가
+      // 코스와 같은 장소만 그 코스에 붙인다 — 남의 코스에 장소를 끼워 넣지 못하게.
+      authorId: a.string(),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
       allow.authenticated('identityPool').to(['read']),
       allow.group('Admins'),
+      allow.group('Curators').to(['create']),
+      allow.ownerDefinedIn('authorId').identityClaim('sub').to(['read', 'update', 'delete']),
     ]),
 
   // 회원 깃발(어드민 전용 메모/표시) — userId를 기본키로 써서 회원 한 명당
@@ -348,6 +379,7 @@ const schema = a.schema({
     status: a.string().required(),
     createdAt: a.string().required(),
     isAdmin: a.boolean().required(),
+    isCurator: a.boolean().required(),
   }),
 
   adminListUsers: a
@@ -373,6 +405,15 @@ const schema = a.schema({
   adminSetUserAdmin: a
     .mutation()
     .arguments({ username: a.string().required(), isAdmin: a.boolean().required() })
+    .returns(a.boolean())
+    .authorization((allow) => [allow.group('Admins')])
+    .handler(a.handler.function(adminUsersFn)),
+
+  // 작가(Curators 그룹) 지정/해제(2026-10-21) — 발자취를 직접 만들고
+  // 관리하는 계정. adminSetUserAdmin과 같은 방식.
+  adminSetUserCurator: a
+    .mutation()
+    .arguments({ username: a.string().required(), isCurator: a.boolean().required() })
     .returns(a.boolean())
     .authorization((allow) => [allow.group('Admins')])
     .handler(a.handler.function(adminUsersFn)),

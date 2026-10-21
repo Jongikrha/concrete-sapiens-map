@@ -67,7 +67,9 @@ export const auth = defineAuth({
   triggers: {
     preSignUp: preSignUpFn,
   },
-  groups: ['Admins'],
+  // Curators(2026-10-21) — 발자취를 직접 만들고 관리하는 작가 계정. 일반
+  // 가입 후 관리자가 회원관리 탭에서 지정한다(amplify/data/resource.ts Course).
+  groups: ['Admins', 'Curators'],
   // senders.email(SES 경유 발송)을 일부러 지정하지 않는다 — Cognito 기본
   // 발송(COGNITO_DEFAULT)을 쓴다는 뜻이다. no-reply@concretesapiens.com으로
   // 보내려면 SES 프로덕션 액세스가 필요한데 2회 반려됐고(2026-08-24 확인),
