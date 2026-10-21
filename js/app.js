@@ -105,24 +105,29 @@ function maybeShowPendingWelcomeOverlay() {
 // 첫 방문 환영 모달(2026-10-21 개편) — 설명을 한 줄로 줄이고 "발자취 걷기"/"기억 남기기"
 // 두 행동을 나란히 보여 준다. 읽고 걷는 쪽이 첫 방문자에게 부담이 작아 발자취를 먼저(주황),
 // 기억 남기기는 같은 크기의 흰 카드로. 아래 "그냥 둘러볼게요"가 예전 "둘러보기 시작"이다.
+// 오른쪽 위 일러스트(assets/welcome-art.webp)는 지도 + 옛 사진 폴라로이드 — 장식이라 alt는 비운다.
 const WELCOME_PLUS_ICON = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>`;
+const WELCOME_ARROW_ICON = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
 
 function showWelcomeOverlay() {
   const panel = document.getElementById("welcome-panel");
   panel.innerHTML = `
+    <img class="welcome-art" src="assets/welcome-art.webp" alt="" aria-hidden="true" width="148" height="160" />
     <div class="daily-prompt-header">
       <span class="daily-prompt-label"><span class="daily-prompt-dot"></span>콘크리트 사피엔스</span>
     </div>
-    <p class="daily-prompt-quote">장소는 기억으로<br>만들어집니다.</p>
+    <p class="daily-prompt-quote">장소는 기억으로<br><span class="welcome-accent">만들어집니다.</span></p>
     <p class="welcome-sub">둘 중 하나로 시작해 보세요.</p>
     <div class="welcome-actions">
       <button type="button" class="welcome-action welcome-action--primary" id="welcome-course-btn">
         <span class="welcome-action-icon">${COURSE_CHIP_ICON}</span>
         <span class="welcome-action-text"><b>발자취 걷기</b><small>책·노래 속 장소를 따라 걸어요</small></span>
+        <span class="welcome-action-arrow">${WELCOME_ARROW_ICON}</span>
       </button>
       <button type="button" class="welcome-action" id="welcome-write-btn">
         <span class="welcome-action-icon">${WELCOME_PLUS_ICON}</span>
         <span class="welcome-action-text"><b>기억 남기기</b><small>원하는 장소에 한 줄을 남겨요</small></span>
+        <span class="welcome-action-arrow">${WELCOME_ARROW_ICON}</span>
       </button>
     </div>
     <button type="button" class="btn-secondary" id="welcome-confirm">그냥 둘러볼게요</button>
