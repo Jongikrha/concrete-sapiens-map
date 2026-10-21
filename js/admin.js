@@ -30,6 +30,13 @@ let activeDeviceFilter = null;
 let storyAuthorEmailById = {};
 let storyCountByUserId = {};
 let client = null;
+// 발자취 작가 계정(Curators 그룹, 2026-10-21)도 이 페이지로 들어온다 — 작가는
+// 발자취 탭만 보고 자기 코스만 다룬다. "admin" | "curator"
+let sessionRole = null;
+let currentUserId = null; // Cognito sub — 작가 코스의 Course.authorId
+// 승인 기록(CourseApproval)과 전체 코스 slug는 작가의 userPool 권한으로는 못
+// 읽어서(자기 코스만 읽힘) 메인 지도와 같은 공개 읽기(identityPool)로 읽는다.
+let publicClient = null;
 let currentUsername = null;
 let members = null; // 회원관리 탭에서만 필요해서 첫 진입 때 로드(지연 로딩)
 let flagsByUserId = {}; // userId -> UserFlag 레코드(id, note) — 있으면 깃발 켜짐
@@ -150,25 +157,33 @@ function csvRowsToObjects(rows) {
   });
 }
 
-async function isAdminSession() {
+// 관리자면 "admin", 작가면 "curator", 둘 다 아니거나 로그인 전이면 null.
+async function getSessionRole() {
   try {
     await getCurrentUser();
     const session = await fetchAuthSession();
     const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
-    return groups.includes("Admins");
+    if (groups.includes("Admins")) return "admin";
+    if (groups.includes("Curators")) return "curator";
+    return null;
   } catch (e) {
-    return false;
+    return null;
   }
 }
 
-async function bootAdminClient() {
+async function bootAdminClient(role) {
+  sessionRole = role;
   client = generateClient({ authMode: "userPool" });
+  publicClient = generateClient({ authMode: "identityPool" });
+  const user = await getCurrentUser();
+  currentUsername = user.username;
+  currentUserId = user.userId;
+  // 작가는 기억·회원·방문 데이터를 읽을 권한이 없어 발자취에 필요한 것만 준비한다.
+  if (role === "curator") return;
   Storage._setClient(client);
   await Storage.refresh();
   // 어드민 페이지에 로그인한 브라우저도 방문 통계에서 자동 제외(2026-10-19).
   await Storage.ensureDeviceExcluded();
-
-  currentUsername = (await getCurrentUser()).username;
 
   const authors = await Storage.listStoryAuthors();
   storyAuthorEmailById = {};
@@ -182,6 +197,17 @@ async function bootAdminClient() {
 function showDashboard() {
   document.getElementById("login-view").classList.add("hidden");
   document.getElementById("dashboard-view").classList.remove("hidden");
+  const isCurator = sessionRole === "curator";
+  document.getElementById("admin-title").textContent = isCurator
+    ? "콘크리트 사피엔스 지도 — 발자취 작가"
+    : "콘크리트 사피엔스 지도 — 어드민";
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    b.classList.toggle("hidden", isCurator && b.dataset.tab !== "courses");
+  });
+  if (isCurator) {
+    activeTab = "courses";
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("tab-btn--active", b.dataset.tab === "courses"));
+  }
   renderActiveTab();
 }
 
@@ -230,18 +256,24 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!(await isAdminSession())) {
-    showLogin("관리자 계정이 아닙니다.");
+  const role = await getSessionRole();
+  if (!role) {
+    showLogin("관리자나 발자취 작가 계정이 아닙니다.");
     await signOut();
     return;
   }
 
-  await bootAdminClient();
+  await bootAdminClient(role);
   showDashboard();
 });
 
 document.getElementById("btn-logout").addEventListener("click", async () => {
   await signOut();
+  // 다른 계정(관리자 ↔ 작가)으로 다시 들어올 때 이전 계정의 목록이 남지 않게
+  courses = null;
+  members = null;
+  selectedCourseId = null;
+  editingCourseId = null;
   showLogin();
 });
 
@@ -847,6 +879,7 @@ function memberRowHtml(member) {
         <span>작성 ${storyCount}건</span>
         <span>${member.enabled ? "정상" : "정지됨"}</span>
         <span>${member.isAdmin ? "관리자" : "일반회원"}</span>
+        ${member.isCurator ? "<span>발자취 작가</span>" : ""}
         ${isSelf ? '<span class="admin-self-badge">나</span>' : ""}
         ${flag ? `<span class="admin-flag-badge">🚩 ${escapeHtml(flag.note || "깃발")}</span>` : ""}
       </div>
@@ -862,6 +895,9 @@ function memberRowHtml(member) {
             </button>
             <button class="btn-restore" data-action="toggle-admin" data-username="${escapeHtml(member.username)}" data-is-admin="${member.isAdmin}">
               ${member.isAdmin ? "관리자 해제" : "관리자 지정"}
+            </button>
+            <button class="btn-restore" data-action="toggle-curator" data-username="${escapeHtml(member.username)}" data-is-curator="${member.isCurator}">
+              ${member.isCurator ? "작가 해제" : "작가 지정"}
             </button>
             <button class="btn-restore" data-action="reset-password" data-username="${escapeHtml(member.username)}" data-email="${escapeHtml(member.email)}">비밀번호 재설정</button>
             <button class="btn-delete" data-action="delete-member" data-username="${escapeHtml(member.username)}">계정 삭제</button>
@@ -913,6 +949,14 @@ async function handleMemberAction(action, username, dataset) {
     const verb = isAdmin ? "관리자 권한을 해제" : "관리자로 지정";
     if (!confirm(`${username} 계정을 ${verb}할까요?`)) return;
     await client.mutations.adminSetUserAdmin({ username, isAdmin: !isAdmin });
+  } else if (action === "toggle-curator") {
+    const isCurator = dataset.isCurator === "true";
+    const msg = isCurator
+      ? `${username} 계정의 발자취 작가 권한을 해제할까요?\n이미 만든 발자취는 그대로 남고, 관리는 관리자가 이어서 할 수 있어요.`
+      : `${username} 계정을 발자취 작가로 지정할까요?\n${window.location.origin}/admin.html 에서 자기 발자취를 만들고 관리할 수 있어요. 공개는 관리자 승인 후에 돼요.`;
+    if (!confirm(msg)) return;
+    await client.mutations.adminSetUserCurator({ username, isCurator: !isCurator });
+    alert(isCurator ? "해제했어요." : "지정했어요. 작가가 이미 로그인해 있었다면 로그아웃 후 다시 로그인해야 반영돼요.");
   } else if (action === "delete-member") {
     if (!confirm(`${username} 계정을 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
     await client.mutations.adminDeleteUser({ username });
@@ -1075,8 +1119,11 @@ const COURSE_KINDS = [
   { value: "etc", label: "기타" },
 ];
 
-let courses = null; // 발자취 탭 첫 진입 때 로드(지연 로딩)
+let courses = null; // 발자취 탭 첫 진입 때 로드(지연 로딩) — 작가는 자기 코스만
 let coursePlacesById = {}; // courseId -> CoursePlace[] (seq 순)
+let approvedCourseIds = new Set(); // CourseApproval — 승인된 작가 코스
+let allCourseSlugs = []; // [{ id, slug }] 전체 코스 — 작가도 남의 slug와 겹치지 않게
+let curatorEmailById = {}; // 관리자 화면에서 작가 코스 옆에 보여줄 작가 이메일(userId -> email)
 let selectedCourseId = null; // 장소 관리 중인 코스
 let editingCourseId = null; // null이면 "새 코스" 폼
 let editingPlaceId = null; // null이면 "장소 추가" 폼
@@ -1140,13 +1187,34 @@ function guardDoubleSubmit(handler) {
 }
 
 async function loadCourses() {
-  const [courseList, placeList] = await Promise.all([
+  const isCurator = sessionRole === "curator";
+  // 작가의 userPool 목록은 서버가 authorId = 자기 sub인 것만 돌려준다(owner 규칙).
+  const [courseList, placeList, approvals, publicCourses] = await Promise.all([
     listAllRecords(client.models.Course),
     listAllRecords(client.models.CoursePlace),
+    listAllRecords(publicClient.models.CourseApproval),
+    isCurator ? listAllRecords(publicClient.models.Course) : null,
   ]);
-  courses = courseList.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  if (!isCurator && members === null) {
+    try {
+      members = await loadMembers();
+    } catch (e) {
+      console.error("작가 이메일 불러오기 실패", e); // 이메일 없이 sub 앞자리로 보여준다
+    }
+  }
+  curatorEmailById = Object.fromEntries((members || []).map((m) => [m.userId, m.email]));
+  approvedCourseIds = new Set(approvals.map((a) => a.courseId));
+  allCourseSlugs = (publicCourses || courseList).map((c) => ({ id: c.id, slug: c.slug }));
+  courses = courseList
+    .filter((c) => !isCurator || c.authorId === currentUserId)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  const courseById = Object.fromEntries(courses.map((c) => [c.id, c]));
   coursePlacesById = {};
   placeList.forEach((p) => {
+    // 메인 지도와 같은 기준 — 코스와 authorId가 다른 장소는 붙이지 않는다
+    // (js/storage.js fetchPublishedCourses).
+    const course = courseById[p.courseId];
+    if (!course || (p.authorId || null) !== (course.authorId || null)) return;
     (coursePlacesById[p.courseId] ||= []).push(p);
   });
   Object.values(coursePlacesById).forEach((list) => list.sort((a, b) => a.seq - b.seq));
@@ -1174,10 +1242,32 @@ function kakaoMapLink(name, lat, lng) {
   return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
 }
 
+// 작가 코스는 isPublished가 "공개 요청"이라 승인 여부와 묶어서 상태를 말한다.
+function courseStatusLabel(course) {
+  if (!course.authorId) return course.isPublished ? "공개" : "비공개";
+  const approved = approvedCourseIds.has(course.id);
+  if (!course.isPublished) return approved ? "승인됨 · 작가가 내림" : "작성 중";
+  return approved ? "공개" : "승인 대기";
+}
+
+function isCourseLive(course) {
+  return Storage.isCourseLive(course, approvedCourseIds);
+}
+
+function courseAuthorLabel(course) {
+  if (!course.authorId) return "운영자";
+  return `작가 ${curatorEmailById[course.authorId] || course.authorId.slice(0, 8)}`;
+}
+
 function courseCardHtml(course) {
   const places = coursePlacesById[course.id] || [];
   const kindLabel = COURSE_KINDS.find((k) => k.value === course.kind)?.label || course.kind || "-";
   const isSelected = course.id === selectedCourseId;
+  const isCurator = sessionRole === "curator";
+  const approved = approvedCourseIds.has(course.id);
+  const publishLabel = isCurator
+    ? (course.isPublished ? (approved ? "비공개로" : "공개 요청 취소") : "공개 요청")
+    : (course.isPublished ? "비공개로" : "공개하기");
   return `
     <div class="admin-card${isSelected ? " course-card--selected" : ""}">
       <p class="admin-card-content"><b>${escapeHtml(course.title)}</b></p>
@@ -1185,8 +1275,9 @@ function courseCardHtml(course) {
         <span>${escapeHtml(course.slug)}</span>
         <span>${escapeHtml(kindLabel)}</span>
         <span>장소 ${places.length}곳</span>
-        <span>${course.isPublished ? "공개" : "비공개"}</span>
-        <span>정렬 ${course.sortOrder ?? 0}</span>
+        <span>${courseStatusLabel(course)}</span>
+        ${isCurator ? "" : `<span>${escapeHtml(courseAuthorLabel(course))}</span>`}
+        ${isCurator ? "" : `<span>정렬 ${course.sortOrder ?? 0}</span>`}
         ${course.logoKey ? `<span>로고 있음</span>` : ""}
         ${course.coverKey ? `<span>표지 있음</span>` : ""}
       </div>
@@ -1194,7 +1285,8 @@ function courseCardHtml(course) {
       <div class="admin-card-actions">
         <button class="btn-restore" data-course-action="select" data-course-id="${course.id}">${isSelected ? "장소 관리 닫기" : "장소 관리"}</button>
         <button class="btn-restore" data-course-action="edit" data-course-id="${course.id}">수정</button>
-        <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${course.isPublished ? "비공개로" : "공개하기"}</button>
+        <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${publishLabel}</button>
+        ${!isCurator && course.authorId ? `<button class="btn-restore" data-course-action="toggle-approval" data-course-id="${course.id}">${approved ? "승인 취소" : "승인"}</button>` : ""}
         <button class="btn-restore" data-course-action="copy-link" data-course-id="${course.id}">링크 복사</button>
         <button class="btn-delete" data-course-action="delete" data-course-id="${course.id}">삭제</button>
       </div>
@@ -1347,12 +1439,14 @@ function courseFormHtml() {
         <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
       </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
-      <label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>
+      ${sessionRole === "curator" ? "" : `<label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>`}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
         ${c ? `<button type="button" class="btn-delete" data-course-action="cancel-edit">취소</button>` : ""}
       </div>
-      ${c ? "" : `<p class="field-hint">새 코스는 비공개로 만들어져요. 장소를 다 넣은 뒤 "공개하기"를 누르세요.</p>`}
+      ${c ? "" : sessionRole === "curator"
+        ? `<p class="field-hint">새 코스는 비공개로 만들어져요. 장소를 다 넣은 뒤 "공개 요청"을 누르면 관리자가 확인하고 공개해요.</p>`
+        : `<p class="field-hint">새 코스는 비공개로 만들어져요. 장소를 다 넣은 뒤 "공개하기"를 누르세요.</p>`}
     </form>
   `;
 }
@@ -1594,8 +1688,8 @@ async function renderCoursesTab() {
   const places = selected ? coursePlacesById[selected.id] || [] : [];
 
   content.innerHTML = `
-    <div class="admin-section-title">발자취 (${courses.length}개 코스)</div>
-    <p class="field-hint">여러 장소를 순서대로 묶은 코스예요. 지도 화면에서 "따라 걷기"로 보여줄 예정이에요.</p>
+    <div class="admin-section-title">${sessionRole === "curator" ? "내 발자취" : "발자취"} (${courses.length}개 코스)</div>
+    <p class="field-hint">여러 장소를 순서대로 묶은 코스예요. 지도 화면에서 "따라 걷기"로 보여줘요.</p>
     ${courses.length ? courses.map(courseCardHtml).join("") : `<p class="empty-state">아직 코스가 없어요.</p>`}
     ${selected ? `
       <div class="course-places-panel">
@@ -1688,9 +1782,11 @@ async function handleCourseSubmit(e) {
     kind: f.get("kind"),
     description: f.get("description").trim() || null,
     linkUrl: f.get("linkUrl").trim() || null,
-    sortOrder: parseInt(f.get("sortOrder"), 10) || 0,
   };
   const editing = editingCourseId ? courses.find((c) => c.id === editingCourseId) : null;
+  // 정렬 순서는 관리자만 정한다(작가 폼엔 칸이 없음).
+  if (sessionRole !== "curator") fields.sortOrder = parseInt(f.get("sortOrder"), 10) || 0;
+  else if (!editing) fields.sortOrder = 0;
   let logoKey = editing?.logoKey || null;
   if (f.get("removeLogo")) logoKey = null;
   const logoFile = f.get("logo");
@@ -1725,7 +1821,7 @@ async function handleCourseSubmit(e) {
   fields.coverKey = coverKey;
   fields.coverSpineRatio = coverKey ? (isBookCourseKind(fields.kind) ? parseFloat(f.get("coverSpineRatio")) || 0 : 0) : null;
   fields.intro = (f.get("intro") || "").trim().slice(0, COURSE_INTRO_MAX) || null;
-  if (courses.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
+  if (allCourseSlugs.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;
   }
@@ -1733,11 +1829,16 @@ async function handleCourseSubmit(e) {
     const updated = await runCourseMutation(client.models.Course.update({ id: editingCourseId, ...fields }), "코스 수정 실패");
     if (!updated) return;
     courses = courses.map((c) => (c.id === updated.id ? updated : c));
+    allCourseSlugs = allCourseSlugs.map((c) => (c.id === updated.id ? { id: c.id, slug: updated.slug } : c));
     editingCourseId = null;
   } else {
-    const created = await runCourseMutation(client.models.Course.create({ ...fields, isPublished: false }), "코스 만들기 실패");
+    // 작가가 만들면 자기 sub를 authorId로 직접 채운다 — 이 값이 있어야 이후
+    // 수정·삭제 권한(owner 규칙)이 잡힌다.
+    const authorId = sessionRole === "curator" ? currentUserId : null;
+    const created = await runCourseMutation(client.models.Course.create({ ...fields, isPublished: false, authorId }), "코스 만들기 실패");
     if (!created) return;
     courses.push(created);
+    allCourseSlugs.push({ id: created.id, slug: created.slug });
     selectedCourseId = created.id;
   }
   courses.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
@@ -1751,10 +1852,11 @@ async function handleCourseAction(action, courseId) {
     // 비공개 코스는 일반 링크로 안 열리므로 시안 미리보기 링크(&preview=1)를 준다 —
     // 링크를 아는 사람만 볼 수 있고 방문·반응 집계에는 잡히지 않는다.
     const base = `${window.location.origin}/?course=${encodeURIComponent(course.slug)}`;
-    const url = course.isPublished ? base : `${base}&preview=1`;
+    const live = isCourseLive(course);
+    const url = live ? base : `${base}&preview=1`;
     try {
       await navigator.clipboard.writeText(url);
-      alert(`링크를 복사했어요.\n${url}${course.isPublished ? "" : "\n\n아직 비공개라 시안 미리보기 링크예요. 링크를 아는 사람은 누구나 볼 수 있으니 허락받을 분께만 보내세요."}`);
+      alert(`링크를 복사했어요.\n${url}${live ? "" : "\n\n아직 비공개라 시안 미리보기 링크예요. 링크를 아는 사람은 누구나 볼 수 있으니 허락받을 분께만 보내세요."}`);
     } catch (e) {
       prompt("아래 링크를 복사해주세요.", url);
     }
@@ -1774,13 +1876,35 @@ async function handleCourseAction(action, courseId) {
     editingCourseId = null;
   } else if (action === "toggle-publish") {
     const places = coursePlacesById[courseId] || [];
-    if (!course.isPublished && places.length === 0 && !confirm("장소가 하나도 없어요. 그래도 공개할까요?")) return;
+    if (!course.isPublished && places.length === 0) {
+      // 장소 없는 코스는 지도에 어차피 안 보인다(js/storage.js fetchPublishedCourses).
+      if (sessionRole === "curator") {
+        alert("장소를 하나 이상 넣은 뒤에 공개 요청할 수 있어요.");
+        return;
+      }
+      if (!confirm("장소가 하나도 없어요. 그래도 공개할까요?")) return;
+    }
     const updated = await runCourseMutation(
       client.models.Course.update({ id: courseId, isPublished: !course.isPublished }),
       "공개 상태 변경 실패",
     );
     if (!updated) return;
     courses = courses.map((c) => (c.id === updated.id ? updated : c));
+  } else if (action === "toggle-approval") {
+    const approved = approvedCourseIds.has(courseId);
+    const msg = approved
+      ? `"${course.title}" 승인을 취소할까요? 지도에서 바로 내려가요.`
+      : `"${course.title}"을(를) 승인할까요?${course.isPublished ? " 지도에 바로 공개돼요." : " 작가가 공개 요청하면 바로 공개돼요."}\n승인 뒤에 작가가 고친 내용은 다시 확인 없이 바로 반영돼요.`;
+    if (!confirm(msg)) return;
+    const ok = await runCourseMutation(
+      approved
+        ? client.models.CourseApproval.delete({ courseId })
+        : client.models.CourseApproval.create({ courseId }),
+      approved ? "승인 취소 실패" : "승인 실패",
+    );
+    if (!ok) return;
+    if (approved) approvedCourseIds.delete(courseId);
+    else approvedCourseIds.add(courseId);
   } else if (action === "delete") {
     const places = coursePlacesById[courseId] || [];
     if (!confirm(`"${course.title}" 코스와 장소 ${places.length}곳을 완전히 삭제할까요? 되돌릴 수 없습니다.`)) return;
@@ -1790,7 +1914,14 @@ async function handleCourseAction(action, courseId) {
     }
     const ok = await runCourseMutation(client.models.Course.delete({ id: courseId }), "코스 삭제 실패");
     if (!ok) return;
+    // 승인 기록은 관리자만 지울 수 있다 — 작가가 지운 코스의 승인은 남아도
+    // 가리킬 코스가 없어 아무 데도 안 쓰인다.
+    if (sessionRole !== "curator" && approvedCourseIds.has(courseId)) {
+      await runCourseMutation(client.models.CourseApproval.delete({ courseId }), "승인 기록 삭제 실패");
+      approvedCourseIds.delete(courseId);
+    }
     courses = courses.filter((c) => c.id !== courseId);
+    allCourseSlugs = allCourseSlugs.filter((c) => c.id !== courseId);
     delete coursePlacesById[courseId];
     if (selectedCourseId === courseId) selectedCourseId = null;
     if (editingCourseId === courseId) editingCourseId = null;
@@ -1913,8 +2044,10 @@ async function handlePlaceSubmit(e) {
     editingPlaceId = null;
   } else {
     const seq = list.length ? Math.max(...list.map((p) => p.seq)) + 1 : 1;
+    // 장소의 authorId는 코스와 같아야 지도에 붙는다(js/storage.js fetchPublishedCourses).
+    const authorId = courses.find((c) => c.id === selectedCourseId)?.authorId || null;
     const created = await runCourseMutation(
-      client.models.CoursePlace.create({ courseId: selectedCourseId, seq, ...fields }),
+      client.models.CoursePlace.create({ courseId: selectedCourseId, seq, authorId, ...fields }),
       "장소 추가 실패",
     );
     if (!created) return;
@@ -2010,8 +2143,9 @@ document.getElementById("admin-content").addEventListener("click", (e) => {
   const outputs = await fetch(OUTPUTS_FILE).then((r) => r.json());
   Amplify.configure(outputs);
 
-  if (await isAdminSession()) {
-    await bootAdminClient();
+  const role = await getSessionRole();
+  if (role) {
+    await bootAdminClient(role);
     showDashboard();
   } else {
     showLogin();

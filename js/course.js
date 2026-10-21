@@ -165,7 +165,7 @@ async function openCoursePreviewFromLink(slug) {
 }
 
 function isCoursePreview(course) {
-  return course.isPublished === false;
+  return !course.isLive;
 }
 
 function buildCourseUrl(slug) {
