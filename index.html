@@ -517,6 +517,11 @@
     </div>
   </div>
 
+  <!-- 미니 플레이어의 유튜브 iframe 자리(js/storySheet.js warmMiniPlayer) — 보이지 않고
+       소리만 낸다. #mini-player는 회상·발자취 때 DOM 위치를 옮기는데, iframe이 같이
+       옮겨지면 다시 로드되며 곡 끝·오류 이벤트가 끊겨서 절대 옮기지 않는 이 자리에 둔다. -->
+  <div class="mini-player-audio" id="mini-player-audio" aria-hidden="true"></div>
+
   <script src="js/config.js"></script>
   <!-- 카카오맵 SDK 요청을 최대한 일찍 시작한다 — 원래 이 태그가 아래 로컬
        스크립트 14개(~400KB)를 전부 순서대로 다운로드+실행한 뒤에야

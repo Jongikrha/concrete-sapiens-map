@@ -1504,6 +1504,19 @@ body {
   animation-play-state: running;
 }
 
+/* 유튜브 iframe 자리(index.html #mini-player-audio) — 보이지 않고 소리만 낸다.
+   화면 안에 크기를 가진 채 두는 건 모바일 브라우저가 화면 밖/0px iframe의 재생을
+   멈추는 경우가 있어서다(예전에도 미니 플레이어 안 44px 자리에 투명하게 있었다). */
+.mini-player-audio {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  height: 44px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .mini-player-frame {
   position: absolute;
   inset: 0;

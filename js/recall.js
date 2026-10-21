@@ -1176,6 +1176,11 @@ function bindRecallEvents() {
     if (recallSessionOpen && recallScope === "songs") handleRadioSongEnded();
     else if (courseModeOpen) handleCourseSongEnded(); // 발자취 플레이리스트(js/course.js)
   });
+  // 재생이 막힌 곡 — 발자취는 다음 곡으로 건너뛴다. 기억 라디오는 곡 끝이 곧
+  // 다음 기억 카드라 오류 때 카드가 갑자기 넘어가지 않게 그대로 둔다.
+  setMiniPlayerErrorCallback(() => {
+    if (courseModeOpen) handleCourseSongEnded();
+  });
   // 미니 플레이어 ✕/일시정지로 노래를 바꾸면 카드의 노래 카드도 바로
   // 따라가야 한다. app.js가 onclick을 이보다 먼저 등록하므로 이 리스너는
   // 정지/토글된 뒤에 돈다.

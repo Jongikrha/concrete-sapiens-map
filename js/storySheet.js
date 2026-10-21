@@ -55,6 +55,21 @@ function setMiniPlayerEndedCallback(fn) {
   miniPlayerEndedCallback = fn;
 }
 
+// 재생 자체가 안 되는 곡(onError)을 알림 받을 콜백과, 이번 방문에서 실패한
+// 곡 목록(2026-10-21) — 발자취 첫 곡이 퍼가기 금지 영상이라 아무 소리 없이
+// 멈춰 있고, 다음 장소로 가도 "이미 코스 노래가 흐르는 중"으로 보여 코스
+// 전체에서 노래가 안 나왔다. 발자취는 실패한 곡을 건너뛰고 다음 곡을 튼다.
+let miniPlayerErrorCallback = null;
+const miniPlayerFailedVideoIds = new Set();
+
+function setMiniPlayerErrorCallback(fn) {
+  miniPlayerErrorCallback = fn;
+}
+
+function isMiniPlayerVideoFailed(videoId) {
+  return miniPlayerFailedVideoIds.has(videoId);
+}
+
 /**
  * 유튜브 IFrame Player API(공식 JS API)를 준비해둔다. app.js initApp()이
  * 부팅 시 미리 한 번 호출해서, 사용자가 실제로 재생 버튼을 누르는 시점엔
@@ -94,7 +109,13 @@ function warmMiniPlayer() {
   if (ytPlayer || ytPlayerCreating) return;
   ytPlayerCreating = true;
   const holder = document.createElement("div");
-  document.getElementById("mini-player-frame-mount").appendChild(holder);
+  // 미니 플레이어(#mini-player) 안이 아니라 움직이지 않는 #mini-player-audio에
+  // 둔다(2026-10-21). 발자취·라디오가 미니 플레이어를 #app 아래로 옮기면
+  // (js/recall.js enterRecallImmersiveChrome) 안의 iframe이 다시 로드되면서
+  // 재생 명령은 먹어도 아래 events(곡 끝·오류)가 더는 오지 않았다 — 발자취
+  // 플레이리스트가 다음 곡으로 안 넘어가고, 퍼가기가 막힌 첫 곡을 건너뛰지
+  // 못해 서울 1995가 통째로 무음이었다. iframe은 원래 보이지 않고 소리만 낸다.
+  document.getElementById("mini-player-audio").appendChild(holder);
   ytPlayer = new YT.Player(holder, {
     host: "https://www.youtube-nocookie.com",
     playerVars: { playsinline: 1 },
@@ -122,7 +143,10 @@ function warmMiniPlayer() {
       // 이면 자동재생 정책과 무관하게 아예 재생이 안 된다 — 콘솔에 남겨서
       // 나중에 구분할 수 있게 한다.
       onError: (e) => {
-        console.warn("[mini-player] YouTube 재생 오류, code:", e.data);
+        console.warn("[mini-player] YouTube 재생 오류, code:", e.data, activeMiniPlayerVideoId);
+        miniPlayerActuallyPlaying = false;
+        if (activeMiniPlayerVideoId) miniPlayerFailedVideoIds.add(activeMiniPlayerVideoId);
+        if (miniPlayerErrorCallback) miniPlayerErrorCallback();
       },
     },
   });

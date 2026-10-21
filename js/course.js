@@ -533,10 +533,26 @@ function playCourseSongAt(i) {
 }
 
 function startCourseMusicAt(place) {
-  if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId)) return; // 이미 흐르는 중
+  // 이미 흐르는 중 — 재생이 막혀 멈춘 곡은 흐르는 걸로 치지 않는다
+  if (courseSongs.some((s) => s.videoId === activeMiniPlayerVideoId) && !isMiniPlayerVideoFailed(activeMiniPlayerVideoId)) return;
   const videoId = Storage.extractYoutubeVideoId(place.youtubeUrl);
   const i = courseSongs.findIndex((s) => s.videoId === videoId);
-  if (i >= 0) playCourseSongAt(i);
+  if (i < 0) return; // 노래 없는 장소 — 예전처럼 아무것도 틀지 않는다
+  if (isMiniPlayerVideoFailed(videoId)) playNextCourseSongAfter(i);
+  else playCourseSongAt(i);
+}
+
+// i번 곡 다음부터 재생이 막히지 않은 첫 곡을 튼다(마지막 뒤엔 처음으로).
+// 전부 막혔으면 미니 플레이어를 끈다 — 소리 없이 재생 중처럼 보이지 않게.
+function playNextCourseSongAfter(i) {
+  for (let step = 1; step <= courseSongs.length; step++) {
+    const next = (i + step + courseSongs.length) % courseSongs.length;
+    if (!isMiniPlayerVideoFailed(courseSongs[next].videoId)) {
+      playCourseSongAt(next);
+      return;
+    }
+  }
+  stopMiniPlayer();
 }
 
 // 곡이 끝나면 다음 곡으로(마지막 곡 뒤엔 처음으로) — js/recall.js
@@ -544,12 +560,17 @@ function startCourseMusicAt(place) {
 // 기억 라디오(handleRadioSongEnded)처럼, 카드를 넘겨봐서 지금 보고 있는
 // 장소의 노래가 방금 끝난 곡과 다르면 그 장소 노래로 이어간다(카드와 노래를
 // 다시 맞춘다). 같거나 노래 없는 장소면 코스 순서상 다음 곡으로.
+// 재생이 막힌 곡(js/storySheet.js onError)도 여기로 와서 건너뛴다.
 function handleCourseSongEnded() {
   const i = courseSongs.findIndex((s) => s.videoId === activeMiniPlayerVideoId);
   if (i < 0) return; // 사용자가 다른 곡으로 바꿔 들은 경우 — 손대지 않는다
   const place = activeCourse.places[courseIndex];
   const placeSongIndex = place ? courseSongs.findIndex((s) => s.videoId === Storage.extractYoutubeVideoId(place.youtubeUrl)) : -1;
-  playCourseSongAt(placeSongIndex >= 0 && placeSongIndex !== i ? placeSongIndex : (i + 1) % courseSongs.length);
+  if (placeSongIndex >= 0 && placeSongIndex !== i && !isMiniPlayerVideoFailed(courseSongs[placeSongIndex].videoId)) {
+    playCourseSongAt(placeSongIndex);
+  } else {
+    playNextCourseSongAfter(i);
+  }
 }
 
 // ------------------------------------------------------------
