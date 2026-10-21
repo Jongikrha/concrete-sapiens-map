@@ -1294,6 +1294,125 @@ function courseCardHtml(course) {
   `;
 }
 
+// ------------------------------------------------------------
+// "어디에 보이나요?" 예시(2026-10-21) — 작가 계정이 생기면서 코스 폼의
+// 칸(이름·저자·부제…)이 실제 화면 어디에 나오는지 몰라 헤맬 수 있어서,
+// 발자취 탭 오른쪽 여백에 실제 코스(콘크리트 사피엔스) 화면을 캡처해 두고
+// 입력 칸을 누르면 그 내용이 나오는 자리를 표시한다. 캡처는 폰 크기(390px)
+// 화면이고, 표시 상자 좌표는 캡처할 때 요소 위치를 그대로 잰 값(CSS px)이다 —
+// 코스 화면 디자인이 크게 바뀌면 assets/course-guide/의 캡처와 같이 다시 잰다.
+// ------------------------------------------------------------
+const COURSE_GUIDE_SCREENS = {
+  list: {
+    label: "발자취 목록",
+    img: "/assets/course-guide/list.jpg",
+    size: [343, 726],
+    spots: { cover: [37, 309, 68, 91], title: [119, 309, 137, 23], author: [119, 336, 68, 20], description: [119, 362, 157, 21], kind: [119, 389, 98, 19] },
+  },
+  detail: {
+    label: "소개 화면",
+    img: "/assets/course-guide/detail.jpg",
+    size: [350, 654],
+    spots: { cover: [110, 66, 130, 170], title: [20, 285, 310, 31], description: [20, 325, 310, 22], intro: [20, 365, 310, 168], linkUrl: [100, 14, 80, 36] },
+  },
+  place: {
+    label: "장소 카드",
+    img: "/assets/course-guide/place.jpg",
+    size: [390, 844],
+    spots: { song: [16, 18, 358, 58], logo: [166, 77, 59, 71], photo: [42, 310, 306, 172], photoMeta: [42, 492, 306, 37], title: [42, 549, 150, 31], label: [42, 592, 306, 20], name: [42, 618, 306, 34], quote: [42, 670, 306, 143] },
+  },
+};
+
+// 폼 칸 하나 = 예시의 한 항목. spots의 키가 위 화면의 같은 이름 상자다.
+// 화면에 안 나오는 칸(slug 등)은 설명만 보여준다.
+const COURSE_GUIDE_FIELDS = [
+  { key: "title", name: "이름", screens: ["list", "detail", "place"], text: "목록 카드 제목, 소개 화면의 큰 제목, 따라 걷는 동안 장소 카드 윗줄에 나와요." },
+  { key: "author", name: "저자", screens: ["list"], text: "목록에서 제목 아래 \"나종익 지음\"처럼 나와요. 종류가 음악이면 \"노래\", 드라마·영화면 \"연출\"이 붙어요." },
+  { key: "kind", name: "종류", screens: ["list"], text: "목록의 \"책 · 장소 20곳\" 줄에 나오고, 표지 모양도 정해요(책은 입체 책, 인물은 폴라로이드, 음악은 정사각형)." },
+  { key: "description", name: "부제(한 줄)", screens: ["list", "detail"], text: "목록에서는 저자 아래, 소개 화면에서는 큰 제목 바로 아래에 나와요." },
+  { key: "intro", name: "책·작품 소개", screens: ["detail"], text: "소개 화면의 본문이에요. 표지 아래 큰 글로 나와요." },
+  { key: "cover", name: "표지", screens: ["list", "detail"], text: "목록 왼쪽 작은 표지, 소개 화면 맨 위의 큰 표지로 나와요." },
+  { key: "logo", name: "로고", screens: ["place"], text: "따라 걷는 동안 지도 위 장소 핀(동그라미)에 들어가요." },
+  { key: "linkUrl", name: "바깥 링크", screens: ["detail"], text: "소개 화면 위쪽에 \"더 알아보기\" 버튼으로 나와요(이 예시엔 링크가 없어서 버튼 자리만 표시했어요)." },
+  { key: "slug", name: "영문 식별자", screens: [], text: "화면에는 안 나오고 공유 링크 주소 끝에 붙어요. 예: concretesapiens.com/?course=concrete-sapiens" },
+  { key: "photo", name: "장소 사진", screens: ["place"], text: "장소 카드 맨 위에 가로로 납작하게(16:9) 잘려 나와요. 여러 장이면 옆으로 넘겨 봐요." },
+  { key: "photoMeta", name: "사진 제목·출처", screens: ["place"], text: "사진 바로 아래 작은 글씨로 나와요. 출처는 \"출처 | 서울기록원\"처럼 보여요." },
+  { key: "label", name: "꼬리표", screens: ["place"], text: "장소 이름 위에 주황색 작은 글씨로 나와요. 책이면 쪽수나 장 제목을 적어요." },
+  { key: "name", name: "지도에 보일 이름", screens: ["place"], text: "장소 카드의 큰 제목이에요." },
+  { key: "quote", name: "인용", screens: ["place"], text: "장소 이름 아래 왼쪽에 주황 줄이 있는 글로 나와요. 책 속 한두 문장을 옮겨요." },
+  { key: "song", name: "이 장소의 노래", screens: ["place"], text: "그 장소에 오면 화면 맨 위 플레이어에서 흘러요. 아티스트·곡 제목이 거기에 나와요." },
+];
+
+// 폼 칸 name → 예시 항목 key
+const COURSE_GUIDE_INPUT_KEYS = {
+  title: "title", author: "author", slug: "slug", kind: "kind", description: "description", intro: "intro",
+  linkUrl: "linkUrl", logo: "logo", removeLogo: "logo", cover: "cover", removeCover: "cover", coverSpineRatio: "cover",
+  name: "name", label: "label", quote: "quote", youtubeUrl: "song", musicArtist: "song", musicTitle: "song",
+};
+
+let guideScreen = "detail";
+// 넓은 화면에선 오른쪽 여백에 펼쳐 두고, 좁은 화면에선 접어 둔다(폼 위에 길게 끼어들지 않게).
+let courseGuideOpen = window.matchMedia("(min-width: 1240px)").matches;
+let guideKey = null;
+
+function courseGuideKeyForInput(el) {
+  if (!el?.closest?.("#course-form, #place-form")) return null;
+  if (el.id === "place-search-input") return "name";
+  if (el.dataset?.slotField) return "photoMeta";
+  if (el.closest(".course-place-photos")) return "photo";
+  return COURSE_GUIDE_INPUT_KEYS[el.name] || null;
+}
+
+function courseGuideHtml() {
+  const screen = COURSE_GUIDE_SCREENS[guideScreen];
+  const [w, h] = screen.size;
+  const field = COURSE_GUIDE_FIELDS.find((f) => f.key === guideKey) || null;
+  // 이 화면에 나오는 항목만 번호를 매긴다(폼 순서대로).
+  const onScreen = COURSE_GUIDE_FIELDS.filter((f) => f.screens.includes(guideScreen) && screen.spots[f.key]);
+  const pct = (v, total) => `${((v / total) * 100).toFixed(2)}%`;
+  const spotsHtml = onScreen.map((f, i) => {
+    const [x, y, sw, sh] = screen.spots[f.key];
+    const active = f.key === guideKey;
+    return `<button type="button" class="course-guide-spot${active ? " course-guide-spot--active" : ""}" data-guide-key="${f.key}"
+      style="left:${pct(x, w)};top:${pct(y, h)};width:${pct(sw, w)};height:${pct(sh, h)}" aria-label="${escapeHtml(f.name)}">
+      <span class="course-guide-spot-num">${i + 1}</span></button>`;
+  }).join("");
+  return `
+    <div class="course-guide-head">
+      <b>어디에 보이나요?</b>
+      <p class="field-hint">입력 칸을 누르면 그 내용이 실제 화면 어디에 나오는지 표시해요. 예시는 「콘크리트 사피엔스」 발자취예요.</p>
+    </div>
+    <div class="course-guide-tabs">
+      ${Object.entries(COURSE_GUIDE_SCREENS).map(([id, sc]) => {
+        const has = field?.screens.includes(id);
+        return `<button type="button" class="course-guide-tab${id === guideScreen ? " course-guide-tab--active" : ""}${has ? " course-guide-tab--has" : ""}" data-guide-screen="${id}">${sc.label}</button>`;
+      }).join("")}
+    </div>
+    ${field ? `<div class="course-guide-now"><b>${escapeHtml(field.name)}</b> — ${escapeHtml(field.text)}</div>` : ""}
+    <div class="course-guide-phone${field ? " course-guide-phone--focused" : ""}" style="aspect-ratio:${w} / ${h};width:min(100%, calc(58vh * ${(w / h).toFixed(3)}))">
+      <img src="${screen.img}" alt="${escapeHtml(screen.label)} 예시 화면" />
+      ${spotsHtml}
+    </div>
+    <ol class="course-guide-legend">
+      ${onScreen.map((f) => `<li><button type="button" class="${f.key === guideKey ? "course-guide-legend--active" : ""}" data-guide-key="${f.key}">${escapeHtml(f.name)}</button></li>`).join("")}
+    </ol>
+  `;
+}
+
+function renderCourseGuide() {
+  const el = document.getElementById("course-guide-body");
+  if (el) el.innerHTML = courseGuideHtml();
+}
+
+// 칸을 고르면 그 항목이 나오는 화면으로 넘긴다(지금 화면에도 나오면 그대로).
+function selectCourseGuideKey(key) {
+  if (!key) return;
+  const field = COURSE_GUIDE_FIELDS.find((f) => f.key === key);
+  guideKey = key;
+  if (field.screens.length && !field.screens.includes(guideScreen)) guideScreen = field.screens[0];
+  renderCourseGuide();
+}
+
 // 소개 화면 본문 최대 글자 수 — 시안(2026-10-13)의 소개 글 길이(116자).
 // 이보다 길면 소개 화면에서 책 표지보다 글이 길게 늘어진다.
 const COURSE_INTRO_MAX = 116;
@@ -1688,6 +1807,8 @@ async function renderCoursesTab() {
   const places = selected ? coursePlacesById[selected.id] || [] : [];
 
   content.innerHTML = `
+    <div class="course-tab-layout">
+    <div class="course-tab-main">
     <div class="admin-section-title">${sessionRole === "curator" ? "내 발자취" : "발자취"} (${courses.length}개 코스)</div>
     <p class="field-hint">여러 장소를 순서대로 묶은 코스예요. 지도 화면에서 "따라 걷기"로 보여줘요.</p>
     ${courses.length ? courses.map(courseCardHtml).join("") : `<p class="empty-state">아직 코스가 없어요.</p>`}
@@ -1699,7 +1820,18 @@ async function renderCoursesTab() {
       </div>
     ` : ""}
     ${courseFormHtml()}
+    </div>
+    <aside class="course-guide" id="course-guide">
+      <details id="course-guide-details"${courseGuideOpen ? " open" : ""}>
+        <summary>입력한 내용이 화면 어디에 보이나요?</summary>
+        <div id="course-guide-body">${courseGuideHtml()}</div>
+      </details>
+    </aside>
+    </div>
   `;
+  document.getElementById("course-guide-details").addEventListener("toggle", (e) => {
+    courseGuideOpen = e.target.open;
+  });
 
   document.getElementById("course-form").addEventListener("submit", guardDoubleSubmit(handleCourseSubmit));
   document.getElementById("course-logo-input").addEventListener("change", (e) => {
@@ -2111,7 +2243,23 @@ function renderActiveTab() {
   hydrateAdminPhotos();
 }
 
+document.getElementById("admin-content").addEventListener("focusin", (e) => {
+  selectCourseGuideKey(courseGuideKeyForInput(e.target));
+});
+
 document.getElementById("admin-content").addEventListener("click", (e) => {
+  const guideScreenBtn = e.target.closest("[data-guide-screen]");
+  if (guideScreenBtn) {
+    guideScreen = guideScreenBtn.dataset.guideScreen;
+    renderCourseGuide();
+    return;
+  }
+  const guideKeyBtn = e.target.closest("[data-guide-key]");
+  if (guideKeyBtn) {
+    guideKey = guideKeyBtn.dataset.guideKey;
+    renderCourseGuide();
+    return;
+  }
   const deviceBtn = e.target.closest(".device-badge");
   if (deviceBtn) {
     setDeviceFilter(deviceBtn.dataset.device);

@@ -748,3 +748,183 @@ body {
   flex-direction: row;
   cursor: pointer;
 }
+
+/* 발자취 탭 "어디에 보이나요?" 예시(2026-10-21, js/admin.js courseGuideHtml) —
+   넓은 화면에선 오른쪽 여백에 붙어 따라 내려오고, 좁은 화면에선 목록 위에 접혀 있다. */
+.course-tab-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.course-guide {
+  order: -1;
+  margin: 8px 0 4px;
+}
+
+@media (min-width: 1240px) {
+  #admin-content:has(.course-tab-layout) {
+    max-width: 1300px;
+  }
+
+  .course-tab-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 900px) 340px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .course-guide {
+    order: 0;
+    position: sticky;
+    top: 16px;
+    margin-top: 20px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
+
+.course-guide details {
+  background: #fff;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  padding: 10px 14px 14px;
+}
+
+.course-guide summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-guide-head {
+  margin-top: 10px;
+}
+
+.course-guide-head b {
+  font-size: 15px;
+}
+
+.course-guide-head .field-hint {
+  margin: 4px 0 0;
+}
+
+.course-guide-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 10px;
+}
+
+.course-guide-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+}
+
+.course-guide-tab--has {
+  border-color: var(--cs-orange);
+  color: var(--cs-orange);
+}
+
+.course-guide-tab--active {
+  background: var(--cs-black);
+  border-color: var(--cs-black);
+  color: #fff;
+}
+
+.course-guide-now {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #fff3ef;
+  border-radius: var(--cs-radius-card);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.course-guide-now b {
+  color: var(--cs-orange);
+}
+
+.course-guide-phone {
+  position: relative;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+.course-guide-phone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.course-guide-spot {
+  position: absolute;
+  padding: 0;
+  border: 2px dashed rgba(255, 90, 54, 0.55);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* 칸을 고르면 나머지 상자는 번호만 흐리게 남긴다 */
+.course-guide-phone--focused .course-guide-spot:not(.course-guide-spot--active) {
+  border-color: transparent;
+}
+
+.course-guide-phone--focused .course-guide-spot:not(.course-guide-spot--active) .course-guide-spot-num {
+  opacity: 0.45;
+}
+
+.course-guide-spot--active {
+  border: 3px solid var(--cs-orange);
+  background: rgba(255, 90, 54, 0.12);
+  box-shadow: 0 0 0 9999px rgba(47, 48, 49, 0.35);
+  z-index: 1;
+}
+
+.course-guide-spot-num {
+  position: absolute;
+  top: -9px;
+  left: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--cs-orange);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.course-guide-legend {
+  margin: 12px 0 0;
+  padding-left: 22px;
+  font-size: 13px;
+}
+
+.course-guide-legend li {
+  margin: 2px 0;
+}
+
+.course-guide-legend button {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--cs-text-main);
+  cursor: pointer;
+}
+
+.course-guide-legend button:hover,
+.course-guide-legend--active {
+  color: var(--cs-orange) !important;
+  font-weight: 600;
+}
