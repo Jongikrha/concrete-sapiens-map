@@ -6124,8 +6124,10 @@ button.story-place-line:hover {
 }
 
 .course-choice-list {
-  display: flex;
-  flex-direction: column;
+  /* 카드 높이를 모두 같게(2026-10-22) — 작가 이름·부제 줄 수가 달라도 가장
+     큰 카드에 맞춘다 */
+  display: grid;
+  grid-auto-rows: 1fr;
   gap: 12px;
   margin-top: 16px;
 }
@@ -6321,6 +6323,9 @@ button.story-place-line:hover {
 
   .course-choice-item {
     grid-template-columns: auto 1fr;
+    /* 높이를 맞추며 남는 자리는 글과 버튼 사이로 — 제목은 위, 버튼은 아래에 줄 맞춤 */
+    grid-template-rows: 1fr auto;
+    align-items: start;
     gap: 6px 14px;
     padding: 14px;
   }
@@ -6636,6 +6641,18 @@ button.story-place-line:hover {
 .archive-course-cover.course-cover--music,
 .course-intro-cover.course-cover--music {
   aspect-ratio: 1 / 1;
+}
+
+/* 발자취 목록에선 정사각형 앨범 커버를 세로 표지(3:4) 칸 한가운데에 — 위아래로
+   (칸 높이 − 커버 높이) / 2 = 폭의 1/6씩 띄워 다른 표지와 같은 자리를 차지한다(2026-10-22) */
+.course-choice-cover.course-cover--music {
+  margin: 14px 0;
+}
+
+@media (max-width: 600px) {
+  .course-choice-cover.course-cover--music {
+    margin: calc(68px / 6) 0;
+  }
 }
 
 /* 아카이브 줄에선 정사각형 앨범 커버를 세로 표지(2:3) 칸 한가운데에 놓는다 — 위아래로
