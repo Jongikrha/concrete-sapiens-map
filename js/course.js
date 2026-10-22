@@ -237,7 +237,7 @@ function openCourseChoice() {
       <span class="course-list-badge">${COURSE_LIST_BOOKS_ICON}${publishedCourses.length}개의 발자취</span>
     </div>
     <div class="course-choice-list">
-      ${publishedCourses.map((c, i) => `
+      ${publishedCourses.map((c, i) => `${i === 1 ? `<div class="course-choice-rest">` : ""}
         <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
           <span class="course-choice-cover${courseCoverKindClass(c)}">
             ${c.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(c)}></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
@@ -252,7 +252,7 @@ function openCourseChoice() {
           <span class="course-choice-actions">
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
           </span>
-        </div>
+        </div>${i === publishedCourses.length - 1 && i >= 1 ? `</div>` : ""}
       `).join("")}
     </div>
     <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>

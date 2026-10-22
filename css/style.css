@@ -6136,12 +6136,20 @@ button.story-place-line:hover {
 }
 
 .course-choice-list {
-  /* 카드 높이를 모두 같게(2026-10-22) — 작가 이름·부제 줄 수가 달라도 가장
-     큰 카드에 맞춘다 */
+  /* 카드 높이는 각자 내용만큼 — 한때 모두 같게 맞췄더니 "지금 둘러보세요" 줄이
+     붙은 맨 위 카드에 다른 카드가 전부 끌려가 헐렁해졌다(2026-10-22) */
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* "지금 둘러보세요" 아래 나머지 카드들 — 책·음악·기타 모두 가장 큰 카드 하나에 높이를
+   맞춘다(앨범 커버가 작아도 다른 카드보다 낮아 보이지 않게, 2026-10-22). 맨 위 카드는
+   이 묶음 밖이라 거기에 끌려가지 않는다. */
+.course-choice-rest {
   display: grid;
   grid-auto-rows: 1fr;
   gap: 12px;
-  margin-top: 16px;
 }
 
 .course-choice-item {
@@ -6292,7 +6300,6 @@ button.story-place-line:hover {
 
   .course-choice-item {
     grid-template-columns: auto 1fr;
-    /* 높이를 맞추며 남는 자리는 글과 버튼 사이로 — 제목은 위, 버튼은 아래에 줄 맞춤 */
     grid-template-rows: 1fr auto;
     align-items: start;
     gap: 6px 14px;
