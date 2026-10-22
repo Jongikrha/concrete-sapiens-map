@@ -70,12 +70,14 @@ const Auth = {
         Storage.refreshMyReactions(),
         Storage.refreshMySharedIds(),
         Storage.refreshMyPlaceWishes(),
+        Storage.refreshMyCourseLikes(),
       ]);
     } else {
       Storage.clearMyStoryIds();
       Storage.clearMyReactions();
       Storage.clearMySharedIds();
       Storage.clearMyPlaceWishes();
+      Storage.clearMyCourseLikes();
     }
     // GNB 아바타(js/mymemory.js)에 로그인 상태 변화를 알려준다. 이 상태가
     // 바뀌는 지점은 init/signIn/confirmSignUp뿐이라 여기 한 곳에서만
@@ -146,6 +148,7 @@ const Auth = {
     Storage.clearMyReactions();
     Storage.clearMySharedIds();
     Storage.clearMyPlaceWishes();
+    Storage.clearMyCourseLikes();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 
@@ -189,6 +192,7 @@ const Auth = {
     Storage.clearMyReactions();
     Storage.clearMySharedIds();
     Storage.clearMyPlaceWishes();
+    Storage.clearMyCourseLikes();
     if (typeof renderAccountAvatar === "function") renderAccountAvatar();
   },
 

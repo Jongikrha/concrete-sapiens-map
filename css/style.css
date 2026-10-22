@@ -6217,6 +6217,58 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
+/* "장소 N곳" 줄 + 오른쪽 끝 좋아요(2026-10-22) */
+.course-choice-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 발자취 좋아요 — 하트 + 수(0이면 하트만). 누르면 주황으로 채운다. */
+.course-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 6px;
+  border: none;
+  border-radius: var(--cs-radius-chip);
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.course-like-count:empty {
+  display: none;
+}
+
+.course-like-btn--on {
+  color: var(--cs-orange);
+}
+
+.course-like-btn--on svg {
+  fill: currentColor;
+}
+
+/* 소개 화면 윗줄 — "공유하기" 알약과 같은 높이의 회색 알약 */
+.course-like-btn--detail {
+  height: 36px;
+  margin-left: 0;
+  padding: 0 12px;
+  background: #ECEBE8;
+  color: var(--cs-text-main);
+}
+
+.course-like-btn--detail.course-like-btn--on {
+  color: #E8451F;
+}
+
 .course-choice-btn {
   display: inline-flex;
   align-items: center;

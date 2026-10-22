@@ -166,6 +166,12 @@ let _mySharedIds = null;
 // 로그인 계정의 발자취 장소 "가보고 싶어요"(PlaceWish, 2026-10-16) —
 // placeId → { courseId, createdAt, recordId(Promise) }. 위와 같은 패턴.
 let _myPlaceWishes = null;
+// 로그인 계정이 좋아요한 발자취(CourseLike, 2026-10-22) — courseId → 레코드
+// id(Promise). 위와 같은 패턴이라 null이면 비로그인.
+let _myCourseLikes = null;
+// 발자취 좋아요 수(CourseLikeCount) — courseId → count. 레코드가 아직 없는
+// 코스(한 번도 안 눌림)는 Map에 없고, 처음 누를 때 create로 만든다.
+const _courseLikeCounts = new Map();
 
 // strict: 조회 오류를 빈 목록으로 삼키지 않고 던진다 — "데이터가 없음"과 "못 받음"을
 // 구분해야 하는 곳(발자취 목록)에서 쓴다. 기본은 예전처럼 오류를 로그만 남기고 받은 만큼 돌려준다.
@@ -531,6 +537,101 @@ const Storage = {
   /** 로그아웃/탈퇴(auth.js) 시 비운다 — 다음 계정에 섞이지 않게. */
   clearMyPlaceWishes() {
     _myPlaceWishes = null;
+  },
+
+  /** 발자취 좋아요 수 — 목록을 받아올 때(fetchPublishedCourses) 같이 채운다. */
+  getCourseLikeCount(courseId) {
+    return _courseLikeCounts.get(courseId) || 0;
+  },
+
+  /** 이 발자취에 좋아요를 눌렀는지 — 로그인 계정 기준(비로그인이면 항상 false). */
+  hasLikedCourse(courseId) {
+    return !!_myCourseLikes && _myCourseLikes.has(courseId);
+  },
+
+  /**
+   * 좋아요를 누르거나 취소하고 바뀐 상태(눌렸으면 true)를 돌려준다 —
+   * toggleReaction과 같이 화면 숫자를 먼저 바꾸고 서버엔 백그라운드로 보낸다.
+   * 비로그인이면 호출부가 먼저 로그인을 요구하므로 여기선 아무것도 안 한다.
+   */
+  toggleCourseLike(courseId) {
+    if (!_myCourseLikes) return false;
+    const hadCount = _courseLikeCounts.has(courseId);
+    const prev = _courseLikeCounts.get(courseId) || 0;
+    const liked = !_myCourseLikes.has(courseId);
+    const count = liked ? prev + 1 : Math.max(0, prev - 1);
+    _courseLikeCounts.set(courseId, count);
+
+    if (liked) {
+      // GraphQL 에러는 reject가 아니라 errors 배열로 온다([[project_amplify_data_silent_errors]]).
+      const recordId = client
+        ? client.models.CourseLike.create({ courseId }, { authMode: "userPool" })
+          .then(({ data, errors }) => {
+            if (errors) console.error("발자취 좋아요 기록 실패", courseId, errors);
+            return data?.id || null;
+          })
+          .catch((e) => {
+            console.error("발자취 좋아요 기록 실패", courseId, e);
+            return null;
+          })
+        : Promise.resolve(null);
+      _myCourseLikes.set(courseId, recordId);
+    } else {
+      const recordId = _myCourseLikes.get(courseId);
+      _myCourseLikes.delete(courseId);
+      if (client) {
+        // 방금 누른 걸 바로 취소하는 경우 create 응답(레코드 id)을 기다렸다가 지운다.
+        recordId
+          .then((id) => id && client.models.CourseLike.delete({ id }, { authMode: "userPool" }))
+          .then((res) => res?.errors && console.error("발자취 좋아요 삭제 실패", courseId, res.errors))
+          .catch((e) => console.error("발자취 좋아요 삭제 실패", courseId, e));
+      }
+    }
+
+    if (client) {
+      // 처음 눌리는 코스면 숫자 레코드부터 만든다. 그 사이 다른 사람이 먼저
+      // 만들었으면 create가 거부되니 update로 다시 보낸다.
+      const update = () => client.models.CourseLikeCount.update({ courseId, count });
+      const send = hadCount
+        ? update()
+        : client.models.CourseLikeCount.create({ courseId, count })
+          .then((res) => (res?.errors ? update() : res));
+      send
+        .then((res) => res?.errors && console.error("발자취 좋아요 수 반영 실패", courseId, res.errors))
+        .catch((e) => console.error("발자취 좋아요 수 반영 실패", courseId, e));
+    }
+    return liked;
+  },
+
+  /** 로그인 직후(auth.js) 호출 — refreshMyReactions와 같은 패턴. */
+  async refreshMyCourseLikes() {
+    const likes = new Map();
+    if (client?.models.CourseLike) {
+      let nextToken = null;
+      try {
+        do {
+          const { data, nextToken: token, errors } = await client.models.CourseLike.list({
+            limit: 1000,
+            nextToken,
+            authMode: "userPool",
+          });
+          if (errors) {
+            console.error("발자취 좋아요 조회 실패", errors);
+            break;
+          }
+          data.forEach((l) => likes.set(l.courseId, Promise.resolve(l.id)));
+          nextToken = token;
+        } while (nextToken);
+      } catch (e) {
+        console.error("발자취 좋아요 조회 실패", e);
+      }
+    }
+    _myCourseLikes = likes;
+  },
+
+  /** 로그아웃/탈퇴(auth.js) 시 비운다 — 다음 계정에 섞이지 않게. */
+  clearMyCourseLikes() {
+    _myCourseLikes = null;
   },
 
   hasShared(storyId) {
@@ -1076,6 +1177,14 @@ const Storage = {
       fetchAll("CoursePlace", { strict: true }),
       fetchAll("CourseApproval", { strict: true }),
     ]);
+    // 좋아요 수는 목록에 곁들이는 숫자라 못 받아도 목록은 그대로 보여준다.
+    const likeCounts = client.models.CourseLikeCount
+      ? await fetchAll("CourseLikeCount").catch((e) => {
+        console.error("발자취 좋아요 수 조회 실패", e);
+        return [];
+      })
+      : [];
+    likeCounts.forEach((l) => _courseLikeCounts.set(l.courseId, l.count || 0));
     const approvedIds = new Set(approvals.map((a) => a.courseId));
     const courseById = Object.fromEntries(courses.map((c) => [c.id, c]));
     const placesByCourse = {};
