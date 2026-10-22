@@ -168,7 +168,13 @@ function isCoursePreview(course) {
   return !course.isLive;
 }
 
+// 카톡 미리보기용 공유 페이지(c/<slug>.html, 2026-10-22)가 있는 코스는 /c/<slug> —
+// 그 페이지가 코스별 og 이미지를 보여주고 바로 아래 주소로 넘긴다. 아직 페이지를
+// 안 만든 코스(scripts/build-course-share.mjs를 다시 돌리기 전)는 예전 주소 그대로.
 function buildCourseUrl(slug) {
+  if (typeof COURSE_SHARE_PAGES !== "undefined" && Object.hasOwn(COURSE_SHARE_PAGES, slug)) {
+    return `${window.location.origin}/c/${encodeURIComponent(slug)}`;
+  }
   return `${window.location.origin}${window.location.pathname}?course=${encodeURIComponent(slug)}&from=course_link`;
 }
 

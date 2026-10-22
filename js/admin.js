@@ -1985,7 +1985,9 @@ async function handleCourseAction(action, courseId) {
     // 링크를 아는 사람만 볼 수 있고 방문·반응 집계에는 잡히지 않는다.
     const base = `${window.location.origin}/?course=${encodeURIComponent(course.slug)}`;
     const live = isCourseLive(course);
-    const url = live ? base : `${base}&preview=1`;
+    // 공개 코스는 카톡 미리보기가 코스별로 나오는 공유 페이지 주소(js/courseSharePages.js)
+    const sharePage = live && typeof COURSE_SHARE_PAGES !== "undefined" && Object.hasOwn(COURSE_SHARE_PAGES, course.slug);
+    const url = sharePage ? `${window.location.origin}/c/${encodeURIComponent(course.slug)}` : live ? base : `${base}&preview=1`;
     try {
       await navigator.clipboard.writeText(url);
       alert(`링크를 복사했어요.\n${url}${live ? "" : "\n\n아직 비공개라 시안 미리보기 링크예요. 링크를 아는 사람은 누구나 볼 수 있으니 허락받을 분께만 보내세요."}`);
