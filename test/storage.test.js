@@ -977,3 +977,17 @@ test("가보고 싶어요: 비로그인이면 담기지 않고, 로그인 후 �
   Storage.clearMyPlaceWishes();
   assert.deepEqual(Storage.getMyPlaceWishes(), []);
 });
+
+test("발자취 순서: 고정(1 이상)은 숫자 순으로 맨 앞, 나머지는 최신순", () => {
+  const courses = [
+    { title: "콘크리트 사피엔스", sortOrder: 0, createdAt: "2026-10-13T00:00:00Z" },
+    { title: "은평", sortOrder: 0, createdAt: "2026-10-22T00:00:00Z" },
+    { title: "탁류", sortOrder: 2, createdAt: "2026-10-15T00:00:00Z" },
+    { title: "제주", sortOrder: null, createdAt: "2026-10-19T00:00:00Z" },
+    { title: "음악", sortOrder: 1, createdAt: "2026-10-16T00:00:00Z" },
+  ];
+  assert.deepEqual(
+    courses.sort(Storage.compareCourseOrder).map((c) => c.title),
+    ["음악", "탁류", "은평", "제주", "콘크리트 사피엔스"],
+  );
+});

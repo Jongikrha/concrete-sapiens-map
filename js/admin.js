@@ -1207,7 +1207,7 @@ async function loadCourses() {
   allCourseSlugs = (publicCourses || courseList).map((c) => ({ id: c.id, slug: c.slug }));
   courses = courseList
     .filter((c) => !isCurator || c.authorId === currentUserId)
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+    .sort(Storage.compareCourseOrder);
   const courseById = Object.fromEntries(courses.map((c) => [c.id, c]));
   coursePlacesById = {};
   placeList.forEach((p) => {
@@ -1277,7 +1277,7 @@ function courseCardHtml(course) {
         <span>장소 ${places.length}곳</span>
         <span>${courseStatusLabel(course)}</span>
         ${isCurator ? "" : `<span>${escapeHtml(courseAuthorLabel(course))}</span>`}
-        ${isCurator ? "" : `<span>정렬 ${course.sortOrder ?? 0}</span>`}
+        ${isCurator ? "" : (course.sortOrder > 0 ? `<span>고정 ${course.sortOrder}</span>` : "")}
         ${course.logoKey ? `<span>로고 있음</span>` : ""}
         ${course.coverKey ? `<span>표지 있음</span>` : ""}
       </div>
@@ -1558,7 +1558,7 @@ function courseFormHtml() {
         <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
       </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
-      ${sessionRole === "curator" ? "" : `<label>정렬 순서(작을수록 앞)<input type="number" name="sortOrder" value="${c?.sortOrder ?? 0}" /></label>`}
+      ${sessionRole === "curator" ? "" : `<label>목록 고정(1 이상이면 맨 앞에 고정, 작을수록 앞 · 0이면 최신순)<input type="number" name="sortOrder" min="0" value="${c?.sortOrder ?? 0}" /></label>`}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
         ${c ? `<button type="button" class="btn-delete" data-course-action="cancel-edit">취소</button>` : ""}
@@ -1973,7 +1973,7 @@ async function handleCourseSubmit(e) {
     allCourseSlugs.push({ id: created.id, slug: created.slug });
     selectedCourseId = created.id;
   }
-  courses.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+  courses.sort(Storage.compareCourseOrder);
   renderCoursesTab();
 }
 

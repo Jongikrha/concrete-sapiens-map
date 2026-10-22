@@ -1198,7 +1198,21 @@ const Storage = {
       .map((c) => ({ ...c, isLive: Storage.isCourseLive(c, approvedIds) }))
       .filter((c) => (includeDrafts || c.isLive) && placesByCourse[c.id]?.length)
       .map((c) => ({ ...c, places: placesByCourse[c.id].sort((a, b) => a.seq - b.seq) }))
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title));
+      .sort(Storage.compareCourseOrder);
+  },
+
+  /**
+   * 발자취 목록 순서(2026-10-22) — 정렬 순서(sortOrder)를 1 이상으로 넣은
+   * 코스만 "고정"으로 숫자 작은 순 맨 앞에, 나머지(0, 작가 코스는 항상 0)는
+   * 최신순. 맨 앞 코스가 목록의 "지금 둘러보세요" 자리라 운영자가 고르고,
+   * 새 발자취는 숫자를 다시 매기지 않아도 고정 바로 아래로 올라온다.
+   * 예전엔 모두 0이라 사실상 제목 가나다순이었다. 지도·어드민이 같이 쓴다.
+   */
+  compareCourseOrder(a, b) {
+    const pinA = a.sortOrder > 0 ? a.sortOrder : Infinity;
+    const pinB = b.sortOrder > 0 ? b.sortOrder : Infinity;
+    if (pinA !== pinB) return pinA - pinB;
+    return (b.createdAt || "").localeCompare(a.createdAt || "") || a.title.localeCompare(b.title);
   },
 
   /** 지도에 실제로 공개된 코스인지 — 운영자 코스는 isPublished만, 작가 코스는 승인까지. */
