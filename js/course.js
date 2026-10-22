@@ -432,8 +432,9 @@ function openCourseDetail(course, { fromList = false } = {}) {
   }
   document.getElementById("course-detail-close").onclick = () => {
     closeCourseDetail();
-    // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay)
-    maybeShowPendingWelcomeOverlay();
+    // 공유 링크로 들어와 미뤄둔 첫 방문 환영 모달(js/app.js maybeShowWelcomeOverlay) —
+    // 걷는 중에 띄운 소개 화면이면 아직 발자취 안이라 걷기를 마칠 때로 미룬다.
+    if (!courseModeOpen) maybeShowPendingWelcomeOverlay();
   };
   const back = document.getElementById("course-detail-back");
   if (back) back.onclick = () => {
@@ -444,22 +445,30 @@ function openCourseDetail(course, { fromList = false } = {}) {
   if (detailLike) bindCourseLikeButton(detailLike, course);
   const detailShare = document.getElementById("course-detail-share");
   if (detailShare) detailShare.onclick = (e) => shareCourseLink(course, e.currentTarget);
+  // 걷는 중에 장소 카드의 코스 이름으로 열었으면 새로 시작하지 않고 그
+  // 걷기 안에서 해당 장소로 옮긴다(startCourseWalk는 걷는 중이면 무시된다).
+  const walkTo = (index) => {
+    closeCourseDetail();
+    if (courseModeOpen && activeCourse?.id === course.id) showCourseStep(index);
+    else startCourseWalk(course, index);
+  };
   document.getElementById("course-detail-start").onclick = () => {
     // 처음부터 시작하면(처음 보거나 지난번에 다 본 코스) 둘러본 수도 새로 센다
     if (resumeIndex === null) Storage.resetCourseProgress(course.id);
     else Storage.logEvent(`course_resumed:${course.slug}`);
-    closeCourseDetail();
-    startCourseWalk(course, resumeIndex ?? 0);
+    walkTo(resumeIndex ?? 0);
   };
   const restart = document.getElementById("course-detail-restart");
   if (restart) restart.onclick = () => {
     Storage.resetCourseProgress(course.id);
     Storage.logEvent(`course_restarted:${course.slug}`);
-    closeCourseDetail();
-    startCourseWalk(course, 0);
+    walkTo(0);
   };
   panel.scrollTop = 0;
-  document.getElementById("course-detail-overlay").classList.remove("hidden");
+  const overlay = document.getElementById("course-detail-overlay");
+  // 걷기 화면(.recall-session, 110)보다 위로
+  overlay.classList.toggle("course-detail-overlay--over-walk", courseModeOpen);
+  overlay.classList.remove("hidden");
   Storage.logEvent(`course_detail_opened:${course.slug}`);
   syncCourseNav();
 }
@@ -1051,7 +1060,7 @@ function renderCourseCard() {
       ${coursePhotoCarouselHtml(place)}
       <div class="course-card-kicker">
         ${courseKindIconSvg(activeCourse.kind)}
-        <span>${escapeHtml(activeCourse.title)}</span>
+        <span class="course-card-kicker-title" id="course-card-kicker-title" role="button" tabindex="0">${escapeHtml(activeCourse.title)}</span>
         <span class="course-card-kicker-sep" aria-hidden="true">·</span>
         <span>${courseIndex + 1} / ${total}</span>
         <button type="button" class="course-wish-btn" id="course-wish-btn" aria-label="가보고 싶어요" aria-pressed="false">${COURSE_WISH_ICON}</button>
@@ -1100,6 +1109,16 @@ function renderCourseCard() {
     bindCourseSongCard(activeCourse.places[courseIndex]);
     document.getElementById("course-map-btn").onclick = () => setCourseMapFolded(true);
     bindCourseWishButton(activeCourse.places[courseIndex]);
+    // 코스 이름을 누르면 소개 화면(2026-10-22) — 걷기는 그대로 두고 위에 띄워서,
+    // 닫으면 보던 장소로 돌아오고 노래도 안 끊긴다.
+    const kickerTitle = document.getElementById("course-card-kicker-title");
+    kickerTitle.onclick = () => openCourseDetail(activeCourse);
+    kickerTitle.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openCourseDetail(activeCourse);
+      }
+    };
   }
 }
 
@@ -1431,6 +1450,10 @@ function handleCoursePopState() {
   }
   if (!courseNavPushed) return;
   courseNavPushed = false; // 사용자가 뒤로가기로 이미 항목을 지났다
+  if (courseModeOpen && !document.getElementById("course-detail-overlay").classList.contains("hidden")) {
+    closeCourseDetail(); // 걷는 중에 띄운 소개 화면만 닫는다(걷기는 남아 있어 항목을 다시 쌓는다)
+    return;
+  }
   if (courseModeOpen) endCourseWalk();
   if (!document.getElementById("course-detail-overlay").classList.contains("hidden")) {
     closeCourseDetail();
@@ -1441,6 +1464,11 @@ function handleCoursePopState() {
 
 // ESC — 열려 있는 가장 위 발자취 화면을 닫는다. 처리했으면 true(js/app.js 전역 핸들러).
 function handleCourseEscape() {
+  const detailOpen = !document.getElementById("course-detail-overlay").classList.contains("hidden");
+  if (courseModeOpen && detailOpen) {
+    closeCourseDetail(); // 걷는 중에 띄운 소개 화면만 닫고 걷기로 돌아간다
+    return true;
+  }
   if (courseModeOpen) {
     endCourseWalk();
     return true;

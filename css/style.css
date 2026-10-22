@@ -5856,6 +5856,20 @@ button.story-place-line:hover {
   cursor: pointer;
 }
 
+/* 코스 이름 — 누르면 소개 화면(js/course.js showCourseStep, 2026-10-22) */
+.course-card-kicker-title {
+  cursor: pointer;
+}
+
+.course-card-kicker-title:hover {
+  color: var(--cs-text-main);
+}
+
+/* 걷는 중에 코스 이름으로 연 소개 화면은 걷기 화면(.recall-session, 110) 위로 */
+.course-detail-overlay--over-walk {
+  z-index: 115;
+}
+
 /* 코스 이름이 길면 버튼 자리를 위해 말줄임 */
 .course-card-kicker > span:first-of-type {
   min-width: 0;
