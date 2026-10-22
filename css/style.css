@@ -6233,12 +6233,29 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-/* "장소 N곳" 줄 + 오른쪽 끝 좋아요(2026-10-22) */
-.course-choice-meta-row {
+/* 오른쪽 "♡ N | 둘러보기"(2026-10-22 시안) — 오른쪽 정렬이라 숫자가 생기면
+   하트가 그만큼 왼쪽으로 나간다 */
+.course-choice-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.course-choice-actions-sep {
+  width: 1px;
+  height: 26px;
+  background: var(--cs-map-gray);
+}
+
+.course-choice-actions .course-like-btn {
+  margin-left: 0;
+  font-size: 15px;
+}
+
+.course-choice-actions .course-like-btn svg {
+  width: 24px;
+  height: 24px;
 }
 
 /* 발자취 좋아요 — 하트 + 수(0이면 하트만). 누르면 주황으로 채운다. */
@@ -6341,9 +6358,13 @@ button.story-place-line:hover {
   }
 
   .course-choice-btn {
-    justify-self: start;
     padding: 8px 16px;
     font-size: 13px;
+  }
+
+  /* 폰에서도 오른쪽 끝에 붙여 버튼 자리는 고정, 숫자가 생기면 하트만 왼쪽으로 */
+  .course-choice-actions {
+    justify-self: end;
   }
 }
 

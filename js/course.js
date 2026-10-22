@@ -241,12 +241,12 @@ function openCourseChoice() {
             <span class="course-choice-title">${escapeHtml(c.title)}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-            <span class="course-choice-meta-row">
-              <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
-              ${isCoursePreview(c) ? "" : courseLikeButtonHtml(c)}
-            </span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
           </span>
-          <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
+          <span class="course-choice-actions">
+            ${isCoursePreview(c) ? "" : `${courseLikeButtonHtml(c)}<span class="course-choice-actions-sep" aria-hidden="true"></span>`}
+            <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
+          </span>
         </div>
       `).join("")}
     </div>
@@ -276,7 +276,7 @@ function openCourseChoice() {
   syncCourseNav();
 }
 
-// 발자취 좋아요(2026-10-22) — 목록 카드 "장소 N곳" 줄 오른쪽과 소개 화면
+// 발자취 좋아요(2026-10-22) — 목록 카드 "둘러보기" 왼쪽(구분선 사이)과 소개 화면
 // 윗줄에 하트 + 수. 0이면 숫자는 숨기고 하트만(작은 숫자가 초라해 보이지
 // 않게). 누르는 건 로그인 계정 기준이라 비로그인이면 로그인부터 —
 // "가보고 싶어요"(bindCourseWishButton)와 같은 흐름.
