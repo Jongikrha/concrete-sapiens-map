@@ -285,10 +285,10 @@ function courseProgressNote(c) {
   return seenCount > 0 ? ` · ${seenCount}곳 둘러봄` : "";
 }
 
-const COURSE_KIND_LABELS = { book: "책", person: "인물", drama: "드라마·영화", music: "음악", org: "단체" };
+const COURSE_KIND_LABELS = { book: "책", person: "인물", influencer: "인플루언서", drama: "드라마·영화", music: "음악", org: "단체" };
 
 // 코스 목록 제목 아래 "OOO 지음" — 종류에 따라 붙는 말이 다르다(2026-10-16).
-const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출" };
+const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출", influencer: "운영" };
 function courseAuthorLine(c) {
   return `${c.author} ${COURSE_AUTHOR_SUFFIX[c.kind] || "지음"}`;
 }
@@ -1208,6 +1208,7 @@ function courseKindIconSvg(kind) {
     book: '<path d="M12 6.5C10.3 5.2 7.9 4.6 4 4.8v13.4c3.9-.2 6.3.4 8 1.7 1.7-1.3 4.1-1.9 8-1.7V4.8c-3.9-.2-6.3.4-8 1.7zM12 6.5v13.4" />',
     drama: '<path d="M4 9.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5zM4 9.5 3.3 6.6a1 1 0 0 1 .7-1.2l13.6-3.3a1 1 0 0 1 1.2.7l.6 2.6L4 9.5zM8.2 4.4l2.4 3.4M13.2 3.2l2.4 3.4" />',
     person: '<circle cx="12" cy="8" r="3.6" /><path d="M5 20c.8-3.9 3.6-6 7-6s6.2 2.1 7 6" />',
+    influencer: '<circle cx="12" cy="8" r="3.6" /><path d="M5 20c.8-3.9 3.6-6 7-6s6.2 2.1 7 6" />',
     music: '<path d="M9 17.5V5.5l10-2v12" /><circle cx="6.5" cy="17.5" r="2.5" /><circle cx="16.5" cy="15.5" r="2.5" />',
   };
   if (!paths[kind]) return COURSE_CHIP_ICON.replace('class="course-entry-icon"', 'class="course-card-kicker-icon"');

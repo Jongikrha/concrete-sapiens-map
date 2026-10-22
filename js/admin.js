@@ -1113,6 +1113,7 @@ async function handleBulkDeleteAll() {
 const COURSE_KINDS = [
   { value: "book", label: "책" },
   { value: "person", label: "인물" },
+  { value: "influencer", label: "인플루언서" },
   { value: "drama", label: "드라마·영화" },
   { value: "music", label: "음악" },
   { value: "org", label: "단체" },
@@ -1519,6 +1520,7 @@ const COURSE_COVER_GUIDES = {
   music: `<p><b>정사각형 앨범 커버를 올려주세요.</b> 소개 화면에 앨범 커버 뒤로 LP판이 삐져나온 모양으로 보이고, 목록에서도 정사각형으로 보여요.</p>`,
   drama: `<p><b>세로 포스터를 올려주세요.</b> 소개 화면에 포스터 한 장으로 보여요.</p>`,
   person: `<p><b>인물 사진을 올려주세요.</b> 소개 화면에 폴라로이드 사진처럼 보여요. 얼굴이 가운데 오게 잘라 올리면 좋아요.</p>`,
+  influencer: `<p><b>계정 대표 이미지나 대표 사진을 올려주세요.</b> 소개 화면에 이미지가 평평하게 그대로 보이고, 목록에선 세로로 긴 칸에 맞춰 잘려요. 목록 작가 줄엔 "OOO 운영"으로 나와요.</p>`,
   etc: `<p>소개 화면에 올린 이미지가 평평하게 그대로 보여요. 목록에선 세로로 긴 칸에 맞춰 잘려요.</p>`,
 };
 
