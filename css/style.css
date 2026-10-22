@@ -5936,6 +5936,18 @@ button.story-place-line:hover {
   }
 }
 
+/* 모바일 발자취 카드(2026-10-22) — 60vh는 폰·앱 안 브라우저마다 실제 높이가 달라
+   카드 위 빈 지도가 들쭉날쭉했다(같은 코드인데 어떤 폰에선 카드가 한참 아래).
+   비율 대신 미니 플레이어 아래 끝(약 82px)에서 장소 핀이 보일 만큼(약 114px)만
+   남기고 채운다. 핀은 그 남은 자리 가운데로 간다(js/course.js placeCoursePinBesideCard).
+   기억 라디오·기억산책은 배경을 남기려고 예전 60vh 그대로. */
+@media (max-width: 767px) {
+  .card-frame > #course-card {
+    max-height: calc(100vh - 56px - 196px);
+    max-height: calc(100dvh - 56px - 196px);
+  }
+}
+
 /* 첫 줄이 사진이면 오른쪽 위 모서리를 ✕ 원(중심: 사진 모서리에서 왼쪽 2px)
    + 틈 5px만큼 파낸다 */
 .course-card > .recall-card-photo:first-child {

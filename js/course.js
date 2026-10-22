@@ -962,7 +962,11 @@ function placeCoursePinBesideCard(index) {
     map.panBy(mapWidth / 2 - targetX, mapHeight / 2 - targetY);
     return;
   }
-  const offset = Math.max(0, mapHeight / 2 - (topEdge + cardRect.top) / 2);
+  // 핀은 장소 점에서 위로 솟아 있어서(로고 원 42px + 점까지 9px), 점이 아니라 핀
+  // 전체가 남는 자리 가운데 오게 그 절반만큼 더 내린다 — 안 그러면 모바일에서 로고
+  // 원이 미니 플레이어 밑으로 들어간다(2026-10-22).
+  const PIN_HALF_HEIGHT = 26;
+  const offset = Math.max(0, mapHeight / 2 - ((topEdge + cardRect.top) / 2 + PIN_HALF_HEIGHT));
   if (offset > 0) map.panBy(0, offset);
 }
 
