@@ -139,6 +139,34 @@ const schema = a.schema({
       allow.group('Admins').to(['read']),
     ]),
 
+  // 발자취 좋아요(2026-10-22) — 코스 목록에서 고를 때 기준이 되게. "내가
+  // 눌렀는지"는 StoryReaction과 같은 이유로 로그인 계정(owner) 기준이고,
+  // 화면에 보이는 숫자는 CourseLikeCount가 진실이다(이 레코드를 공개로 읽게
+  // 하면 owner에 계정 식별자가 드러나서 숫자를 따로 둔다).
+  CourseLike: a
+    .model({
+      courseId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'delete']),
+      allow.group('Admins').to(['read']),
+    ]),
+
+  // 발자취 좋아요 수 — Story.reactionCount처럼 화면이 낙관적으로 올리고 내린다.
+  // Course는 관리자/작가만 고칠 수 있어 숫자를 거기 두지 않고 따로 뺐다.
+  // 좋아요는 로그인해야 누를 수 있으니 쓰기는 로그인 사용자에게만 연다.
+  CourseLikeCount: a
+    .model({
+      courseId: a.string().required(),
+      count: a.integer().required(),
+    })
+    .identifier(['courseId'])
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated('identityPool').to(['read', 'create', 'update']),
+      allow.group('Admins'),
+    ]),
+
   // "떠올랐어요" 알림 메일 수신 거부(2026-10-08) — 레코드가 있으면 거부.
   // 메일의 수신 거부 링크(amplify/functions/reaction-digest/unsubscribe.ts)가
   // DynamoDB에 직접 쓰고, 화면에서는 관리자 + 본인만 읽는다. 본인 읽기는
