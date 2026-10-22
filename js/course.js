@@ -250,7 +250,6 @@ function openCourseChoice() {
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
           </span>
           <span class="course-choice-actions">
-            ${isCoursePreview(c) ? "" : `${courseLikeButtonHtml(c)}<span class="course-choice-actions-sep" aria-hidden="true"></span>`}
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
           </span>
         </div>
@@ -265,60 +264,17 @@ function openCourseChoice() {
       openCourseDetail(publishedCourses[Number(btn.dataset.courseIndex)], { fromList: true });
     };
   });
-  // 카드 어디를 눌러도 둘러보기와 같게(버튼만 누르기엔 폰에서 작다) — 좋아요만 빼고
+  // 카드 어디를 눌러도 둘러보기와 같게(버튼만 누르기엔 폰에서 작다)
   panel.querySelectorAll(".course-choice-item").forEach((item) => {
     const btn = item.querySelector(".course-choice-btn");
     item.onclick = (e) => {
-      if (e.target.closest(".course-like-btn")) return;
       if (e.target !== btn && !btn.contains(e.target)) btn.click();
     };
-  });
-  panel.querySelectorAll(".course-like-btn").forEach((btn) => {
-    bindCourseLikeButton(btn, publishedCourses.find((c) => c.id === btn.dataset.courseId));
   });
   panel.querySelectorAll(".course-choice-cover-img").forEach(fillCoverSlot);
   panel.scrollTop = 0;
   document.getElementById("course-choice-overlay").classList.remove("hidden");
   syncCourseNav();
-}
-
-// 발자취 좋아요(2026-10-22) — 목록 카드 "둘러보기" 왼쪽(구분선 사이)과 소개 화면
-// 윗줄에 하트 + 수. 0이면 숫자는 숨기고 하트만(작은 숫자가 초라해 보이지
-// 않게). 누르는 건 로그인 계정 기준이라 비로그인이면 로그인부터 —
-// "가보고 싶어요"(bindCourseWishButton)와 같은 흐름.
-const COURSE_LIKE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.5-4.6-7.5-10.1A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.5c0 5.5-7.5 10.1-7.5 10.1z" /></svg>`;
-
-function courseLikeButtonHtml(c, extraClass = "") {
-  return `<button type="button" class="course-like-btn ${extraClass}" data-course-id="${escapeHtml(c.id)}" aria-label="좋아요" aria-pressed="false">${COURSE_LIKE_ICON}<span class="course-like-count"></span></button>`;
-}
-
-function bindCourseLikeButton(btn, course) {
-  if (!course) return;
-  const sync = () => {
-    const on = Storage.hasLikedCourse(course.id);
-    const count = Storage.getCourseLikeCount(course.id);
-    btn.classList.toggle("course-like-btn--on", on);
-    btn.setAttribute("aria-pressed", String(on));
-    btn.querySelector(".course-like-count").textContent = count > 0 ? String(count) : "";
-  };
-  const toggle = () => {
-    const on = Storage.toggleCourseLike(course.id);
-    sync();
-    Storage.logEvent(`course_like_${on ? "added" : "removed"}:${course.slug}`);
-  };
-  sync();
-  btn.onclick = (e) => {
-    e.stopPropagation();
-    if (Auth.isLoggedIn()) {
-      toggle();
-      return;
-    }
-    requireLogin(() => {
-      if (!btn.isConnected) return;
-      if (Storage.hasLikedCourse(course.id)) sync();
-      else toggle();
-    });
-  };
 }
 
 // 목록 카드 "장소 20곳" 뒤에 붙는 진행 표시 — 다 본 코스는 "다 둘러봄",
@@ -398,7 +354,6 @@ function openCourseDetail(course, { fromList = false } = {}) {
         ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">${COURSE_DETAIL_BACK_ICON}<span>목록</span></button>` : "<span></span>"}
         <div class="course-detail-top-actions">
           ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
-          ${isCoursePreview(course) ? "" : courseLikeButtonHtml(course, "course-like-btn--detail")}
           ${isCoursePreview(course) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-detail-share">${COURSE_DETAIL_SHARE_ICON}<span>공유하기</span></button>`}
           <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">${COURSE_DETAIL_CLOSE_ICON}</button>
         </div>
@@ -447,8 +402,6 @@ function openCourseDetail(course, { fromList = false } = {}) {
     closeCourseDetail();
     openCourseChoice();
   };
-  const detailLike = panel.querySelector(".course-like-btn");
-  if (detailLike) bindCourseLikeButton(detailLike, course);
   const detailShare = document.getElementById("course-detail-share");
   if (detailShare) detailShare.onclick = (e) => shareCourseLink(course, e.currentTarget);
   // 걷는 중에 장소 카드의 코스 이름으로 열었으면 새로 시작하지 않고 그

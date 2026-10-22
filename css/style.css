@@ -6233,73 +6233,13 @@ button.story-place-line:hover {
   color: var(--cs-orange);
 }
 
-/* 오른쪽 "♡ N | 둘러보기"(2026-10-22 시안) — 오른쪽 정렬이라 숫자가 생기면
-   하트가 그만큼 왼쪽으로 나간다 */
+/* 오른쪽 "둘러보기" 자리. 발자취 좋아요 하트(2026-10-22)를 잠깐 여기 뒀다가 같은 날
+   "아직 이르다"로 화면에서만 뺐다 — 저장 계층(js/storage.js toggleCourseLike 등)과
+   CourseLike/CourseLikeCount 모델은 남아 있어 다시 붙이려면 git 이력에서 버튼만 되살리면 된다. */
 .course-choice-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-}
-
-.course-choice-actions-sep {
-  width: 1px;
-  height: 26px;
-  background: var(--cs-map-gray);
-}
-
-.course-choice-actions .course-like-btn {
-  margin-left: 0;
-  font-size: 15px;
-}
-
-.course-choice-actions .course-like-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-/* 발자취 좋아요 — 하트 + 수(0이면 하트만). 누르면 주황으로 채운다. */
-.course-like-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding: 4px 6px;
-  border: none;
-  border-radius: var(--cs-radius-chip);
-  background: none;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--cs-text-muted);
-  cursor: pointer;
-  transition: color 0.15s;
-}
-
-.course-like-count:empty {
-  display: none;
-}
-
-.course-like-btn--on {
-  color: var(--cs-orange);
-}
-
-.course-like-btn--on svg {
-  fill: currentColor;
-}
-
-/* 소개 화면 윗줄 — "공유하기" 알약과 같은 높이의 회색 알약 */
-.course-like-btn--detail {
-  height: 36px;
-  margin-left: 0;
-  padding: 0 12px;
-  background: #ECEBE8;
-  color: var(--cs-text-main);
-}
-
-.course-like-btn--detail.course-like-btn--on {
-  color: #E8451F;
 }
 
 .course-choice-btn {
@@ -6362,9 +6302,8 @@ button.story-place-line:hover {
     font-size: 13px;
   }
 
-  /* 폰에서도 오른쪽 끝에 붙여 버튼 자리는 고정, 숫자가 생기면 하트만 왼쪽으로 */
   .course-choice-actions {
-    justify-self: end;
+    justify-self: start;
   }
 }
 
