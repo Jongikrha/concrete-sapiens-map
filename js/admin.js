@@ -704,6 +704,50 @@ function buildCourseStatsHtml(appEvents, courseList, courseViewCounts = []) {
     .join("");
 }
 
+// 발자취 조회수 지난 기록 채우기(2026-10-23, 한 번만) — 조회수(CourseViewCount)는
+// 배포 시각부터 0으로 시작했다. 그 전에 장소 카드에 들어간 기록 중 가장 가까운
+// 이벤트(시작·이어 걷기·새 장소 먼저 보기)를 세서 더한다. deviceId가 있는
+// 이벤트(10-19~)는 기기당 1번, 없는 그 전 이벤트는 한 사람이 여러 번 시작한 것도
+// 그대로 세져 부풀려진다 — 미리보기에서 둘을 나눠 보여준다.
+const COURSE_VIEW_COUNT_SINCE = "2026-10-23T06:07:43Z"; // 조회수 배포(c406450) 시각
+const COURSE_VIEW_BACKFILL_DONE = "course_view_backfilled";
+const COURSE_VIEW_BACKFILL_STEPS = ["course_started", "course_resumed", "course_new_opened"];
+
+function computeCourseViewBackfill(appEvents, courseList) {
+  const bySlug = {};
+  appEvents.forEach((e) => {
+    if (!e.createdAt || e.createdAt >= COURSE_VIEW_COUNT_SINCE) return;
+    const i = e.type.indexOf(":");
+    if (i < 0 || !COURSE_VIEW_BACKFILL_STEPS.includes(e.type.slice(0, i))) return;
+    const c = (bySlug[e.type.slice(i + 1)] ||= { devices: new Set(), legacy: 0 });
+    if (e.deviceId) c.devices.add(e.deviceId);
+    else c.legacy += 1;
+  });
+  return Object.entries(bySlug)
+    .map(([slug, c]) => {
+      const course = courseList?.find((x) => x.slug === slug);
+      return { slug, courseId: course?.id, title: course?.title || slug, devices: c.devices.size, legacy: c.legacy };
+    })
+    .filter((r) => r.courseId) // 지워진 코스는 넣을 곳이 없다
+    .sort((a, b) => b.devices + b.legacy - (a.devices + a.legacy));
+}
+
+async function applyCourseViewBackfill(rows, currentCounts) {
+  for (const r of rows) {
+    const add = r.devices + r.legacy;
+    if (!add) continue;
+    const existing = currentCounts.find((v) => v.courseId === r.courseId);
+    const count = (existing?.count || 0) + add;
+    const res = existing
+      ? await client.models.CourseViewCount.update({ courseId: r.courseId, count })
+      : await client.models.CourseViewCount.create({ courseId: r.courseId, count });
+    if (res?.errors) throw new Error(`${r.title}: ${res.errors.map((e) => e.message).join(", ")}`);
+  }
+  // 두 번 더해지지 않게 끝난 표시를 남긴다(AppEvent create는 identityPool만 허용)
+  const done = await publicClient.models.AppEvent.create({ type: COURSE_VIEW_BACKFILL_DONE, deviceId: Storage.getDeviceId() });
+  if (done?.errors) console.error("지난 기록 채우기 완료 표시 실패", done.errors);
+}
+
 function computeReturningVisitRate(appEvents) {
   const first = appEvents.filter((e) => e.type === "visit_first").length;
   const returning = appEvents.filter((e) => e.type === "visit_returning").length;
@@ -745,6 +789,14 @@ async function renderVisitsTab() {
     })
     : [];
   const courseStatsHtml = buildCourseStatsHtml(appEvents, courses, courseViewCounts);
+  // 완료 표시는 어드민 기기가 남기니 기기 제외 전 목록에서 찾는다
+  const backfillDone = allAppEvents.some((e) => e.type === COURSE_VIEW_BACKFILL_DONE);
+  const backfillRows = backfillDone || !publicClient.models.CourseViewCount ? [] : computeCourseViewBackfill(appEvents, courses);
+  const backfillHtml = backfillRows.length
+    ? `<p class="empty-state">조회수는 10/23 배포부터 셌어요. 그 전 기록(시작·이어 걷기·새 장소 보기)으로 한 번만 채울 수 있어요 — 10/19부터는 기기당 1번, 그 전은 기기 구분이 없어 여러 번 시작한 것도 세져요.</p>
+      ${backfillRows.map((r) => `<div class="top-story-row"><span>${escapeHtml(r.title)}<small class="empty-state">기기 기준 ${r.devices} + 10/19 전 ${r.legacy}</small></span><span>+${r.devices + r.legacy}</span></div>`).join("")}
+      <button type="button" class="btn-primary" id="course-view-backfill">지난 기록으로 조회수 채우기</button>`
+    : "";
   const eventCountsHtml = buildEventCountsHtml(appEvents);
   const returningRate = computeReturningVisitRate(appEvents);
 
@@ -819,6 +871,7 @@ async function renderVisitsTab() {
     ${buildDwellStatsHtml(appEvents)}
     <div class="admin-section-title">발자취 반응 (전체 기간 · 발자취 버튼 ${appEvents.filter((e) => e.type === "course_toolbar_clicked").length}회)</div>
     ${courseStatsHtml}
+    ${backfillHtml}
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
     <div class="admin-section-title">기능별 전환율</div>
@@ -842,6 +895,19 @@ async function renderVisitsTab() {
       await Storage.addExcludedDevice(btn.dataset.excludeDevice);
       renderVisitsTab();
     });
+  });
+
+  document.getElementById("course-view-backfill")?.addEventListener("click", async (e) => {
+    const total = backfillRows.reduce((sum, r) => sum + r.devices + r.legacy, 0);
+    if (!confirm(`발자취 ${backfillRows.length}개에 조회수 합계 ${total}을 더합니다. 한 번만 할 수 있어요. 진행할까요?`)) return;
+    e.target.disabled = true;
+    try {
+      await applyCourseViewBackfill(backfillRows, courseViewCounts);
+    } catch (err) {
+      console.error("지난 기록 채우기 실패", err);
+      alert(`채우다 실패했어요 — ${err.message}`);
+    }
+    renderVisitsTab();
   });
 
   document.querySelectorAll("[data-exclude-record-id]").forEach((btn) => {
