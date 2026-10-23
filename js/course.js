@@ -313,9 +313,12 @@ function courseViewNote(c) {
 
 // 목록 카드 "장소 20곳" 뒤에 붙는 진행 표시 — 다 본 코스는 "다 둘러봄",
 // 걷다 만 코스는 "5곳 둘러봄". 처음 보는 코스엔 아무것도 안 붙는다.
+// 한 번 완주한 뒤 다시 걷는 중이면 "5번째 보던 중"(2026-10-23) — 이미 다 본
+// 코스에 "5곳 둘러봄"은 덜 본 것처럼 읽혀서.
 function courseProgressNote(c) {
-  const { seenCount, finished } = Storage.getCourseProgress(c);
+  const { seenCount, finished, currentIndex, completedOnce } = Storage.getCourseProgress(c);
   if (finished) return " · 다 둘러봄";
+  if (completedOnce) return currentIndex !== null ? ` · ${currentIndex + 1}번째 보던 중` : " · 다 둘러봄";
   return seenCount > 0 ? ` · ${seenCount}곳 둘러봄` : "";
 }
 
