@@ -4706,7 +4706,7 @@ button.story-place-line:hover {
      칩과 비슷한 높이로 맞춘다. */
   #search-input {
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: 11px;
   }
   #search-btn {
     padding: 0 12px;
@@ -6219,7 +6219,7 @@ button.story-place-line:hover {
   padding: 7px 16px;
   border-radius: 999px;
   background: #EEF1F5;
-  font-size: 13.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #2D3A4E;
   font-variant-numeric: tabular-nums;
