@@ -287,19 +287,21 @@ function openCourseChoice() {
   syncCourseNav();
 }
 
-// "N명이 봤어요" 앞 눈 아이콘 — 아몬드 눈매 + 동공(가는 선, 핀 아이콘과 같은 14px)
+// 목록 카드 "둘러보기" 버튼 밑 눈 아이콘 + 숫자 알약(2026-10-23) — 장소 카드를 본
+// 사람 수. 처음엔 메타 줄 "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여
+// 애매하다고 버튼 밑 "N명이 봤어요"로, 다시 사용자 시안대로 알약으로 바꿨다.
+// 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
 const COURSE_VIEWERS_EYE_ICON = `
-  <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
     <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
   </svg>`;
 
-// 목록 카드 "둘러보기" 버튼 밑 "128명이 봤어요"(2026-10-23) — 처음엔 메타 줄
-// "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여 애매하다고 여기로 옮겼다.
-// 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
 function courseViewerLine(c) {
   const n = Storage.getCourseViewCount(c.id);
-  return n > 0 ? `<span class="course-choice-viewers">${COURSE_VIEWERS_EYE_ICON}${n.toLocaleString()}명이 봤어요</span>` : "";
+  return n > 0
+    ? `<span class="course-choice-viewers" title="${n.toLocaleString()}명이 봤어요" aria-label="${n.toLocaleString()}명이 봤어요">${COURSE_VIEWERS_EYE_ICON}${n.toLocaleString()}</span>`
+    : "";
 }
 
 // 소개 화면 윗줄 "장소 20곳" 뒤에 붙는 조회수 — 0이면 안 붙인다.

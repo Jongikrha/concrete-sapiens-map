@@ -6203,19 +6203,32 @@ button.story-place-line:hover {
 .course-choice-actions {
   display: flex;
   flex-direction: column;
-  align-items: center; /* "N명이 봤어요"를 버튼 가운데에 맞춘다 */
+  align-items: stretch; /* 아래 조회수 알약을 버튼과 같은 폭으로 */
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-/* 버튼 밑 "128명이 봤어요"(2026-10-23, js/course.js courseViewerLine) — 앞에 눈 아이콘 */
+/* 버튼 밑 눈 아이콘 + 본 사람 수 알약(2026-10-23, js/course.js courseViewerLine,
+   사용자 시안). 눌리는 것처럼 안 보이게 테두리 없이 옅은 배경만 — 맨 위 카드는
+   주황, 나머지는 회청색. */
 .course-choice-viewers {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--cs-text-muted);
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: #EEF1F5;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2D3A4E;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.course-choice-item--featured .course-choice-viewers {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--cs-orange);
 }
 
 .course-choice-btn {
@@ -6282,7 +6295,13 @@ button.story-place-line:hover {
     /* 폰에선 버튼 옆에 나란히 */
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .course-choice-viewers {
+    padding: 6px 12px;
+    font-size: 13px;
+    gap: 6px;
   }
 }
 
