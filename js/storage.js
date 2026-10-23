@@ -1339,8 +1339,10 @@ const Storage = {
 
   /**
    * 코스 진행 요약 — 지금 코스에 남아 있는 장소 기준으로 센다.
-   * resumeIndex: 이어 걸을 장소 순서(지난번 마지막으로 보던 장소). 첫 장소였거나,
-   *   끝까지 다 봤거나, 그 장소가 지워졌으면 null(처음부터).
+   * resumeIndex: 이어 걸을 장소 순서 — 지난번 마지막으로 본 장소의 "다음"(2026-10-24,
+   *   예전엔 그 장소 자체라 본 카드가 또 나왔다). 마지막 장소까지 봤으면 장소 수와 같은
+   *   값(= 마무리 화면). 첫 장소만 보고 나갔거나, 끝까지 다 봤거나, 그 장소가 지워졌으면
+   *   null(처음부터).
    * seenCount: 이번 바퀴에 둘러본 장소 수, finished: 마지막 카드까지 다 봤는지.
    * currentIndex: 마지막으로 보던 장소 순서(없으면 null).
    * completedOnce: 한 번이라도 끝까지 본 적 있는지 — "처음부터 걷기"로 안 지워진다.
@@ -1351,7 +1353,7 @@ const Storage = {
     const seen = new Set(progress.seen || []);
     const index = course.places.findIndex((p) => p.id === progress.lastPlaceId);
     return {
-      resumeIndex: !progress.finished && index > 0 ? index : null,
+      resumeIndex: !progress.finished && index > 0 ? index + 1 : null,
       seenCount: course.places.filter((p) => seen.has(p.id)).length,
       finished: Boolean(progress.finished),
       currentIndex: index >= 0 ? index : null,
