@@ -292,7 +292,7 @@ function openCourseChoice() {
 // 애매하다고 버튼 밑 "N명이 봤어요"로, 다시 사용자 시안대로 알약으로 바꿨다.
 // 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
 const COURSE_VIEWERS_EYE_ICON = `
-  <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
     <path d="M2.5 15a9.5 9.5 0 0 1 19 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
     <path fill="currentColor" fill-rule="evenodd" d="M6.5 15.5a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0z M8.2 13.6a1.9 1.9 0 1 0 3.8 0a1.9 1.9 0 1 0 -3.8 0z" />
   </svg>`;

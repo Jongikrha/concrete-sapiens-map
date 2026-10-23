@@ -6219,7 +6219,7 @@ button.story-place-line:hover {
   padding: 7px 16px;
   border-radius: 999px;
   background: #EEF1F5;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #2D3A4E;
   font-variant-numeric: tabular-nums;
@@ -6300,7 +6300,7 @@ button.story-place-line:hover {
 
   .course-choice-viewers {
     padding: 6px 12px;
-    font-size: 13px;
+    font-size: 12px;
     gap: 6px;
   }
 }
