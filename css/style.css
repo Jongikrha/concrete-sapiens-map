@@ -6203,13 +6203,16 @@ button.story-place-line:hover {
 .course-choice-actions {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center; /* "N명이 봤어요"를 버튼 가운데에 맞춘다 */
   justify-content: center;
   gap: 6px;
 }
 
-/* 버튼 밑 "128명이 봤어요"(2026-10-23, js/course.js courseViewerLine) */
+/* 버튼 밑 "128명이 봤어요"(2026-10-23, js/course.js courseViewerLine) — 앞에 눈 아이콘 */
 .course-choice-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--cs-text-muted);
   white-space: nowrap;
