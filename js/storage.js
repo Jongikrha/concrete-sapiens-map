@@ -42,6 +42,7 @@ const COURSE_PHOTO_SEEN_KEY = "concrete_sapiens_course_photo_seen_v1";
 // 보던 장소부터 이어 걷게. 사진 번호처럼 보기 편의라 이 브라우저에만 둔다.
 // { [courseId]: { lastPlaceId, seen: [placeId...], finished } } — 번호가 아니라
 // 장소 id로 기억해서 어드민이 순서를 바꿔도 같은 장소로 돌아간다.
+const NEW_PLACE_DAYS = 7; // 발자취 장소에 NEW를 붙여두는 기간
 const COURSE_PROGRESS_KEY = "concrete_sapiens_course_progress_v1";
 // 발자취 장소 하나에 올릴 수 있는 사진 수(js/admin.js, js/course.js)
 const COURSE_PLACE_PHOTO_MAX = 3;
@@ -1298,6 +1299,26 @@ const Storage = {
       seenCount: course.places.filter((p) => seen.has(p.id)).length,
       finished: Boolean(progress.finished),
     };
+  },
+
+  /**
+   * "NEW" 장소(2026-10-23) — 최근 NEW_PLACE_DAYS일 안에 추가됐고 아직 안 본 장소의
+   * 순서(index) 배열. 이 코스를 한 곳이라도 본 적 있는 사람에게만 센다 — 처음 오는
+   * 사람에겐 모든 장소가 새것이라 중간으로 점프하게 되기 때문. createdAt(생성 시각)만
+   * 보므로 기존 장소를 고쳐 저장해도 NEW가 되지 않는다. 기록이 기기별이라 다른
+   * 기기에선 이미 본 장소도 NEW로 보일 수 있다.
+   */
+  getCourseNewPlaceIndices(course) {
+    const progress = this._readCourseProgressAll()[course.id];
+    if (!progress || !(progress.seen || []).length) return [];
+    const seen = new Set(progress.seen);
+    const since = Date.now() - NEW_PLACE_DAYS * 24 * 60 * 60 * 1000;
+    const indices = [];
+    course.places.forEach((p, i) => {
+      const created = Date.parse(p.createdAt);
+      if (!seen.has(p.id) && Number.isFinite(created) && created >= since) indices.push(i);
+    });
+    return indices;
   },
 
   markCoursePlaceSeen(courseId, placeId) {

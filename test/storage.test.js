@@ -991,3 +991,31 @@ test("발자취 순서: 고정(1 이상)은 숫자 순으로 맨 앞, 나머지�
     ["음악", "탁류", "은평", "제주", "콘크리트 사피엔스"],
   );
 });
+
+test("발자취 NEW 장소: 최근 추가 + 아직 안 본 장소만, 처음 오는 사람·오래된 장소는 제외", () => {
+  localStorage.clear();
+  const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+  const course = {
+    id: "c1",
+    places: [
+      { id: "p1", createdAt: daysAgo(30) },
+      { id: "p2", createdAt: daysAgo(30) },
+      { id: "p3", createdAt: daysAgo(2) }, // 최근에 끼어든 장소
+      { id: "p4", createdAt: daysAgo(10) }, // 새로 추가됐지만 7일 지남
+    ],
+  };
+  // 한 곳도 안 본 사람 — 모든 장소가 새것이라 NEW를 세지 않는다
+  assert.deepEqual(Storage.getCourseNewPlaceIndices(course), []);
+  // 중간까지 본 사람 — 안 본 최근 장소(p3)만
+  Storage.markCoursePlaceSeen("c1", "p1");
+  assert.deepEqual(Storage.getCourseNewPlaceIndices(course), [2]);
+  // 새 장소를 보면 사라진다
+  Storage.markCoursePlaceSeen("c1", "p3");
+  assert.deepEqual(Storage.getCourseNewPlaceIndices(course), []);
+  // 처음부터 걷기로 기록을 비우면 다시 안 센다
+  Storage.resetCourseProgress("c1");
+  assert.deepEqual(Storage.getCourseNewPlaceIndices(course), []);
+  // createdAt이 없는 장소는 NEW가 아니다
+  Storage.markCoursePlaceSeen("c1", "p1");
+  assert.deepEqual(Storage.getCourseNewPlaceIndices({ id: "c1", places: [{ id: "px" }] }), []);
+});

@@ -244,7 +244,7 @@ function openCourseChoice() {
           </span>
           <span class="course-choice-text">
             ${i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
-            <span class="course-choice-title">${escapeHtml(c.title)}</span>
+            <span class="course-choice-title">${escapeHtml(c.title)}${Storage.getCourseNewPlaceIndices(c).length ? `<span class="course-choice-new">NEW</span>` : ""}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
             <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
@@ -260,8 +260,17 @@ function openCourseChoice() {
   document.getElementById("course-choice-close").onclick = closeCourseChoice;
   panel.querySelectorAll(".course-choice-btn[data-course-index]").forEach((btn) => {
     btn.onclick = () => {
+      const course = publishedCourses[Number(btn.dataset.courseIndex)];
       closeCourseChoice();
-      openCourseDetail(publishedCourses[Number(btn.dataset.courseIndex)], { fromList: true });
+      // 다 둘러본 코스에 새 장소가 생겼으면 소개 화면 없이 바로 그 장소로 — 걷던 중이면
+      // 보던 흐름을 끊지 않게 소개 화면에서 고르게 한다(openCourseDetail의 "새 장소 먼저 보기").
+      const newIndices = Storage.getCourseNewPlaceIndices(course);
+      if (newIndices.length && Storage.getCourseProgress(course).finished) {
+        Storage.logEvent(`course_new_opened:${course.slug}`);
+        startCourseWalk(course, newIndices[0]);
+        return;
+      }
+      openCourseDetail(course, { fromList: true });
     };
   });
   // 카드 어디를 눌러도 둘러보기와 같게(버튼만 누르기엔 폰에서 작다)
@@ -344,6 +353,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
   // 지난번에 걷다 만 코스면 보던 장소부터 이어 걷기(2026-10-16) — 바로
   // 그 장소로 보내면 왜 중간부터인지 헷갈려서 소개 화면에서 고르게 한다.
   const { resumeIndex } = Storage.getCourseProgress(course);
+  const newIndices = Storage.getCourseNewPlaceIndices(course);
   // 시안(2026-10-13): 왼쪽 입체 책 표지, 오른쪽에 제목·부제(description)·
   // 소개 글(intro)·고정 문구, 아래 "따라 걷기 시작". 장소 목록은 뺐다
   // (걷기 시작하면 바로 보이니 여기선 콘텐츠 소개에 집중). 아래 주황
@@ -375,6 +385,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
         ${resumeIndex === null ? "<span>따라 걷기 시작</span>" : `<span class="course-detail-resume-label">이어 걷기 · ${resumeIndex + 1}/${course.places.length} ${escapeHtml(course.places[resumeIndex].name)}</span>`}
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
+      ${newIndices.length ? `<button type="button" class="course-detail-newplaces" id="course-detail-newplaces"><span class="course-choice-new">NEW</span>새 장소 먼저 보기 · ${newIndices.length}곳</button>` : ""}
       ${resumeIndex === null ? "" : `<button type="button" class="course-detail-restart" id="course-detail-restart">처음부터 걷기</button>`}
     </div>
   `;
@@ -416,6 +427,11 @@ function openCourseDetail(course, { fromList = false } = {}) {
     if (resumeIndex === null) Storage.resetCourseProgress(course.id);
     else Storage.logEvent(`course_resumed:${course.slug}`);
     walkTo(resumeIndex ?? 0);
+  };
+  const newPlaces = document.getElementById("course-detail-newplaces");
+  if (newPlaces) newPlaces.onclick = () => {
+    Storage.logEvent(`course_new_opened:${course.slug}`);
+    walkTo(newIndices[0]);
   };
   const restart = document.getElementById("course-detail-restart");
   if (restart) restart.onclick = () => {
