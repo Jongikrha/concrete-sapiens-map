@@ -698,7 +698,7 @@ function buildCourseStatsHtml(appEvents, courseList, courseViewCounts = []) {
       const rate = started > 0 ? ` · 완주 ${Math.round(((c.course_completed || 0) / started) * 100)}%` : "";
       const courseId = courseList?.find((x) => x.slug === slug)?.id;
       const views = courseViewCounts.find((v) => v.courseId === courseId)?.count || 0;
-      const steps = [`조회 ${views}명`, ...COURSE_FUNNEL_STEPS.map((st) => `${st.label} ${c[st.type] || 0}`)].join(" · ");
+      const steps = [`조회 ${views}회`, ...COURSE_FUNNEL_STEPS.map((st) => `${st.label} ${c[st.type] || 0}`)].join(" · ");
       return `<div class="top-story-row"><span>${escapeHtml(titleOf(slug))}<small class="empty-state">${steps}${rate}</small></span></div>`;
     })
     .join("");
@@ -781,7 +781,7 @@ async function renderVisitsTab() {
     }
   }
   // 발자취 조회수(2026-10-23) — 이벤트가 아니라 CourseViewCount의 누적 숫자라
-  // 어드민 기기 제외가 안 된다(사람 수 기준이라 어드민 1명분만 섞인다).
+  // 어드민 기기 제외가 안 된다(걸을 때마다 +1이라 어드민이 본 횟수도 섞인다).
   const courseViewCounts = publicClient.models.CourseViewCount
     ? await listAllRecords(publicClient.models.CourseViewCount).catch((e) => {
       console.error("발자취 조회수 불러오기 실패", e);

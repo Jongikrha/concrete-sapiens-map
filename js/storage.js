@@ -44,9 +44,6 @@ const COURSE_PHOTO_SEEN_KEY = "concrete_sapiens_course_photo_seen_v1";
 // 장소 id로 기억해서 어드민이 순서를 바꿔도 같은 장소로 돌아간다.
 const NEW_PLACE_DAYS = 7; // 발자취 장소에 NEW를 붙여두는 기간
 const COURSE_PROGRESS_KEY = "concrete_sapiens_course_progress_v1";
-// 이 브라우저가 이미 조회수에 들어간 발자취 id 목록(2026-10-23, recordCourseView).
-// 진행 기록(위)과 따로 두는 이유: 조회수를 세기 전에 걸어본 브라우저도 한 번은 세려고.
-const COURSE_VIEWED_KEY = "concrete_sapiens_course_viewed_v1";
 // 발자취 장소 하나에 올릴 수 있는 사진 수(js/admin.js, js/course.js)
 const COURSE_PLACE_PHOTO_MAX = 3;
 
@@ -176,9 +173,6 @@ let _myCourseLikes = null;
 // 발자취 좋아요 수(CourseLikeCount) — courseId → count. 레코드가 아직 없는
 // 코스(한 번도 안 눌림)는 Map에 없고, 처음 누를 때 create로 만든다.
 const _courseLikeCounts = new Map();
-// 로그인 계정이 이미 조회수에 들어간 발자취(CourseView) — courseId 집합.
-// 위와 같은 패턴이라 null이면 비로그인(또는 아직 못 받음).
-let _myCourseViews = null;
 // 발자취 조회수(CourseViewCount) — courseId → count. 좋아요 수와 같은 방식.
 const _courseViewCounts = new Map();
 
@@ -648,48 +642,21 @@ const Storage = {
     return _courseViewCounts.get(courseId) || 0;
   },
 
-  _readViewedCourseIds() {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(COURSE_VIEWED_KEY) || "[]"));
-    } catch (e) {
-      return new Set();
-    }
-  },
-
   /**
-   * 장소 카드를 한 장이라도 보면 조회수 +1(2026-10-23, js/course.js showCourseStep).
-   * 한 브라우저는 한 번(localStorage), 로그인 계정은 다른 기기에서도 한 번
-   * (CourseView) — 둘 중 하나라도 이미 셌으면 숫자는 안 올린다. 비로그인으로
-   * 보고 나서 로그인하면 계정 기록만 채워 다른 기기에서 다시 세지 않게 한다.
+   * 발자취에 들어가 장소 카드를 보면 조회수 +1(js/course.js showCourseStep) — 한 번
+   * 걸을 때 1번(카드를 몇 장 넘기든). 처음엔 브라우저·계정당 1번(본 사람 수)으로
+   * 셌다가 "사람이 아니라 눈"이라 본 횟수로 바꿨다(2026-10-23). 그때 쓰던
+   * CourseView 모델은 스키마에만 남아 있고 더는 안 쓴다.
    */
   recordCourseView(courseId) {
     if (this.isAutomatedBrowser()) return;
-    const viewed = this._readViewedCourseIds();
-    const inBrowser = viewed.has(courseId);
-    const inAccount = !!_myCourseViews && _myCourseViews.has(courseId);
-    if (_myCourseViews && !inAccount) {
-      _myCourseViews.add(courseId);
-      client?.models.CourseView?.create({ courseId }, { authMode: "userPool" })
-        .then((res) => res?.errors && console.error("발자취 조회 기록 실패", courseId, res.errors))
-        .catch((e) => console.error("발자취 조회 기록 실패", courseId, e));
-    }
-    if (!inBrowser) {
-      viewed.add(courseId);
-      try {
-        localStorage.setItem(COURSE_VIEWED_KEY, JSON.stringify([...viewed]));
-      } catch (e) {
-        // 저장이 막힌 브라우저(시크릿 창 등)는 열 때마다 셀 수 있다 — 감수.
-      }
-    }
-    if (inBrowser || inAccount) return;
-
     // 화면 숫자는 바로 올리고, 저장은 아래에서 최신 값을 다시 읽어 +1 한다
     _courseViewCounts.set(courseId, (_courseViewCounts.get(courseId) || 0) + 1);
     if (!client?.models.CourseViewCount) return;
     // 목록을 받아온 뒤 숫자가 바뀌었을 수 있어(다른 사람의 조회, 관리자 수정
     // 2026-10-23) 저장 직전에 최신 값을 다시 읽는다 — 페이지를 열 때 받은 옛
     // 숫자에 +1 해서 덮어쓰면 그 사이 늘어난 숫자가 되돌아간다. 동시에 여러 명이
-    // 보는 순간엔 여전히 한두 명이 빠질 수 있다(완전히 막으려면 서버 쪽 +1 필요).
+    // 보는 순간엔 여전히 한두 번이 빠질 수 있다(완전히 막으려면 서버 쪽 +1 필요).
     // 레코드가 없으면 만들고, 그 사이 누가 먼저 만들었으면 create가 거부되니 다시 읽어 update.
     const model = client.models.CourseViewCount;
     const readLatest = async () => {
@@ -707,37 +674,6 @@ const Storage = {
       if (res?.errors) res = await bump(await readLatest());
       if (res?.errors) console.error("발자취 조회수 반영 실패", courseId, res.errors);
     })().catch((e) => console.error("발자취 조회수 반영 실패", courseId, e));
-  },
-
-  /** 로그인 직후(auth.js) 호출 — refreshMyCourseLikes와 같은 패턴. */
-  async refreshMyCourseViews() {
-    const views = new Set();
-    if (client?.models.CourseView) {
-      let nextToken = null;
-      try {
-        do {
-          const { data, nextToken: token, errors } = await client.models.CourseView.list({
-            limit: 1000,
-            nextToken,
-            authMode: "userPool",
-          });
-          if (errors) {
-            console.error("발자취 조회 기록 조회 실패", errors);
-            break;
-          }
-          data.forEach((v) => views.add(v.courseId));
-          nextToken = token;
-        } while (nextToken);
-      } catch (e) {
-        console.error("발자취 조회 기록 조회 실패", e);
-      }
-    }
-    _myCourseViews = views;
-  },
-
-  /** 로그아웃/탈퇴(auth.js) 시 비운다 — 다음 계정에 섞이지 않게. */
-  clearMyCourseViews() {
-    _myCourseViews = null;
   },
 
   hasShared(storyId) {

@@ -23,6 +23,8 @@ let activeCourse = null;
 // -1은 코스 소개 카드(전체 경로를 한눈에), 0부터는 장소 순서,
 // places.length는 마무리 카드(다시 전체 경로)
 let courseIndex = -1;
+// 이번 걷기에서 조회수를 이미 셌는지(2026-10-23) — 걸을 때마다 1번만 센다
+let courseViewCounted = false;
 let courseOverlays = []; // kakao.maps.CustomOverlay — 번호 핀
 // 이번 따라 걷기의 플레이리스트 — 노래가 있는 장소들을 코스 순서대로
 // (같은 곡은 한 번만). 끝낼 때 미니 플레이어가 여전히 이 중 하나면 멈춘다
@@ -287,8 +289,8 @@ function openCourseChoice() {
   syncCourseNav();
 }
 
-// 목록 카드 "둘러보기" 버튼 밑 눈 아이콘(눈꺼풀 곡선 + 빛 반사 있는 눈동자, 사용자 시안) + 숫자 알약(2026-10-23) — 장소 카드를 본
-// 사람 수. 처음엔 메타 줄 "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여
+// 목록 카드 "둘러보기" 버튼 밑 눈 아이콘(눈꺼풀 곡선 + 빛 반사 있는 눈동자, 사용자 시안) + 숫자 알약(2026-10-23) — 발자취를
+// 본 횟수(걸을 때마다 +1). 처음엔 메타 줄 "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여
 // 애매하다고 버튼 밑 "N명이 봤어요"로, 다시 사용자 시안대로 알약으로 바꿨다.
 // 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
 const COURSE_VIEWERS_EYE_ICON = `
@@ -300,7 +302,7 @@ const COURSE_VIEWERS_EYE_ICON = `
 function courseViewerLine(c) {
   const n = Storage.getCourseViewCount(c.id);
   return n > 0
-    ? `<span class="course-choice-viewers" title="${n.toLocaleString()}명이 봤어요" aria-label="${n.toLocaleString()}명이 봤어요">${COURSE_VIEWERS_EYE_ICON}${n.toLocaleString()}</span>`
+    ? `<span class="course-choice-viewers" title="조회 ${n.toLocaleString()}회" aria-label="조회 ${n.toLocaleString()}회">${COURSE_VIEWERS_EYE_ICON}${n.toLocaleString()}</span>`
     : "";
 }
 
@@ -555,6 +557,7 @@ function startCourseWalk(course, startIndex = 0) {
 
   activeCourse = course;
   courseModeOpen = true;
+  courseViewCounted = false;
   clearCourseBadges(); // 지도 위 발자취 배지도 걷는다(끝나면 renderMarkers가 되살림)
   coursePhotoIndexByPlace.clear();
   enterRecallImmersiveChrome();
@@ -959,9 +962,12 @@ function showCourseStep(index, { deferMusic = false } = {}) {
   if (index >= 0 && index < total) {
     const place = activeCourse.places[index];
     Storage.markCoursePlaceSeen(activeCourse.id, place.id);
-    // 장소 카드를 한 장이라도 보면 조회수에 들어간다(2026-10-23) — 소개 화면만
-    // 보고 나간 건 안 센다. 시안 미리보기는 공개 전이라 빼고.
-    if (!isCoursePreview(activeCourse)) Storage.recordCourseView(activeCourse.id);
+    // 장소 카드를 한 장이라도 보면 조회수에 들어간다(2026-10-23) — 걸을 때마다 1번,
+    // 소개 화면만 보고 나간 건 안 센다. 시안 미리보기는 공개 전이라 빼고.
+    if (!courseViewCounted && !isCoursePreview(activeCourse)) {
+      courseViewCounted = true;
+      Storage.recordCourseView(activeCourse.id);
+    }
     if (deferMusic) {
       setTimeout(() => {
         if (courseModeOpen && courseIndex === index) startCourseMusicAt(place);
