@@ -167,6 +167,32 @@ const schema = a.schema({
       allow.group('Admins'),
     ]),
 
+  // 발자취 조회수(2026-10-23) — 장소 카드를 한 장이라도 본 사람 수. 한 계정·한
+  // 브라우저는 한 번만 센다(브라우저는 localStorage, 계정은 아래 CourseView로
+  // 거른다). CourseLikeCount와 같은 구조인데 비로그인도 세야 해서 guest 쓰기를 연다.
+  CourseViewCount: a
+    .model({
+      courseId: a.string().required(),
+      count: a.integer().required(),
+    })
+    .identifier(['courseId'])
+    .authorization((allow) => [
+      allow.guest().to(['read', 'create', 'update']),
+      allow.authenticated('identityPool').to(['read', 'create', 'update']),
+      allow.group('Admins'),
+    ]),
+
+  // 이 계정이 이미 조회수에 들어간 발자취(2026-10-23) — 다른 브라우저·기기에서
+  // 같은 계정으로 다시 봐도 한 번만 세려고. CourseLike와 같은 owner 패턴.
+  CourseView: a
+    .model({
+      courseId: a.string().required(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read']),
+      allow.group('Admins').to(['read']),
+    ]),
+
   // "떠올랐어요" 알림 메일 수신 거부(2026-10-08) — 레코드가 있으면 거부.
   // 메일의 수신 거부 링크(amplify/functions/reaction-digest/unsubscribe.ts)가
   // DynamoDB에 직접 쓰고, 화면에서는 관리자 + 본인만 읽는다. 본인 읽기는

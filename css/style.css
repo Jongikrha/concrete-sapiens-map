@@ -6195,6 +6195,8 @@ button.story-place-line:hover {
   gap: 4px;
   font-size: 13px;
   color: var(--cs-orange);
+  /* "조회 128"이 넘칠 때 "조/회"처럼 글자 중간에서 갈라지지 않게(2026-10-23) */
+  word-break: keep-all;
 }
 
 /* 오른쪽 "둘러보기" 자리. 발자취 좋아요 하트(2026-10-22)를 잠깐 여기 뒀다가 같은 날

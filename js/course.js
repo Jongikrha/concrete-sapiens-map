@@ -247,7 +247,7 @@ function openCourseChoice() {
             <span class="course-choice-title">${escapeHtml(c.title)}${Storage.getCourseNewPlaceIndices(c).length ? `<span class="course-choice-new">NEW</span>` : ""}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseViewNote(c)}${courseProgressNote(c)}</span>
           </span>
           <span class="course-choice-actions">
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
@@ -284,6 +284,13 @@ function openCourseChoice() {
   panel.scrollTop = 0;
   document.getElementById("course-choice-overlay").classList.remove("hidden");
   syncCourseNav();
+}
+
+// "장소 20곳" 뒤에 붙는 조회수(2026-10-23) — 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
+function courseViewNote(c) {
+  const n = Storage.getCourseViewCount(c.id);
+  // "조회"와 숫자가 줄바꿈으로 갈라지지 않게 사이를 줄바꿈 없는 공백으로
+  return n > 0 ? ` · 조회\u00A0${n.toLocaleString()}` : "";
 }
 
 // 목록 카드 "장소 20곳" 뒤에 붙는 진행 표시 — 다 본 코스는 "다 둘러봄",
@@ -372,7 +379,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
         ${course.coverKey ? `<div class="course-detail-book" id="course-detail-book"></div>` : ""}
         <div class="course-detail-text">
           ${isCoursePreview(course) ? `<p class="course-detail-preview-note">시안 미리보기 · 아직 공개 전인 발자취예요</p>` : ""}
-          <p class="course-detail-kicker">발자취 · 장소 ${course.places.length}곳</p>
+          <p class="course-detail-kicker">발자취 · 장소 ${course.places.length}곳${courseViewNote(course)}</p>
           <h2 class="course-detail-title">${escapeHtml(course.title)}</h2>
           ${course.description ? `<p class="course-detail-subtitle">${escapeHtml(course.description)}</p>` : ""}
           ${course.intro ? `<p class="course-detail-intro">${escapeHtml(course.intro)}</p>` : ""}
@@ -931,6 +938,9 @@ function showCourseStep(index, { deferMusic = false } = {}) {
   if (index >= 0 && index < total) {
     const place = activeCourse.places[index];
     Storage.markCoursePlaceSeen(activeCourse.id, place.id);
+    // 장소 카드를 한 장이라도 보면 조회수에 들어간다(2026-10-23) — 소개 화면만
+    // 보고 나간 건 안 센다. 시안 미리보기는 공개 전이라 빼고.
+    if (!isCoursePreview(activeCourse)) Storage.recordCourseView(activeCourse.id);
     if (deferMusic) {
       setTimeout(() => {
         if (courseModeOpen && courseIndex === index) startCourseMusicAt(place);

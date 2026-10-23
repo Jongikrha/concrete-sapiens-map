@@ -677,7 +677,7 @@ const COURSE_FUNNEL_STEPS = [
   { type: "course_map_badge_clicked", label: "지도 배지" },
 ];
 
-function buildCourseStatsHtml(appEvents, courseList) {
+function buildCourseStatsHtml(appEvents, courseList, courseViewCounts = []) {
   const bySlug = {};
   appEvents.forEach((e) => {
     const i = e.type.indexOf(":");
@@ -696,7 +696,9 @@ function buildCourseStatsHtml(appEvents, courseList) {
       const c = bySlug[slug];
       const started = c.course_started || 0;
       const rate = started > 0 ? ` · 완주 ${Math.round(((c.course_completed || 0) / started) * 100)}%` : "";
-      const steps = COURSE_FUNNEL_STEPS.map((st) => `${st.label} ${c[st.type] || 0}`).join(" · ");
+      const courseId = courseList?.find((x) => x.slug === slug)?.id;
+      const views = courseViewCounts.find((v) => v.courseId === courseId)?.count || 0;
+      const steps = [`조회 ${views}명`, ...COURSE_FUNNEL_STEPS.map((st) => `${st.label} ${c[st.type] || 0}`)].join(" · ");
       return `<div class="top-story-row"><span>${escapeHtml(titleOf(slug))}<small class="empty-state">${steps}${rate}</small></span></div>`;
     })
     .join("");
@@ -734,7 +736,15 @@ async function renderVisitsTab() {
       courses = null; // 제목 없이 slug로만 보여준다
     }
   }
-  const courseStatsHtml = buildCourseStatsHtml(appEvents, courses);
+  // 발자취 조회수(2026-10-23) — 이벤트가 아니라 CourseViewCount의 누적 숫자라
+  // 어드민 기기 제외가 안 된다(사람 수 기준이라 어드민 1명분만 섞인다).
+  const courseViewCounts = publicClient.models.CourseViewCount
+    ? await listAllRecords(publicClient.models.CourseViewCount).catch((e) => {
+      console.error("발자취 조회수 불러오기 실패", e);
+      return [];
+    })
+    : [];
+  const courseStatsHtml = buildCourseStatsHtml(appEvents, courses, courseViewCounts);
   const eventCountsHtml = buildEventCountsHtml(appEvents);
   const returningRate = computeReturningVisitRate(appEvents);
 
