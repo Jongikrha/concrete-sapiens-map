@@ -247,10 +247,11 @@ function openCourseChoice() {
             <span class="course-choice-title">${escapeHtml(c.title)}${Storage.getCourseNewPlaceIndices(c).length ? `<span class="course-choice-new">NEW</span>` : ""}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
-            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseViewNote(c)}${courseProgressNote(c)}</span>
+            <span class="course-choice-meta">${COURSE_LIST_PIN_ICON}${escapeHtml(kindName(c))} · 장소 ${c.places.length}곳${courseProgressNote(c)}</span>
           </span>
           <span class="course-choice-actions">
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
+            ${courseViewerLine(c)}
           </span>
         </div>${i === publishedCourses.length - 1 && i >= 1 ? `</div>` : ""}
       `).join("")}
@@ -286,7 +287,15 @@ function openCourseChoice() {
   syncCourseNav();
 }
 
-// "장소 20곳" 뒤에 붙는 조회수(2026-10-23) — 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
+// 목록 카드 "둘러보기" 버튼 밑 "128명이 봤어요"(2026-10-23) — 처음엔 메타 줄
+// "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여 애매하다고 여기로 옮겼다.
+// 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
+function courseViewerLine(c) {
+  const n = Storage.getCourseViewCount(c.id);
+  return n > 0 ? `<span class="course-choice-viewers">${n.toLocaleString()}명이 봤어요</span>` : "";
+}
+
+// 소개 화면 윗줄 "장소 20곳" 뒤에 붙는 조회수 — 0이면 안 붙인다.
 function courseViewNote(c) {
   const n = Storage.getCourseViewCount(c.id);
   // "조회"와 숫자가 줄바꿈으로 갈라지지 않게 사이를 줄바꿈 없는 공백으로

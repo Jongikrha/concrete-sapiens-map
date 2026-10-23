@@ -6195,8 +6195,6 @@ button.story-place-line:hover {
   gap: 4px;
   font-size: 13px;
   color: var(--cs-orange);
-  /* "조회 128"이 넘칠 때 "조/회"처럼 글자 중간에서 갈라지지 않게(2026-10-23) */
-  word-break: keep-all;
 }
 
 /* 오른쪽 "둘러보기" 자리. 발자취 좋아요 하트(2026-10-22)를 잠깐 여기 뒀다가 같은 날
@@ -6204,8 +6202,17 @@ button.story-place-line:hover {
    CourseLike/CourseLikeCount 모델은 남아 있어 다시 붙이려면 git 이력에서 버튼만 되살리면 된다. */
 .course-choice-actions {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 버튼 밑 "128명이 봤어요"(2026-10-23, js/course.js courseViewerLine) */
+.course-choice-viewers {
+  font-size: 12px;
+  color: var(--cs-text-muted);
+  white-space: nowrap;
 }
 
 .course-choice-btn {
@@ -6269,6 +6276,10 @@ button.story-place-line:hover {
 
   .course-choice-actions {
     justify-self: start;
+    /* 폰에선 버튼 옆에 나란히 */
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
   }
 }
 
