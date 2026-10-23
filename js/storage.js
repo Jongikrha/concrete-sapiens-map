@@ -683,20 +683,30 @@ const Storage = {
     }
     if (inBrowser || inAccount) return;
 
-    const hadCount = _courseViewCounts.has(courseId);
-    const count = (_courseViewCounts.get(courseId) || 0) + 1;
-    _courseViewCounts.set(courseId, count);
+    // 화면 숫자는 바로 올리고, 저장은 아래에서 최신 값을 다시 읽어 +1 한다
+    _courseViewCounts.set(courseId, (_courseViewCounts.get(courseId) || 0) + 1);
     if (!client?.models.CourseViewCount) return;
-    // toggleCourseLike와 같이 첫 조회면 레코드부터 만들고, 그 사이 누가 먼저
-    // 만들었으면 create가 거부되니 update로 다시 보낸다.
-    const update = () => client.models.CourseViewCount.update({ courseId, count });
-    const send = hadCount
-      ? update()
-      : client.models.CourseViewCount.create({ courseId, count })
-        .then((res) => (res?.errors ? update() : res));
-    send
-      .then((res) => res?.errors && console.error("발자취 조회수 반영 실패", courseId, res.errors))
-      .catch((e) => console.error("발자취 조회수 반영 실패", courseId, e));
+    // 목록을 받아온 뒤 숫자가 바뀌었을 수 있어(다른 사람의 조회, 관리자 수정
+    // 2026-10-23) 저장 직전에 최신 값을 다시 읽는다 — 페이지를 열 때 받은 옛
+    // 숫자에 +1 해서 덮어쓰면 그 사이 늘어난 숫자가 되돌아간다. 동시에 여러 명이
+    // 보는 순간엔 여전히 한두 명이 빠질 수 있다(완전히 막으려면 서버 쪽 +1 필요).
+    // 레코드가 없으면 만들고, 그 사이 누가 먼저 만들었으면 create가 거부되니 다시 읽어 update.
+    const model = client.models.CourseViewCount;
+    const readLatest = async () => {
+      const { data, errors } = await model.get({ courseId });
+      if (errors) throw new Error(errors.map((e) => e.message).join(", "));
+      return data;
+    };
+    const bump = async (latest) => {
+      const count = (latest?.count || 0) + 1;
+      _courseViewCounts.set(courseId, count);
+      return latest ? model.update({ courseId, count }) : model.create({ courseId, count });
+    };
+    (async () => {
+      let res = await bump(await readLatest());
+      if (res?.errors) res = await bump(await readLatest());
+      if (res?.errors) console.error("발자취 조회수 반영 실패", courseId, res.errors);
+    })().catch((e) => console.error("발자취 조회수 반영 실패", courseId, e));
   },
 
   /** 로그인 직후(auth.js) 호출 — refreshMyCourseLikes와 같은 패턴. */
