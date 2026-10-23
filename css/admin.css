@@ -375,6 +375,25 @@ body {
   flex-shrink: 0;
 }
 
+/* 발자취 일일 조회(2026-10-24) — 코스마다 접고 펼치는 14일 막대 */
+.course-daily {
+  margin-bottom: 12px;
+}
+
+.course-daily > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.course-daily > .daily-visit-chart {
+  margin-bottom: 0;
+}
+
 .top-story-row {
   display: flex;
   justify-content: space-between;

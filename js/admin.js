@@ -704,6 +704,51 @@ function buildCourseStatsHtml(appEvents, courseList, courseViewCounts = []) {
     .join("");
 }
 
+// 발자취별 일일 조회(2026-10-24) — 조회수(CourseViewCount)는 누적 숫자 하나라 날짜로 못
+// 나눠서, 같은 사건(걸을 때마다 +1)인 "course_started:<slug>" 이벤트를 한국 날짜별로 센다.
+// 누적 "조회 N회"는 장소 카드를 한 장이라도 본 경우만 세서 이 숫자와 조금 다를 수 있다.
+// appEvents는 어드민 기기를 이미 뺀 목록이다(deviceId가 남기 시작한 10/19 이전은 못 거른다).
+function buildCourseDailyHtml(appEvents, courseList, days = 14) {
+  const bySlug = {};
+  appEvents.forEach((e) => {
+    if (!e.createdAt || !e.type.startsWith("course_started:")) return;
+    const slug = e.type.slice("course_started:".length);
+    const day = kstDay(e.createdAt);
+    const c = (bySlug[slug] ||= {});
+    c[day] = (c[day] || 0) + 1;
+  });
+  const now = Date.now();
+  const dayKeys = Array.from({ length: days }, (_, i) => kstDay(new Date(now - i * 86400000).toISOString())); // 오늘이 맨 앞
+  const rows = Object.entries(bySlug)
+    .map(([slug, counts]) => {
+      const series = dayKeys.map((date) => ({ date, count: counts[date] || 0 }));
+      return { slug, series, total: series.reduce((sum, d) => sum + d.count, 0) };
+    })
+    .filter((r) => r.total > 0)
+    .sort((a, b) => b.total - a.total);
+  if (!rows.length) return `<p class="empty-state">최근 ${days}일 안에 걷기 시작한 기록이 없습니다.</p>`;
+  return rows
+    .map((r, idx) => {
+      const title = courseList?.find((c) => c.slug === r.slug)?.title || r.slug;
+      const max = Math.max(1, ...r.series.map((d) => d.count));
+      const bars = r.series
+        .map(
+          (d) => `
+          <div class="daily-visit-row">
+            <span class="daily-visit-date">${d.date.slice(5)}</span>
+            <div class="daily-visit-bar-track"><div class="daily-visit-bar" style="width:${(d.count / max) * 100}%"></div></div>
+            <span class="daily-visit-count">${d.count}회</span>
+          </div>`
+        )
+        .join("");
+      return `<details class="course-daily"${idx === 0 ? " open" : ""}>
+        <summary><span>${escapeHtml(title)}</span><small class="empty-state">오늘 ${r.series[0].count} · 어제 ${r.series[1].count} · ${days}일 ${r.total}</small></summary>
+        <div class="daily-visit-chart">${bars}</div>
+      </details>`;
+    })
+    .join("");
+}
+
 // 발자취 조회수 지난 기록 채우기(2026-10-23, 한 번만) — 조회수(CourseViewCount)는
 // 배포 시각부터 0으로 시작했다. 그 전에 장소 카드에 들어간 기록 중 가장 가까운
 // 이벤트(시작·이어 걷기·새 장소 먼저 보기)를 세서 더한다. deviceId가 있는
@@ -789,6 +834,7 @@ async function renderVisitsTab() {
     })
     : [];
   const courseStatsHtml = buildCourseStatsHtml(appEvents, courses, courseViewCounts);
+  const courseDailyHtml = buildCourseDailyHtml(appEvents, courses);
   // 완료 표시는 어드민 기기가 남기니 기기 제외 전 목록에서 찾는다
   const backfillDone = allAppEvents.some((e) => e.type === COURSE_VIEW_BACKFILL_DONE);
   const backfillRows = backfillDone || !publicClient.models.CourseViewCount ? [] : computeCourseViewBackfill(appEvents, courses);
@@ -872,6 +918,9 @@ async function renderVisitsTab() {
     <div class="admin-section-title">발자취 반응 (전체 기간 · 발자취 버튼 ${appEvents.filter((e) => e.type === "course_toolbar_clicked").length}회)</div>
     ${courseStatsHtml}
     ${backfillHtml}
+    <div class="admin-section-title">발자취 일일 조회 (최근 14일 · 걷기 시작 기준, 한국 날짜)</div>
+    <p class="empty-state">코스를 걷기 시작한 횟수예요. 위 누적 "조회 N회"는 장소 카드를 한 장이라도 본 경우만 세서 조금 다를 수 있어요. 10/19 전 기록은 내 기기를 못 걸러요.</p>
+    ${courseDailyHtml}
     <div class="admin-section-title">인기 기억 Top 10</div>
     ${topHtml}
     <div class="admin-section-title">기능별 전환율</div>
