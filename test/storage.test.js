@@ -1019,3 +1019,24 @@ test("발자취 NEW 장소: 최근 추가 + 아직 안 본 장소만, 처음 오
   Storage.markCoursePlaceSeen("c1", "p1");
   assert.deepEqual(Storage.getCourseNewPlaceIndices({ id: "c1", places: [{ id: "px" }] }), []);
 });
+
+test("발자취 순서: 고정 아래는 조회수 많은 순, 조회수가 같으면 최신순", () => {
+  const view = (id, n) => {
+    for (let i = 0; i < n; i++) Storage.recordCourseView(id);
+  };
+  view("v-eunpyeong", 1);
+  view("v-concrete", 1);
+  view("v-seoul", 7);
+  view("v-jeju", 3);
+  const courses = [
+    { id: "v-jeju", title: "제주", sortOrder: 0, createdAt: "2026-10-19T00:00:00Z" },
+    { id: "v-concrete", title: "콘크리트 사피엔스", sortOrder: 2, createdAt: "2026-10-13T00:00:00Z" },
+    { id: "v-new", title: "새 코스", sortOrder: 0, createdAt: "2026-10-23T00:00:00Z" },
+    { id: "v-seoul", title: "서울 1995", sortOrder: 0, createdAt: "2026-10-16T00:00:00Z" },
+    { id: "v-eunpyeong", title: "은평", sortOrder: 1, createdAt: "2026-10-22T00:00:00Z" },
+  ];
+  assert.deepEqual(
+    courses.sort(Storage.compareCourseOrder).map((c) => c.title),
+    ["은평", "콘크리트 사피엔스", "서울 1995", "제주", "새 코스"],
+  );
+});

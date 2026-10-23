@@ -1636,7 +1636,7 @@ function courseFormHtml() {
         <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
       </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
-      ${sessionRole === "curator" ? "" : `<label>목록 고정(1 이상이면 맨 앞에 고정, 작을수록 앞 · 0이면 최신순)<input type="number" name="sortOrder" min="0" value="${c?.sortOrder ?? 0}" /></label>`}
+      ${sessionRole === "curator" ? "" : `<label>목록 고정(1 이상이면 맨 앞에 고정, 작을수록 앞 · 0이면 조회수 많은 순)<input type="number" name="sortOrder" min="0" value="${c?.sortOrder ?? 0}" /></label>`}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
         ${c ? `<button type="button" class="btn-delete" data-course-action="cancel-edit">취소</button>` : ""}
