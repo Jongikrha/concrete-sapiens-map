@@ -287,14 +287,14 @@ function openCourseChoice() {
   syncCourseNav();
 }
 
-// 목록 카드 "둘러보기" 버튼 밑 눈 아이콘 + 숫자 알약(2026-10-23) — 장소 카드를 본
+// 목록 카드 "둘러보기" 버튼 밑 눈 아이콘(눈꺼풀 곡선 + 빛 반사 있는 눈동자, 사용자 시안) + 숫자 알약(2026-10-23) — 장소 카드를 본
 // 사람 수. 처음엔 메타 줄 "장소 20곳 · 조회 N"에 끼웠다가 코스 정보·내 진행과 섞여
 // 애매하다고 버튼 밑 "N명이 봤어요"로, 다시 사용자 시안대로 알약으로 바꿨다.
 // 0이면 안 붙인다(좋아요 하트 숫자와 같은 이유).
 const COURSE_VIEWERS_EYE_ICON = `
-  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
-    <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+  <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+    <path d="M2.5 15a9.5 9.5 0 0 1 19 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    <path fill="currentColor" fill-rule="evenodd" d="M6.5 15.5a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0z M8.2 13.6a1.9 1.9 0 1 0 3.8 0a1.9 1.9 0 1 0 -3.8 0z" />
   </svg>`;
 
 function courseViewerLine(c) {
