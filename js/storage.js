@@ -1400,36 +1400,48 @@ const Storage = {
    * 코스 진행 요약 — 지금 코스에 남아 있는 장소 기준으로 센다.
    * resumeIndex: 이어 걸을 장소 순서(지난번 마지막으로 보던 장소). 첫 장소였거나,
    *   끝까지 다 봤거나, 그 장소가 지워졌으면 null(처음부터).
-   * seenCount: 둘러본 장소 수, finished: 마지막 카드까지 다 봤는지.
+   * seenCount: 이번 바퀴에 둘러본 장소 수, finished: 마지막 카드까지 다 봤는지.
+   * currentIndex: 마지막으로 보던 장소 순서(없으면 null).
+   * completedOnce: 한 번이라도 끝까지 본 적 있는지 — "처음부터 걷기"로 안 지워진다.
    */
   getCourseProgress(course) {
     const progress = this._readCourseProgressAll()[course.id];
-    if (!progress) return { resumeIndex: null, seenCount: 0, finished: false };
+    if (!progress) return { resumeIndex: null, seenCount: 0, finished: false, currentIndex: null, completedOnce: false };
     const seen = new Set(progress.seen || []);
     const index = course.places.findIndex((p) => p.id === progress.lastPlaceId);
     return {
       resumeIndex: !progress.finished && index > 0 ? index : null,
       seenCount: course.places.filter((p) => seen.has(p.id)).length,
       finished: Boolean(progress.finished),
+      currentIndex: index >= 0 ? index : null,
+      // completedOnce가 생기기 전(2026-10-23) 기록은 finished로 대신한다
+      completedOnce: Boolean(progress.completedOnce ?? progress.finished),
     };
   },
 
+  /** 한 번이라도 본 장소 id — "처음부터 걷기"로 seen이 비워져도 남는다(everSeen 이전 기록은 seen으로). */
+  _everSeenPlaceIds(progress) {
+    return new Set([...(progress?.everSeen || []), ...(progress?.seen || [])]);
+  },
+
   /**
-   * "NEW" 장소(2026-10-23) — 최근 NEW_PLACE_DAYS일 안에 추가됐고 아직 안 본 장소의
+   * "NEW" 장소(2026-10-23) — 최근 NEW_PLACE_DAYS일 안에 추가됐고 한 번도 안 본 장소의
    * 순서(index) 배열. 이 코스를 한 곳이라도 본 적 있는 사람에게만 센다 — 처음 오는
    * 사람에겐 모든 장소가 새것이라 중간으로 점프하게 되기 때문. createdAt(생성 시각)만
    * 보므로 기존 장소를 고쳐 저장해도 NEW가 되지 않는다. 기록이 기기별이라 다른
    * 기기에선 이미 본 장소도 NEW로 보일 수 있다.
+   * 이번 바퀴 기록(seen)이 아니라 everSeen으로 판정한다 — 다 본 뒤 "처음부터"로 다시
+   * 5곳만 보면 seen이 1~5만 남아 6~20도 NEW로 뜨던 문제(2026-10-23).
    */
   getCourseNewPlaceIndices(course) {
     const progress = this._readCourseProgressAll()[course.id];
-    if (!progress || !(progress.seen || []).length) return [];
-    const seen = new Set(progress.seen);
+    const everSeen = this._everSeenPlaceIds(progress);
+    if (!everSeen.size) return [];
     const since = Date.now() - NEW_PLACE_DAYS * 24 * 60 * 60 * 1000;
     const indices = [];
     course.places.forEach((p, i) => {
       const created = Date.parse(p.createdAt);
-      if (!seen.has(p.id) && Number.isFinite(created) && created >= since) indices.push(i);
+      if (!everSeen.has(p.id) && Number.isFinite(created) && created >= since) indices.push(i);
     });
     return indices;
   },
@@ -1440,21 +1452,34 @@ const Storage = {
     all[courseId] = {
       lastPlaceId: placeId,
       seen: [...new Set([...(progress.seen || []), placeId])],
+      everSeen: [...new Set([...this._everSeenPlaceIds(progress), placeId])],
       finished: false,
+      completedOnce: Boolean(progress.completedOnce ?? progress.finished),
     };
     this._writeCourseProgressAll(all);
   },
 
   markCourseFinished(courseId) {
     const all = this._readCourseProgressAll();
-    all[courseId] = { ...(all[courseId] || { seen: [] }), lastPlaceId: null, finished: true };
+    all[courseId] = { ...(all[courseId] || { seen: [] }), lastPlaceId: null, finished: true, completedOnce: true };
     this._writeCourseProgressAll(all);
   },
 
-  /** "처음부터 걷기" — 둘러본 기록까지 비우고 새로 센다. */
+  /**
+   * "처음부터 걷기" — 이번 바퀴 기록(둘러본 수·이어 걷기 위치)만 비우고 새로 센다.
+   * 한 번이라도 본 장소(everSeen, NEW 판정용)와 완주 여부(completedOnce)는 남긴다.
+   */
   resetCourseProgress(courseId) {
     const all = this._readCourseProgressAll();
-    delete all[courseId];
+    const progress = all[courseId];
+    if (!progress) return;
+    all[courseId] = {
+      lastPlaceId: null,
+      seen: [],
+      everSeen: [...this._everSeenPlaceIds(progress)],
+      finished: false,
+      completedOnce: Boolean(progress.completedOnce ?? progress.finished),
+    };
     this._writeCourseProgressAll(all);
   },
 
