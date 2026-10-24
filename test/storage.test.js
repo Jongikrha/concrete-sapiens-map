@@ -917,15 +917,15 @@ test("getCoursePlacePhotos: 사진이 없으면 빈 목록", () => {
   assert.deepEqual(Storage.getCoursePlacePhotos({ description: "옛 설명" }), []);
 });
 
-test("getCoursePlacePhotos: 1번은 예전 필드, 2번부터 extraPhotos, 최대 3장", () => {
+test("getCoursePlacePhotos: 1번은 예전 필드, 2번부터 extraPhotos, 최대 5장", () => {
   const photos = Storage.getCoursePlacePhotos({
     photoKey: "a.jpg",
     photoFocusX: 10,
     description: "제목",
     photoCredit: "군산시",
-    extraPhotos: [{ key: "b.jpg", title: "둘" }, null, { key: "c.jpg" }, { key: "d.jpg" }],
+    extraPhotos: [{ key: "b.jpg", title: "둘" }, null, { key: "c.jpg" }, { key: "d.jpg" }, { key: "e.jpg" }, { key: "f.jpg" }],
   });
-  assert.deepEqual(photos.map((p) => p.key), ["a.jpg", "b.jpg", "c.jpg"]);
+  assert.deepEqual(photos.map((p) => p.key), ["a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg"]);
   assert.deepEqual(photos[0], { key: "a.jpg", focusX: 10, focusY: 50, title: "제목", credit: "군산시" });
   assert.deepEqual(photos[1], { key: "b.jpg", focusX: 50, focusY: 50, title: "둘", credit: "" });
 });

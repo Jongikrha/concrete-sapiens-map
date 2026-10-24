@@ -45,7 +45,7 @@ const COURSE_PHOTO_SEEN_KEY = "concrete_sapiens_course_photo_seen_v1";
 const NEW_PLACE_DAYS = 7; // 발자취 장소에 NEW를 붙여두는 기간
 const COURSE_PROGRESS_KEY = "concrete_sapiens_course_progress_v1";
 // 발자취 장소 하나에 올릴 수 있는 사진 수(js/admin.js, js/course.js)
-const COURSE_PLACE_PHOTO_MAX = 3;
+const COURSE_PLACE_PHOTO_MAX = 5; // 3장이던 걸 5장으로(2026-10-24) — 서버 필드(extraPhotos)는 개수 제한이 없다
 
 // "새 글" 지도 표시(2026-08-27)의 기준 시각 — markVisitAndGetUnseenThreshold()가
 // 앱 부팅 시 한 번 채워두고, 세션 내내 이 값을 기준으로 isUnseen()을 판정한다.
