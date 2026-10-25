@@ -1277,6 +1277,27 @@ function smartQuotes(text) {
     .replace(/"([^"\n]*)"/g, "\u201C$1\u201D");
 }
 
+// 세로(9:16) 사진 지원(2026-10-25) — 사진 칸 모양은 코스 단위 설정(Course.photoRatio,
+// "portrait"이면 키 큰 칸, 비었거나 그 밖이면 기존 16:9). 장소마다 모양이 달라
+// 카드 높이·핀 위치가 출렁이지 않는다. 칸과 모양이 다른 사진은 잘라내지 않고
+// 통째로 보여주며 남는 자리는 같은 사진을 흐리게 깐다.
+function isCoursePhotoPortrait(course) {
+  return !!course && course.photoRatio === "portrait";
+}
+
+// 사진을 탭하면 원본 비율로 크게 본다 — 닫기는 아무 데나 탭.
+function openCoursePhotoViewer(url) {
+  const old = document.getElementById("course-photo-viewer");
+  if (old) old.remove();
+  const box = document.createElement("div");
+  box.id = "course-photo-viewer";
+  box.className = "course-photo-viewer";
+  box.innerHTML = `<img alt="" /><span class="course-photo-viewer-close" aria-hidden="true">✕</span>`;
+  box.querySelector("img").src = url;
+  box.onclick = () => box.remove();
+  document.body.appendChild(box);
+}
+
 // 장소 사진(최대 5장 — Storage의 COURSE_PLACE_PHOTO_MAX, 2026-10-16) — 옆으로 넘겨 본다. 넘기기는 가로
 // 스크롤 + scroll-snap이라 폰에선 손가락으로 밀고, 마우스로는 양옆 화살표나
 // 아래 점을 누른다. 점은 사진 위에 얹어 카드 높이를 바꾸지 않는다.
@@ -1286,8 +1307,9 @@ function coursePhotoCarouselHtml(place) {
   const photos = Storage.getCoursePlacePhotos(place);
   if (!photos.length) return "";
   const many = photos.length > 1;
+  const portrait = isCoursePhotoPortrait(activeCourse);
   return `
-    <div class="recall-card-photo course-photo-carousel" id="course-card-photo">
+    <div class="recall-card-photo course-photo-carousel${portrait ? " course-photo-carousel--portrait" : ""}" id="course-card-photo">
       <div class="course-photo-track" id="course-photo-track">
         ${photos.map(() => `<div class="course-photo-slide"></div>`).join("")}
       </div>
@@ -1379,9 +1401,22 @@ function renderCoursePlacePhoto(place) {
       img.className = "recall-card-photo-img";
       img.alt = "";
       img.src = url;
-      // 어드민에서 끌어서 정한 보일 부분
+      // 어드민에서 끌어서 정한 보일 부분(칸과 같은 모양일 때만 잘라 쓴다)
       img.style.objectPosition = `${photo.focusX}% ${photo.focusY}%`;
       slides[i].replaceChildren(img);
+      slides[i].dataset.url = url;
+      const slotPortrait = isCoursePhotoPortrait(activeCourse);
+      const settle = () => {
+        // 가로 칸에 가로 사진만 꽉 채워 자르고, 나머지는 통째로 + 흐린 배경
+        const isPortrait = img.naturalHeight > img.naturalWidth;
+        if (isPortrait !== slotPortrait || slotPortrait) {
+          slides[i].classList.add("course-photo-slide--contain");
+          slides[i].style.setProperty("--photo-bg", `url("${url}")`);
+        }
+      };
+      if (img.complete && img.naturalWidth) settle();
+      else img.addEventListener("load", settle, { once: true });
+      img.addEventListener("click", () => openCoursePhotoViewer(url));
     });
   });
 }

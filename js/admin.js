@@ -1739,6 +1739,11 @@ function courseFormHtml() {
         <input type="range" name="coverSpineRatio" id="course-cover-spine" min="0" max="0.4" step="0.002" value="${c?.coverSpineRatio ?? 0}" />
       </label>
       ${c?.coverKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeCover" /> 표지 빼기</label>` : ""}
+      <label>장소 사진 모양<select name="photoRatio">
+        <option value="landscape"${c?.photoRatio === "portrait" ? "" : " selected"}>가로 (16:9, 기본)</option>
+        <option value="portrait"${c?.photoRatio === "portrait" ? " selected" : ""}>세로 (9:16 사진 위주)</option>
+      </select></label>
+      <p class="field-hint">이 발자취의 모든 장소 카드에 같은 모양으로 적용돼요. 모양이 다른 사진은 잘리지 않고 통째로 보여요(남는 자리는 흐리게). 사진을 탭하면 크게 볼 수 있어요.</p>
       ${sessionRole === "curator" ? "" : `<label>목록 고정(1 이상이면 맨 앞에 고정, 작을수록 앞 · 0이면 조회수 많은 순)<input type="number" name="sortOrder" min="0" value="${c?.sortOrder ?? 0}" /></label>`}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1894,7 +1899,7 @@ function placePhotoFieldHtml() {
       ${slots.length < COURSE_PLACE_PHOTO_MAX ? `
         <label>사진 추가(선택, ${slots.length} / ${COURSE_PLACE_PHOTO_MAX}장)<input type="file" id="place-photo-input" accept="image/*" /></label>
       ` : ""}
-      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. 발자취 설정에서 사진 모양을 "세로"로 두면 칸이 키 큰 모양이 되고, 칸과 모양이 다른 사진은 잘리지 않고 통째로 보여요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
     </div>
   `;
 }
@@ -1940,9 +1945,14 @@ function bindPlacePhotoCrop() {
   document.querySelectorAll(".course-place-photo-crop[data-slot]").forEach((box) => {
     const slot = getPlacePhotoSlots()[Number(box.dataset.slot)];
     let drag = null;
+    // 세로 사진은 카드에서 잘리지 않고 통째로 보이므로 미리보기도 그대로 보여준다.
+    box.addEventListener("load", (e) => {
+      const im = e.target;
+      if (im && im.tagName === "IMG") box.classList.toggle("is-portrait", im.naturalHeight > im.naturalWidth);
+    }, true);
     box.addEventListener("pointerdown", (e) => {
       const img = box.querySelector("img");
-      if (!img || !img.naturalWidth) return;
+      if (!img || !img.naturalWidth || box.classList.contains("is-portrait")) return;
       const scale = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
       const overflowX = img.naturalWidth * scale - box.clientWidth;
       const overflowY = img.naturalHeight * scale - box.clientHeight;
@@ -2134,6 +2144,10 @@ async function handleCourseSubmit(e) {
   fields.coverKey = coverKey;
   fields.coverSpineRatio = coverKey ? (isBookCourseKind(fields.kind) ? parseFloat(f.get("coverSpineRatio")) || 0 : 0) : null;
   fields.intro = (f.get("intro") || "").trim().slice(0, COURSE_INTRO_MAX) || null;
+  // 백엔드에 photoRatio 필드가 배포되기 전엔 보내면 저장이 거부되므로, 세로를 고르거나
+  // 이미 값이 있는 코스를 바꿀 때만 담는다(가로=기본이라 비워도 같은 결과).
+  const photoRatio = f.get("photoRatio") === "portrait" ? "portrait" : null;
+  if (photoRatio || editing?.photoRatio) fields.photoRatio = photoRatio;
   if (allCourseSlugs.some((c) => c.slug === fields.slug && c.id !== editingCourseId)) {
     alert(`"${fields.slug}" 식별자는 이미 다른 코스가 쓰고 있어요.`);
     return;

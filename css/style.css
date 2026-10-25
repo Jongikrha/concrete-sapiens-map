@@ -5458,6 +5458,64 @@ button.story-place-line:hover {
   scroll-snap-stop: always;
 }
 
+/* 세로(9:16) 사진(2026-10-25) — 대표 사진이 세로면 키 큰 칸. 폰 화면을 다 먹지
+   않게 높이에 상한을 둔다. 칸과 모양이 다른 사진(--contain)은 통째로 보여주고
+   남는 자리엔 같은 사진을 흐리게 깐다. */
+.course-card .recall-card-photo.course-photo-carousel--portrait {
+  aspect-ratio: auto;
+  height: 38vh;
+  height: 38dvh;
+  min-height: 240px;
+  max-height: 420px;
+}
+
+.course-photo-slide {
+  position: relative;
+  overflow: hidden;
+}
+
+.course-photo-slide--contain::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  background: var(--photo-bg) center / cover no-repeat;
+  filter: blur(18px) brightness(0.8);
+}
+
+.course-photo-slide--contain .recall-card-photo-img {
+  position: relative;
+  object-fit: contain;
+}
+
+.course-photo-slide .recall-card-photo-img {
+  cursor: zoom-in;
+}
+
+.course-photo-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  cursor: zoom-out;
+}
+
+.course-photo-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.course-photo-viewer-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  color: #fff;
+  font-size: 22px;
+}
+
 /* 몇 번째 사진인지 — 사진 아래쪽에 얹어서 카드 높이는 그대로 */
 .course-photo-dots {
   position: absolute;
