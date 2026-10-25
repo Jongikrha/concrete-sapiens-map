@@ -5461,12 +5461,20 @@ button.story-place-line:hover {
 /* 세로(9:16) 사진(2026-10-25) — 대표 사진이 세로면 키 큰 칸. 폰 화면을 다 먹지
    않게 높이에 상한을 둔다. 칸과 모양이 다른 사진(--contain)은 통째로 보여주고
    남는 자리엔 같은 사진을 흐리게 깐다. */
+/* 화면 높이 비율(38dvh)로 잡았더니 폰에선 가로가 더 긴 칸이 돼 세로 사진이 절반만
+   보였다 — 폭 기준 3:4로 고정하고(2026-10-25), 카드 높이의 70%를 넘지 않게 해서
+   작은 폰에서도 사진 아래 글 첫 줄은 보이게 한다(카드 높이는 아래 .card-frame 규칙). */
 .course-card .recall-card-photo.course-photo-carousel--portrait {
-  aspect-ratio: auto;
-  height: 38vh;
-  height: 38dvh;
-  min-height: 240px;
-  max-height: 420px;
+  aspect-ratio: 3 / 4;
+  max-height: calc((100vh - 162px) * 0.7);
+  max-height: calc((100dvh - 162px) * 0.7);
+}
+
+@media (max-width: 767px) {
+  .course-card .recall-card-photo.course-photo-carousel--portrait {
+    max-height: calc((100vh - 252px) * 0.7);
+    max-height: calc((100dvh - 252px) * 0.7);
+  }
 }
 
 .course-photo-slide {
