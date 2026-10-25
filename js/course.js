@@ -1407,9 +1407,10 @@ function renderCoursePlacePhoto(place) {
       slides[i].dataset.url = url;
       const slotPortrait = isCoursePhotoPortrait(activeCourse);
       const settle = () => {
-        // 가로 칸에 가로 사진만 꽉 채워 자르고, 나머지는 통째로 + 흐린 배경
+        // 칸과 같은 모양의 사진은 꽉 채워 자르고(세로 칸의 세로 사진도 양옆이
+        // 비지 않게 확대, 2026-10-25), 모양이 다른 사진만 통째로 + 흐린 배경
         const isPortrait = img.naturalHeight > img.naturalWidth;
-        if (isPortrait !== slotPortrait || slotPortrait) {
+        if (isPortrait !== slotPortrait) {
           slides[i].classList.add("course-photo-slide--contain");
           slides[i].style.setProperty("--photo-bg", `url("${url}")`);
         }
