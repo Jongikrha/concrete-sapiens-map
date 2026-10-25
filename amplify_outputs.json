@@ -1516,6 +1516,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "photoRatio": {
+              "name": "photoRatio",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "intro": {
               "name": "intro",
               "isArray": false,
