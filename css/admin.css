@@ -857,6 +857,20 @@ body {
   color: var(--cs-text-muted);
 }
 
+/* 접혀 있을 땐 회색 한 줄이 아니라 눌러볼 만한 버튼처럼(2026-10-25) — 작가가 지나치기 쉬웠다 */
+.course-guide details:not([open]) {
+  padding: 0;
+  border-color: #ffc9b8;
+  background: #fff4ef;
+}
+
+.course-guide details:not([open]) summary {
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-orange);
+}
+
 .course-guide-head {
   margin-top: 10px;
 }

@@ -206,6 +206,8 @@ function showDashboard() {
   });
   if (isCurator) {
     activeTab = "courses";
+    // 작가는 이 화면이 처음이라 안내를 폰만 빼고 펼쳐서 시작한다(2026-10-25). 운영자는 넓은 화면에서만.
+    courseGuideOpen = window.matchMedia("(min-width: 768px)").matches;
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("tab-btn--active", b.dataset.tab === "courses"));
   }
   renderActiveTab();
@@ -1556,7 +1558,7 @@ const COURSE_GUIDE_FIELDS = [
   { key: "logo", name: "로고", screens: ["place"], text: "따라 걷는 동안 지도 위 장소 핀(동그라미)에 들어가요." },
   { key: "linkUrl", name: "바깥 링크", screens: ["detail"], text: "소개 화면 위쪽에 버튼으로 나와요. 인스타그램·유튜브 주소면 그 아이콘과 이름으로, 그 밖이면 \"더 알아보기\"로 보여요(이 예시엔 링크가 없어서 버튼 자리만 표시했어요)." },
   { key: "slug", name: "영문 식별자", screens: [], text: "화면에는 안 나오고 공유 링크 주소 끝에 붙어요. 예: concretesapiens.com/?course=concrete-sapiens" },
-  { key: "photo", name: "장소 사진", screens: ["place"], text: "장소 카드 맨 위에 가로로 납작하게(16:9) 잘려 나와요. 여러 장이면 옆으로 넘겨 봐요." },
+  { key: "photo", name: "장소 사진", screens: ["place"], text: "장소 카드 맨 위에 나와요. 보통은 가로(16:9)로, 코스의 \"장소 사진 모양\"이 세로면 3:4로 잘려 나와요. 여러 장이면 옆으로 넘겨 봐요." },
   { key: "photoMeta", name: "사진 제목·출처", screens: ["place"], text: "사진 바로 아래 작은 글씨로 나와요. 출처는 \"출처 | 서울기록원\"처럼 보여요." },
   { key: "label", name: "꼬리표", screens: ["place"], text: "장소 이름 위에 주황색 작은 글씨로 나와요. 책이면 쪽수나 장 제목을 적어요." },
   { key: "name", name: "지도에 보일 이름", screens: ["place"], text: "장소 카드의 큰 제목이에요." },
@@ -2059,7 +2061,7 @@ async function renderCoursesTab() {
     </div>
     <aside class="course-guide" id="course-guide">
       <details id="course-guide-details"${courseGuideOpen ? " open" : ""}>
-        <summary>입력한 내용이 화면 어디에 보이나요?</summary>
+        <summary>📍 입력한 내용이 화면 어디에 보이나요?</summary>
         <div id="course-guide-body">${courseGuideHtml()}</div>
       </details>
     </aside>
