@@ -1270,6 +1270,18 @@ const Storage = {
     return (b.createdAt || "").localeCompare(a.createdAt || "") || a.title.localeCompare(b.title);
   },
 
+  /**
+   * 발자취 목록 "최신순"(2026-10-25) — 목록에서 고르는 정렬. 고정(sortOrder 1 이상)은
+   * 운영자가 고른 "지금 둘러보세요" 자리라 그대로 맨 앞에 두고, 그 아래만 조회수와
+   * 상관없이 만든 날짜 최신순. 기본("조회수순")은 compareCourseOrder.
+   */
+  compareCourseOrderLatest(a, b) {
+    const pinA = a.sortOrder > 0 ? a.sortOrder : Infinity;
+    const pinB = b.sortOrder > 0 ? b.sortOrder : Infinity;
+    if (pinA !== pinB) return pinA - pinB;
+    return (b.createdAt || "").localeCompare(a.createdAt || "") || a.title.localeCompare(b.title);
+  },
+
   /** 지도에 실제로 공개된 코스인지 — 운영자 코스는 isPublished만, 작가 코스는 승인까지. */
   isCourseLive(course, approvedIds) {
     return !!course.isPublished && (!course.authorId || approvedIds.has(course.id));

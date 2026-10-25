@@ -226,9 +226,22 @@ const COURSE_LIST_PIN_ICON = `
     <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
   </svg>`;
 
+// 목록 정렬(2026-10-25) — "조회수순"(기본, Storage.compareCourseOrder)과 "최신순".
+// 둘 다 운영자 고정 코스는 맨 앞 그대로. 지도 배지·다른 목록은 publishedCourses
+// 순서를 그대로 쓰고, 이 목록만 고른 순서로 다시 줄 세운다.
+let courseListSort = "views";
+
+function sortedCourseList() {
+  const compare = courseListSort === "latest" ? Storage.compareCourseOrderLatest : Storage.compareCourseOrder;
+  return [...publishedCourses].sort(compare);
+}
+
 function openCourseChoice() {
   const panel = document.getElementById("course-choice-panel");
   const kindName = (c) => COURSE_KIND_LABELS[c.kind] || "발자취";
+  const list = sortedCourseList();
+  const sortBtn = (key, label) =>
+    `<button type="button" class="course-list-sort-btn${courseListSort === key ? " is-active" : ""}" data-course-sort="${key}" aria-pressed="${courseListSort === key}">${label}</button>`;
   panel.innerHTML = `
     <div class="course-list-header">
       <h2 class="course-list-title">발자취</h2>
@@ -238,8 +251,9 @@ function openCourseChoice() {
       <p class="course-list-subtitle">이야기가 머문 장소를 따라 도시를 걸어보세요.</p>
       <span class="course-list-badge">${COURSE_LIST_BOOKS_ICON}${publishedCourses.length}개의 발자취</span>
     </div>
+    <div class="course-list-sort">${sortBtn("views", "조회수순")}<span aria-hidden="true">·</span>${sortBtn("latest", "최신순")}</div>
     <div class="course-choice-list">
-      ${publishedCourses.map((c, i) => `${i === 1 ? `<div class="course-choice-rest">` : ""}
+      ${list.map((c, i) => `${i === 1 ? `<div class="course-choice-rest">` : ""}
         <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
           <span class="course-choice-cover${courseCoverKindClass(c)}">
             ${c.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(c)}></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
@@ -255,15 +269,23 @@ function openCourseChoice() {
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
             ${courseViewerLine(c)}
           </span>
-        </div>${i === publishedCourses.length - 1 && i >= 1 ? `</div>` : ""}
+        </div>${i === list.length - 1 && i >= 1 ? `</div>` : ""}
       `).join("")}
     </div>
     <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>
   `;
   document.getElementById("course-choice-close").onclick = closeCourseChoice;
+  panel.querySelectorAll("[data-course-sort]").forEach((btn) => {
+    btn.onclick = () => {
+      if (courseListSort === btn.dataset.courseSort) return;
+      courseListSort = btn.dataset.courseSort;
+      Storage.logEvent(`course_list_sort:${courseListSort}`);
+      openCourseChoice();
+    };
+  });
   panel.querySelectorAll(".course-choice-btn[data-course-index]").forEach((btn) => {
     btn.onclick = () => {
-      const course = publishedCourses[Number(btn.dataset.courseIndex)];
+      const course = list[Number(btn.dataset.courseIndex)];
       closeCourseChoice();
       // 다 둘러본 코스에 새 장소가 생겼으면 소개 화면 없이 바로 그 장소로 — 걷던 중이면
       // 보던 흐름을 끊지 않게 소개 화면에서 고르게 한다(openCourseDetail의 "새 장소 먼저 보기").

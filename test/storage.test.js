@@ -1048,3 +1048,20 @@ test("발자취 순서: 고정 아래는 조회수 많은 순, 조회수가 같�
     ["은평", "콘크리트 사피엔스", "서울 1995", "제주", "새 코스"],
   );
 });
+
+test("발자취 최신순: 고정은 그대로 맨 앞, 나머지는 조회수와 상관없이 최신순", () => {
+  const view = (id, n) => {
+    for (let i = 0; i < n; i++) Storage.recordCourseView(id);
+  };
+  view("l-old", 9);
+  const courses = [
+    { id: "l-old", title: "많이 본 옛 코스", sortOrder: 0, createdAt: "2026-10-13T00:00:00Z" },
+    { id: "l-new", title: "새 코스", sortOrder: 0, createdAt: "2026-10-23T00:00:00Z" },
+    { id: "l-pin", title: "고정", sortOrder: 1, createdAt: "2026-10-01T00:00:00Z" },
+    { id: "l-mid", title: "중간", sortOrder: null, createdAt: "2026-10-19T00:00:00Z" },
+  ];
+  assert.deepEqual(
+    courses.sort(Storage.compareCourseOrderLatest).map((c) => c.title),
+    ["고정", "새 코스", "중간", "많이 본 옛 코스"],
+  );
+});

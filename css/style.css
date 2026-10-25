@@ -6118,6 +6118,31 @@ button.story-place-line:hover {
   margin-top: 6px;
 }
 
+/* 목록 정렬(2026-10-25) — 조회수순 · 최신순, 고른 쪽만 진하게 */
+.course-list-sort {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--cs-text-muted);
+}
+
+.course-list-sort-btn {
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--cs-text-muted);
+  cursor: pointer;
+}
+
+.course-list-sort-btn.is-active {
+  color: var(--cs-black);
+  font-weight: 700;
+}
+
 .course-list-subtitle {
   margin: 0;
   font-size: 15px;
