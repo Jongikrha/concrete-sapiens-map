@@ -466,7 +466,6 @@ function openCourseDetail(course, { fromList = false } = {}) {
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
       ${newIndices.length ? `<button type="button" class="course-detail-newplaces" id="course-detail-newplaces"><span class="course-choice-new">NEW</span>새 장소 먼저 보기 · ${newIndices.length}곳</button>` : ""}
-      ${resumeIndex === null ? "" : `<p class="course-detail-resume-note">${resumeIndex}번째 장소까지 봤어요</p>`}
       ${resumeIndex === null ? "" : `<button type="button" class="course-detail-restart" id="course-detail-restart">처음부터 걷기</button>`}
     </div>
   `;
