@@ -1250,6 +1250,7 @@ let coursePlacesById = {}; // courseId -> CoursePlace[] (seq 순)
 let approvedCourseIds = new Set(); // CourseApproval — 승인된 작가 코스
 let allCourseSlugs = []; // [{ id, slug }] 전체 코스 — 작가도 남의 slug와 겹치지 않게
 let curatorEmailById = {}; // 관리자 화면에서 작가 코스 옆에 보여줄 작가 이메일(userId -> email)
+let handoverCourseId = null; // "작가에게 넘기기" 선택창이 열린 코스(운영자 화면)
 let selectedCourseId = null; // 장소 관리 중인 코스
 let editingCourseId = null; // null이면 "새 코스" 폼
 let editingPlaceId = null; // null이면 "장소 추가" 폼
@@ -1385,6 +1386,57 @@ function courseAuthorLabel(course) {
   return `작가 ${curatorEmailById[course.authorId] || course.authorId.slice(0, 8)}`;
 }
 
+// "작가에게 넘기기"(2026-10-25) — 운영자가 만든 코스를 작가(Curators) 계정의 것으로 바꾼다.
+// 코스와 소속 장소의 authorId를 그 작가의 sub로 바꾸면 작가가 자기 "내 발자취"에서 고칠 수
+// 있다(amplify/data/resource.ts Course·CoursePlace의 owner 규칙). 비공개 코스만 넘긴다 —
+// 작가 코스는 공개 승인(CourseApproval)이 있어야 지도에 보이므로, 공개 중인 코스를 승인 없이
+// 넘기면 지도에서 사라진다. 넘긴 뒤 공개는 작가의 "공개 요청" → 운영자 "승인" 순서다.
+function courseHandoverHtml(course) {
+  const curators = (members || []).filter((m) => m.isCurator && m.userId);
+  if (!curators.length) {
+    return `<p class="field-hint course-handover">넘길 작가가 없어요. 회원 탭에서 그 회원을 먼저 "작가 지정"해주세요.
+      <button class="btn-delete" data-course-action="handover-cancel" data-course-id="${course.id}">닫기</button></p>`;
+  }
+  return `
+    <div class="admin-card-actions course-handover">
+      <select id="course-handover-select">
+        ${curators.map((m) => `<option value="${escapeHtml(m.userId)}">${escapeHtml(m.email || m.username)}</option>`).join("")}
+      </select>
+      <button class="btn-restore" data-course-action="handover-confirm" data-course-id="${course.id}">넘기기</button>
+      <button class="btn-delete" data-course-action="handover-cancel" data-course-id="${course.id}">취소</button>
+    </div>`;
+}
+
+async function handoverCourse(course, authorId) {
+  const places = coursePlacesById[course.id] || [];
+  const author = (members || []).find((m) => m.userId === authorId);
+  const authorLabel = author?.email || author?.username || authorId.slice(0, 8);
+  if (!confirm(`"${course.title}" 코스와 장소 ${places.length}곳을 ${authorLabel} 작가에게 넘길까요?\n비공개 그대로 넘어가고, 그 작가의 "내 발자취"에 보여요. 공개는 운영자가 카드의 "공개하기"를 누르거나, 작가가 공개 요청하면 승인해서 할 수 있어요.`)) return false;
+  // 장소 먼저, 코스는 마지막 — 중간에 실패하면 이미 바꾼 장소를 되돌린다
+  // (코스와 authorId가 다른 장소는 화면에서 안 보이므로 반쯤 바뀐 채 두면 안 된다).
+  const done = [];
+  const rollback = async () => {
+    for (const p of done) await client.models.CoursePlace.update({ id: p.id, authorId: null });
+  };
+  for (const p of places) {
+    const updated = await runCourseMutation(client.models.CoursePlace.update({ id: p.id, authorId }), "장소 넘기기 실패");
+    if (!updated) {
+      await rollback();
+      return false;
+    }
+    done.push(updated);
+  }
+  const updatedCourse = await runCourseMutation(client.models.Course.update({ id: course.id, authorId }), "코스 넘기기 실패");
+  if (!updatedCourse) {
+    await rollback();
+    return false;
+  }
+  courses = courses.map((c) => (c.id === updatedCourse.id ? updatedCourse : c));
+  coursePlacesById[course.id] = places.map((p) => done.find((d) => d.id === p.id) || p);
+  alert(`넘겼어요. ${authorLabel} 작가의 "내 발자취"에 보여요. (장소 ${done.length}곳)`);
+  return true;
+}
+
 function courseCardHtml(course) {
   const places = coursePlacesById[course.id] || [];
   const kindLabel = COURSE_KINDS.find((k) => k.value === course.kind)?.label || course.kind || "-";
@@ -1413,9 +1465,11 @@ function courseCardHtml(course) {
         <button class="btn-restore" data-course-action="edit" data-course-id="${course.id}">수정</button>
         <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${publishLabel}</button>
         ${!isCurator && course.authorId ? `<button class="btn-restore" data-course-action="toggle-approval" data-course-id="${course.id}">${approved ? "승인 취소" : "승인"}</button>` : ""}
+        ${!isCurator && !course.authorId ? `<button class="btn-restore" data-course-action="handover" data-course-id="${course.id}">작가에게 넘기기</button>` : ""}
         <button class="btn-restore" data-course-action="copy-link" data-course-id="${course.id}">링크 복사</button>
         <button class="btn-delete" data-course-action="delete" data-course-id="${course.id}">삭제</button>
       </div>
+      ${!isCurator && handoverCourseId === course.id ? courseHandoverHtml(course) : ""}
     </div>
   `;
 }
@@ -2123,7 +2177,19 @@ async function handleCourseAction(action, courseId) {
     }
     return;
   }
-  if (action === "select") {
+  if (action === "handover") {
+    handoverCourseId = handoverCourseId === courseId ? null : courseId;
+  } else if (action === "handover-cancel") {
+    handoverCourseId = null;
+  } else if (action === "handover-confirm") {
+    const authorId = document.getElementById("course-handover-select")?.value;
+    if (!authorId || sessionRole === "curator" || course.authorId) return;
+    if (course.isPublished) {
+      alert("공개 중인 코스예요. 먼저 \"비공개로\" 돌린 뒤 넘겨주세요. (작가 코스는 승인이 있어야 지도에 보여서, 공개 상태로 넘기면 지도에서 사라져요.)");
+      return;
+    }
+    if (await handoverCourse(course, authorId)) handoverCourseId = null;
+  } else if (action === "select") {
     selectedCourseId = selectedCourseId === courseId ? null : courseId;
     editingPlaceId = null;
     placeDraft = null;
@@ -2145,12 +2211,22 @@ async function handleCourseAction(action, courseId) {
       }
       if (!confirm("장소가 하나도 없어요. 그래도 공개할까요?")) return;
     }
+    // 운영자가 작가 코스를 "공개하기"하면 승인도 함께 한다(2026-10-25) — 작가의 "공개 요청"을
+    // 기다리지 않고 바로 지도에 올리려는 경우(넘긴 코스를 운영자가 먼저 공개). 승인이 없으면
+    // 공개 상태여도 지도에 안 보여서 따로 "승인"을 한 번 더 눌러야 했다.
+    const alsoApprove = sessionRole !== "curator" && course.authorId && !course.isPublished && !approvedCourseIds.has(courseId);
+    if (alsoApprove && !confirm(`"${course.title}"을(를) 바로 공개할까요?\n작가 코스라 승인도 함께 처리돼요. 승인 뒤에 작가가 고친 내용은 다시 확인 없이 바로 반영돼요.`)) return;
     const updated = await runCourseMutation(
       client.models.Course.update({ id: courseId, isPublished: !course.isPublished }),
       "공개 상태 변경 실패",
     );
     if (!updated) return;
     courses = courses.map((c) => (c.id === updated.id ? updated : c));
+    if (alsoApprove) {
+      const ok = await runCourseMutation(client.models.CourseApproval.create({ courseId }), "승인 실패");
+      if (ok) approvedCourseIds.add(courseId);
+      else alert("공개로 바꿨지만 승인이 안 됐어요. 카드의 \"승인\" 버튼을 눌러주세요.");
+    }
   } else if (action === "toggle-approval") {
     const approved = approvedCourseIds.has(courseId);
     const msg = approved

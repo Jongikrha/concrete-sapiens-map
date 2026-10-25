@@ -394,6 +394,20 @@ body {
   margin-bottom: 0;
 }
 
+/* 작가에게 넘기기 선택창(2026-10-25) */
+.course-handover {
+  margin-top: 8px;
+  align-items: center;
+}
+
+.course-handover select {
+  max-width: 260px;
+  padding: 6px 8px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  font-size: 13px;
+}
+
 .top-story-row {
   display: flex;
   justify-content: space-between;
