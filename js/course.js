@@ -226,10 +226,11 @@ const COURSE_LIST_PIN_ICON = `
     <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
   </svg>`;
 
-// 목록 정렬(2026-10-25) — "조회수순"(기본, Storage.compareCourseOrder)과 "최신순".
-// 둘 다 운영자 고정 코스는 맨 앞 그대로. 지도 배지·다른 목록은 publishedCourses
-// 순서를 그대로 쓰고, 이 목록만 고른 순서로 다시 줄 세운다.
-let courseListSort = "views";
+// 목록 정렬(2026-10-25) — "최신순"(기본, 같은 날 조회수순에서 바꿈)과 "조회수순"
+// (Storage.compareCourseOrder). 둘 다 운영자 고정 코스는 맨 앞 그대로. 지도 배지·다른
+// 목록은 publishedCourses 순서를 그대로 쓰고, 이 목록만 고른 순서로 다시 줄 세운다.
+// 조회수순에선 맨 앞이 그냥 많이 본 코스라 "지금 둘러보세요" 꼬리표를 안 붙인다.
+let courseListSort = "latest";
 
 function sortedCourseList() {
   const compare = courseListSort === "latest" ? Storage.compareCourseOrderLatest : Storage.compareCourseOrder;
@@ -251,7 +252,7 @@ function openCourseChoice() {
       <p class="course-list-subtitle">이야기가 머문 장소를 따라 도시를 걸어보세요.</p>
       <span class="course-list-badge">${COURSE_LIST_BOOKS_ICON}${publishedCourses.length}개의 발자취</span>
     </div>
-    <div class="course-list-sort">${sortBtn("views", "조회수순")}<span aria-hidden="true">·</span>${sortBtn("latest", "최신순")}</div>
+    <div class="course-list-sort">${sortBtn("latest", "최신순")}<span aria-hidden="true">·</span>${sortBtn("views", "조회수순")}</div>
     <div class="course-choice-list">
       ${list.map((c, i) => `${i === 1 ? `<div class="course-choice-rest">` : ""}
         <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
@@ -259,7 +260,7 @@ function openCourseChoice() {
             ${c.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(c)}></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
           </span>
           <span class="course-choice-text">
-            ${i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
+            ${i === 0 && courseListSort !== "views" ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
             <span class="course-choice-title">${escapeHtml(c.title)}${Storage.getCourseNewPlaceIndices(c).length ? `<span class="course-choice-new">NEW</span>` : ""}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
