@@ -1782,13 +1782,16 @@ function placeRowHtml(place, index, total) {
   `;
 }
 
+function placePickedHtml() {
+  return placeDraft
+    ? `<p class="course-place-picked">📍 <b>${escapeHtml(placeDraft.name)}</b> · ${escapeHtml(placeDraft.address || "")}
+         <a href="${kakaoMapLink(placeDraft.name, placeDraft.lat, placeDraft.lng)}" target="_blank" rel="noopener">위치 확인</a></p>`
+    : `<p class="field-hint">장소를 검색해 고르거나, 지도를 돌아다니다 원하는 곳을 찍으세요.</p>`;
+}
+
 function placeFormHtml() {
   const p = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((x) => x.id === editingPlaceId) : null;
   const v = (field) => escapeHtml(p?.[field] ?? "");
-  const picked = placeDraft
-    ? `<p class="course-place-picked">📍 <b>${escapeHtml(placeDraft.name)}</b> · ${escapeHtml(placeDraft.address || "")}
-         <a href="${kakaoMapLink(placeDraft.name, placeDraft.lat, placeDraft.lng)}" target="_blank" rel="noopener">위치 확인</a></p>`
-    : `<p class="field-hint">아래에서 장소를 검색해 고르세요.</p>`;
   return `
     <form class="course-form" id="place-form">
       <div class="admin-section-title">${p ? `장소 수정 — ${escapeHtml(p.name)}` : "장소 추가"}</div>
@@ -1797,7 +1800,8 @@ function placeFormHtml() {
         <button type="button" class="btn-restore" data-place-action="search">검색</button>
       </div>
       <ul class="course-place-results" id="place-search-results"></ul>
-      ${picked}
+      <div class="place-pick-map" id="place-pick-map"></div>
+      <div id="place-picked">${placePickedHtml()}</div>
       <label>지도에 보일 이름<input type="text" name="name" value="${escapeHtml(p?.name ?? placeDraft?.name ?? "")}" placeholder="검색 결과 이름을 바꾸고 싶을 때만 수정" /></label>
       <label>꼬리표(선택)<input type="text" name="label" value="${v("label")}" data-max-nonspace="${PLACE_LABEL_MAX}" placeholder='예: "3장", "1443년"' /></label>
       <p class="field-hint field-count" data-count-for="label"></p>
@@ -2051,6 +2055,7 @@ async function renderCoursesTab() {
       }
     });
     bindPlacePhotoSlots(placeForm);
+    bindPlacePickMap();
   }
   hydrateAdminPhotos();
   bindPlacePhotoCrop();
@@ -2325,6 +2330,86 @@ function pickSearchResult(index) {
     newForm.elements[k].value = val;
   });
   bindNonSpaceLimits(newForm);
+}
+
+// 지도에서 찍어 장소 고르기(2026-10-25) — 검색에 안 나오거나, 같은 도로명
+// 주소를 쓰는 아파트 동처럼 주소 검색 좌표가 한 점으로 겹치는 곳도 지도를
+// 돌아다니다 찍어서(또는 핀을 끌어서) 정확한 자리에 놓을 수 있게. 검색으로
+// 고르면 그 자리로 옮겨와 핀을 보여주니, 찍어서 위치만 다듬어도 된다.
+// 이 코스의 다른 장소는 순서 번호로 같이 보여준다.
+const PLACE_PICK_DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 }; // 서울시청
+
+async function bindPlacePickMap() {
+  const el = document.getElementById("place-pick-map");
+  if (!el) return;
+  try {
+    await loadKakaoServices();
+  } catch (e) {
+    el.innerHTML = `<p class="field-hint">카카오 지도를 불러오지 못했어요.</p>`;
+    return;
+  }
+  // SDK를 기다리는 사이 탭이 다시 그려졌으면 이 지도는 버린다.
+  if (!el.isConnected) return;
+  const { maps } = kakao;
+  const list = coursePlacesById[selectedCourseId] || [];
+  const editing = editingPlaceId ? list.find((p) => p.id === editingPlaceId) : null;
+  const current = placeDraft || editing;
+  const fallback = list[list.length - 1] || PLACE_PICK_DEFAULT_CENTER;
+  const center = current || fallback;
+  const map = new maps.Map(el, {
+    center: new maps.LatLng(center.lat, center.lng),
+    level: current ? 3 : list.length ? 5 : 7,
+  });
+  list.forEach((p, i) => {
+    if (p.id === editingPlaceId) return;
+    new maps.CustomOverlay({
+      map,
+      position: new maps.LatLng(p.lat, p.lng),
+      content: `<div class="place-pick-map-seq" title="${escapeHtml(p.name)}">${i + 1}</div>`,
+      yAnchor: 0.5,
+    });
+  });
+  const marker = new maps.Marker({
+    map: current ? map : null,
+    position: new maps.LatLng(center.lat, center.lng),
+    draggable: true,
+  });
+  maps.event.addListener(map, "click", (e) => {
+    marker.setPosition(e.latLng);
+    marker.setMap(map);
+    pickMapPoint(e.latLng.getLat(), e.latLng.getLng());
+  });
+  maps.event.addListener(marker, "dragend", () => {
+    const pos = marker.getPosition();
+    pickMapPoint(pos.getLat(), pos.getLng());
+  });
+}
+
+// 찍은 자리의 주소를 거꾸로 찾아 채운다. 이름은 검색으로 골랐거나 수정 중인
+// 장소의 이름을 그대로 두고(위치만 다듬는 경우), 처음 찍을 때만 건물 이름이나
+// 주소로 채운다. 탭을 다시 그리지 않고 고른 장소 줄만 바꿔서 지도 위치를 지킨다.
+function pickMapPoint(lat, lng) {
+  const editing = editingPlaceId ? (coursePlacesById[selectedCourseId] || []).find((p) => p.id === editingPlaceId) : null;
+  const keptName = placeDraft?.name || editing?.name || null;
+  placeDraft = { name: keptName || "지도에서 고른 곳", address: null, lat, lng };
+  const draft = placeDraft;
+  const render = () => {
+    const pickedEl = document.getElementById("place-picked");
+    if (pickedEl) pickedEl.innerHTML = placePickedHtml();
+    const nameInput = document.getElementById("place-form")?.elements.name;
+    if (nameInput && !nameInput.value.trim()) nameInput.value = placeDraft.name;
+  };
+  const { Geocoder, Status } = kakao.maps.services;
+  new Geocoder().coord2Address(lng, lat, (result, status) => {
+    // 그 사이 다른 곳을 또 찍었으면 늦게 온 응답은 버린다.
+    if (placeDraft !== draft) return;
+    const r = status === Status.OK ? result[0] : null;
+    const road = r?.road_address;
+    const address = road?.address_name || r?.address?.address_name || null;
+    draft.address = address;
+    if (!keptName) draft.name = road?.building_name || address || draft.name;
+    render();
+  });
 }
 
 // 유튜브 영상을 다른 사이트(우리 미니 플레이어)에서 틀 수 있는지(2026-10-21) —

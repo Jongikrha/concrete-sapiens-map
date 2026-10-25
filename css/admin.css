@@ -607,6 +607,28 @@ body {
   margin-left: 6px;
 }
 
+/* 지도에서 찍어 장소 고르기 — 이 코스의 다른 장소는 순서 번호 동그라미로 */
+.place-pick-map {
+  width: 100%;
+  height: 320px;
+  border: 1px solid var(--cs-map-gray);
+  border-radius: var(--cs-radius-card);
+  overflow: hidden;
+}
+
+.place-pick-map-seq {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cs-black);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}
+
 .course-place-picked {
   font-size: 13px;
   margin: 0;
