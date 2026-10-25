@@ -1507,7 +1507,7 @@ const COURSE_GUIDE_SCREENS = {
 // 화면에 안 나오는 칸(slug 등)은 설명만 보여준다.
 const COURSE_GUIDE_FIELDS = [
   { key: "title", name: "이름", screens: ["list", "detail", "place"], text: "목록 카드 제목, 소개 화면의 큰 제목, 따라 걷는 동안 장소 카드 윗줄에 나와요." },
-  { key: "author", name: "저자", screens: ["list"], text: "목록에서 제목 아래 \"나종익 지음\"처럼 나와요. 종류가 음악이면 \"노래\", 드라마·영화면 \"연출\"이 붙어요." },
+  { key: "author", name: "저자", screens: ["list"], text: "목록에서 제목 아래 \"나종익 지음\"처럼 나와요. 종류가 음악이면 \"노래\", 드라마·영화면 \"연출\", 인플루언서·기타면 \"운영\"이 붙어요." },
   { key: "kind", name: "종류", screens: ["list"], text: "목록의 \"책 · 장소 20곳\" 줄에 나오고, 표지 모양도 정해요(책은 입체 책, 인물은 폴라로이드, 음악은 정사각형)." },
   { key: "description", name: "부제(한 줄)", screens: ["list", "detail"], text: "목록에서는 저자 아래, 소개 화면에서는 큰 제목 바로 아래에 나와요." },
   { key: "intro", name: "책·작품 소개", screens: ["detail"], text: "소개 화면의 본문이에요. 표지 아래 큰 글로 나와요." },
@@ -1711,7 +1711,7 @@ function courseFormHtml() {
       <div class="admin-section-title">${c ? `코스 수정 — ${escapeHtml(c.title)}` : "새 코스 만들기"}</div>
       <label>이름<input type="text" name="title" value="${v("title")}" placeholder="예: 콘크리트 사피엔스" required /></label>
       <label>저자(선택)<input type="text" name="author" value="${v("author")}" maxlength="30" placeholder="예: 채만식" /></label>
-      <p class="field-hint">코스 목록 제목 아래 "채만식 지음"처럼 보여요(음악은 "OOO 노래", 드라마·영화는 "OOO 연출"). 이름에는 작품 제목만 적어주세요.</p>
+      <p class="field-hint">코스 목록 제목 아래 "채만식 지음"처럼 보여요(음악은 "OOO 노래", 드라마·영화는 "OOO 연출", 인플루언서·기타는 "OOO 운영"). 이름에는 작품 제목만 적어주세요.</p>
       <label>영문 식별자(공유 링크용)<input type="text" name="slug" value="${v("slug")}" placeholder="예: concrete-sapiens" pattern="[a-z0-9-]+" required /></label>
       <label>종류
         <select name="kind">

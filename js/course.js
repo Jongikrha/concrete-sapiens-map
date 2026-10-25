@@ -353,7 +353,7 @@ function courseProgressNote(c) {
 const COURSE_KIND_LABELS = { book: "책", person: "인물", influencer: "인플루언서", drama: "드라마·영화", music: "음악", org: "단체" };
 
 // 코스 목록 제목 아래 "OOO 지음" — 종류에 따라 붙는 말이 다르다(2026-10-16).
-const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출", influencer: "운영" };
+const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출", influencer: "운영", etc: "운영" };
 function courseAuthorLine(c) {
   return `${c.author} ${COURSE_AUTHOR_SUFFIX[c.kind] || "지음"}`;
 }
