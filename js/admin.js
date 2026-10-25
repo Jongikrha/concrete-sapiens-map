@@ -1437,6 +1437,46 @@ async function handoverCourse(course, authorId) {
   return true;
 }
 
+// "운영자로 되찾기"(2026-10-25) — 작가에게 넘긴(또는 작가가 만든) 코스를 다시 운영자 코스로.
+// 넘기기의 반대로 장소 먼저, 코스는 마지막에 authorId를 비우고, 중간에 실패하면 장소를 되돌린다.
+// 운영자 코스는 승인 없이 isPublished만으로 지도에 보이므로, 승인 전 "공개 요청" 상태였던 코스는
+// 되찾는 순간 공개되지 않게 비공개로 돌린다. 승인 기록은 지운다 — 남겨두면 나중에 다시 넘길 때
+// 확인 없이 바로 승인된 상태가 된다. 되찾으면 작가의 "내 발자취"에서는 사라진다.
+async function reclaimCourse(course) {
+  const places = coursePlacesById[course.id] || [];
+  const approved = approvedCourseIds.has(course.id);
+  const unpublish = course.isPublished && !approved;
+  const authorId = course.authorId;
+  if (!confirm(`"${course.title}" 코스와 장소 ${places.length}곳을 운영자 코스로 되찾을까요?\n${courseAuthorLabel(course)}의 "내 발자취"에서는 사라지고, 더는 고칠 수 없어요.${unpublish ? "\n승인 전 공개 요청 상태라 비공개로 돌려서 가져와요." : ""}`)) return false;
+  const done = [];
+  const rollback = async () => {
+    for (const p of done) await client.models.CoursePlace.update({ id: p.id, authorId });
+  };
+  for (const p of places) {
+    const updated = await runCourseMutation(client.models.CoursePlace.update({ id: p.id, authorId: null }), "장소 되찾기 실패");
+    if (!updated) {
+      await rollback();
+      return false;
+    }
+    done.push(updated);
+  }
+  const updatedCourse = await runCourseMutation(
+    client.models.Course.update({ id: course.id, authorId: null, ...(unpublish ? { isPublished: false } : {}) }),
+    "코스 되찾기 실패",
+  );
+  if (!updatedCourse) {
+    await rollback();
+    return false;
+  }
+  courses = courses.map((c) => (c.id === updatedCourse.id ? updatedCourse : c));
+  coursePlacesById[course.id] = places.map((p) => done.find((d) => d.id === p.id) || p);
+  if (approved && await runCourseMutation(client.models.CourseApproval.delete({ courseId: course.id }), "승인 기록 지우기 실패")) {
+    approvedCourseIds.delete(course.id);
+  }
+  alert(`되찾았어요. 이제 운영자 코스예요. (장소 ${done.length}곳)`);
+  return true;
+}
+
 function courseCardHtml(course) {
   const places = coursePlacesById[course.id] || [];
   const kindLabel = COURSE_KINDS.find((k) => k.value === course.kind)?.label || course.kind || "-";
@@ -1466,6 +1506,7 @@ function courseCardHtml(course) {
         <button class="btn-restore" data-course-action="toggle-publish" data-course-id="${course.id}">${publishLabel}</button>
         ${!isCurator && course.authorId ? `<button class="btn-restore" data-course-action="toggle-approval" data-course-id="${course.id}">${approved ? "승인 취소" : "승인"}</button>` : ""}
         ${!isCurator && !course.authorId ? `<button class="btn-restore" data-course-action="handover" data-course-id="${course.id}">작가에게 넘기기</button>` : ""}
+        ${!isCurator && course.authorId ? `<button class="btn-restore" data-course-action="reclaim" data-course-id="${course.id}">운영자로 되찾기</button>` : ""}
         <button class="btn-restore" data-course-action="copy-link" data-course-id="${course.id}">링크 복사</button>
         <button class="btn-delete" data-course-action="delete" data-course-id="${course.id}">삭제</button>
       </div>
@@ -2198,6 +2239,9 @@ async function handleCourseAction(action, courseId) {
   }
   if (action === "handover") {
     handoverCourseId = handoverCourseId === courseId ? null : courseId;
+  } else if (action === "reclaim") {
+    if (sessionRole === "curator" || !course.authorId) return;
+    await reclaimCourse(course);
   } else if (action === "handover-cancel") {
     handoverCourseId = null;
   } else if (action === "handover-confirm") {
