@@ -353,9 +353,11 @@ function courseProgressNote(c) {
 const COURSE_KIND_LABELS = { book: "책", person: "인물", influencer: "인플루언서", drama: "드라마·영화", music: "음악", org: "단체" };
 
 // 코스 목록 제목 아래 "OOO 지음" — 종류에 따라 붙는 말이 다르다(2026-10-16).
-const COURSE_AUTHOR_SUFFIX = { music: "노래", drama: "연출", influencer: "운영", etc: "운영" };
+// 음악은 뒤에 아무것도 안 붙이고 이름만(2026-10-25, 예전엔 "OOO 노래").
+const COURSE_AUTHOR_SUFFIX = { music: "", drama: "연출", influencer: "운영", etc: "운영" };
 function courseAuthorLine(c) {
-  return `${c.author} ${COURSE_AUTHOR_SUFFIX[c.kind] || "지음"}`;
+  const suffix = COURSE_AUTHOR_SUFFIX[c.kind] ?? "지음";
+  return suffix ? `${c.author} ${suffix}` : c.author;
 }
 
 // 표지 썸네일 공통 속성 — 책등은 책 코스에만 있으니 다른 종류는 비율을 0으로
