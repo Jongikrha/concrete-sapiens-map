@@ -241,6 +241,9 @@ function openCourseChoice() {
   const panel = document.getElementById("course-choice-panel");
   const kindName = (c) => COURSE_KIND_LABELS[c.kind] || "발자취";
   const list = sortedCourseList();
+  // 조회수순에선 맨 앞도 강조하지 않고 모두 같은 크기 카드 한 묶음으로(2026-10-25)
+  const featured = courseListSort !== "views";
+  const restStart = featured ? 1 : 0;
   const sortBtn = (key, label) =>
     `<button type="button" class="course-list-sort-btn${courseListSort === key ? " is-active" : ""}" data-course-sort="${key}" aria-pressed="${courseListSort === key}">${label}</button>`;
   panel.innerHTML = `
@@ -254,13 +257,13 @@ function openCourseChoice() {
     </div>
     <div class="course-list-sort">${sortBtn("latest", "최신순")}<span aria-hidden="true">·</span>${sortBtn("views", "조회수순")}</div>
     <div class="course-choice-list">
-      ${list.map((c, i) => `${i === 1 ? `<div class="course-choice-rest">` : ""}
-        <div class="course-choice-item${i === 0 ? " course-choice-item--featured" : ""}">
+      ${list.map((c, i) => `${i === restStart ? `<div class="course-choice-rest">` : ""}
+        <div class="course-choice-item${featured && i === 0 ? " course-choice-item--featured" : ""}">
           <span class="course-choice-cover${courseCoverKindClass(c)}">
             ${c.coverKey ? `<span class="course-choice-cover-img" ${courseCoverSlotAttrs(c)}></span>` : `<span class="course-choice-cover-text">${escapeHtml(c.title)}</span>`}
           </span>
           <span class="course-choice-text">
-            ${i === 0 && courseListSort !== "views" ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
+            ${featured && i === 0 ? `<span class="course-choice-tag">✦ 지금 둘러보세요</span>` : ""}
             <span class="course-choice-title">${escapeHtml(c.title)}${Storage.getCourseNewPlaceIndices(c).length ? `<span class="course-choice-new">NEW</span>` : ""}</span>
             ${c.author ? `<span class="course-choice-author">${escapeHtml(courseAuthorLine(c))}</span>` : ""}
             ${c.description ? `<span class="course-choice-desc">${escapeHtml(c.description)}</span>` : ""}
@@ -270,7 +273,7 @@ function openCourseChoice() {
             <button type="button" class="course-choice-btn" data-course-index="${i}">둘러보기 <span aria-hidden="true">›</span></button>
             ${courseViewerLine(c)}
           </span>
-        </div>${i === list.length - 1 && i >= 1 ? `</div>` : ""}
+        </div>${i === list.length - 1 && i >= restStart ? `</div>` : ""}
       `).join("")}
     </div>
     <p class="course-list-footnote">다른 콘텐츠도 찾고 있어요. 함께 걷고 싶은 책이나 드라마가 있다면 <a href="mailto:hello@todoc.us">hello@todoc.us</a>로 알려주세요.</p>
