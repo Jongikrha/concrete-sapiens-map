@@ -400,6 +400,34 @@ const COURSE_DETAIL_BACK_ICON = `<svg viewBox="0 0 24 24" width="18" height="18"
 const COURSE_DETAIL_SHARE_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 15V4m0 0L8.2 7.8M12 4l3.8 3.8M6 11.5v6.2A1.8 1.8 0 0 0 7.8 19.5h8.4a1.8 1.8 0 0 0 1.8-1.8v-6.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
 const COURSE_DETAIL_CLOSE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>`;
 
+// 코스 바깥 링크(linkUrl) 버튼(2026-10-25) — 만든 사람 SNS로 바로 가게, 주소를 보고
+// 인스타그램·유튜브면 그 아이콘과 이름을, 그 밖이면 예전처럼 "더 알아보기"를 보인다.
+// 링크 칸은 하나라 스키마는 그대로.
+const COURSE_LINK_INSTAGRAM_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5" fill="none" stroke="currentColor" stroke-width="2.1" /><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2.1" /><circle cx="17.3" cy="6.7" r="1.3" fill="currentColor" /></svg>`;
+const COURSE_LINK_YOUTUBE_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M2.6 7.4c.2-1.5 1.3-2.6 2.8-2.7C7.4 4.5 9.7 4.4 12 4.4s4.6.1 6.6.3c1.5.1 2.6 1.2 2.8 2.7.2 1.5.3 3 .3 4.6s-.1 3.1-.3 4.6c-.2 1.5-1.3 2.6-2.8 2.7-2 .2-4.3.3-6.6.3s-4.6-.1-6.6-.3c-1.5-.1-2.6-1.2-2.8-2.7C2.4 15.1 2.3 13.6 2.3 12s.1-3.1.3-4.6zM10 8.8v6.4l5.6-3.2z" /></svg>`;
+
+function courseLinkInfo(url) {
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^(www\.|m\.)/, "");
+  } catch (e) {
+    // 주소 모양이 아니면 그냥 "더 알아보기"
+  }
+  if (host === "instagram.com" || host.endsWith(".instagram.com")) return { label: "인스타그램", icon: COURSE_LINK_INSTAGRAM_ICON };
+  if (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be") return { label: "유튜브", icon: COURSE_LINK_YOUTUBE_ICON };
+  return { label: "더 알아보기", icon: "" };
+}
+
+function courseLinkHtml(course, { pill = false } = {}) {
+  if (!course.linkUrl) return "";
+  const { label, icon } = courseLinkInfo(course.linkUrl);
+  const href = escapeHtml(course.linkUrl);
+  if (pill) {
+    return `<a class="course-card-link course-detail-ext-link${icon ? "" : " course-detail-ext-link--text"}" href="${href}" target="_blank" rel="noopener" aria-label="${label}">${icon}<span>${label}</span></a>`;
+  }
+  return `<a class="course-card-link course-card-ext-link" href="${href}" target="_blank" rel="noopener">${icon}<span>${label}${icon ? "" : " ›"}</span></a>`;
+}
+
 function openCourseDetail(course, { fromList = false } = {}) {
   const panel = document.getElementById("course-detail-panel");
   // 지난번에 걷다 만 코스면 보던 장소부터 이어 걷기(2026-10-16) — 바로
@@ -415,7 +443,7 @@ function openCourseDetail(course, { fromList = false } = {}) {
       <div class="course-detail-top">
         ${fromList ? `<button type="button" class="course-detail-back" id="course-detail-back" aria-label="목록으로">${COURSE_DETAIL_BACK_ICON}<span>목록</span></button>` : "<span></span>"}
         <div class="course-detail-top-actions">
-          ${course.linkUrl ? `<a class="course-card-link" href="${escapeHtml(course.linkUrl)}" target="_blank" rel="noopener">더 알아보기</a>` : ""}
+          ${courseLinkHtml(course, { pill: true })}
           ${isCoursePreview(course) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-detail-share">${COURSE_DETAIL_SHARE_ICON}<span>공유하기</span></button>`}
           <button type="button" class="composer-close-btn" id="course-detail-close" aria-label="닫기">${COURSE_DETAIL_CLOSE_ICON}</button>
         </div>
@@ -1067,7 +1095,7 @@ function renderCourseCard() {
         ${activeCourse.coverKey ? `<div class="course-intro-cover${courseCoverKindClass(activeCourse)}" ${courseCoverSlotAttrs(activeCourse)}></div>` : ""}
       </div>
       <div class="course-card-links">
-        ${activeCourse.linkUrl ? `<a class="course-card-link" href="${escapeHtml(activeCourse.linkUrl)}" target="_blank" rel="noopener">더 알아보기 ›</a>` : ""}
+        ${courseLinkHtml(activeCourse)}
         ${isCoursePreview(activeCourse) ? "" : `<button type="button" class="course-card-link course-card-share" id="course-card-share">공유하기</button>`}
       </div>
     `;

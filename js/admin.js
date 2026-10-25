@@ -1513,7 +1513,7 @@ const COURSE_GUIDE_FIELDS = [
   { key: "intro", name: "책·작품 소개", screens: ["detail"], text: "소개 화면의 본문이에요. 표지 아래 큰 글로 나와요." },
   { key: "cover", name: "표지", screens: ["list", "detail"], text: "목록 왼쪽 작은 표지, 소개 화면 맨 위의 큰 표지로 나와요." },
   { key: "logo", name: "로고", screens: ["place"], text: "따라 걷는 동안 지도 위 장소 핀(동그라미)에 들어가요." },
-  { key: "linkUrl", name: "바깥 링크", screens: ["detail"], text: "소개 화면 위쪽에 \"더 알아보기\" 버튼으로 나와요(이 예시엔 링크가 없어서 버튼 자리만 표시했어요)." },
+  { key: "linkUrl", name: "바깥 링크", screens: ["detail"], text: "소개 화면 위쪽에 버튼으로 나와요. 인스타그램·유튜브 주소면 그 아이콘과 이름으로, 그 밖이면 \"더 알아보기\"로 보여요(이 예시엔 링크가 없어서 버튼 자리만 표시했어요)." },
   { key: "slug", name: "영문 식별자", screens: [], text: "화면에는 안 나오고 공유 링크 주소 끝에 붙어요. 예: concretesapiens.com/?course=concrete-sapiens" },
   { key: "photo", name: "장소 사진", screens: ["place"], text: "장소 카드 맨 위에 가로로 납작하게(16:9) 잘려 나와요. 여러 장이면 옆으로 넘겨 봐요." },
   { key: "photoMeta", name: "사진 제목·출처", screens: ["place"], text: "사진 바로 아래 작은 글씨로 나와요. 출처는 \"출처 | 서울기록원\"처럼 보여요." },
@@ -1722,7 +1722,7 @@ function courseFormHtml() {
       <p class="field-hint">소개 화면 제목 바로 아래, 코스 목록에도 보여요.</p>
       <label>책·작품 소개<textarea name="intro" id="course-intro-input" rows="4" maxlength="${COURSE_INTRO_MAX}" placeholder="소개 화면 본문 — 최대 ${COURSE_INTRO_MAX}자">${v("intro")}</textarea></label>
       <p class="field-hint course-intro-count" id="course-intro-count"></p>
-      <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="책 소개/구매 페이지 등" /></label>
+      <label>바깥 링크(선택)<input type="url" name="linkUrl" value="${v("linkUrl")}" placeholder="만든 사람 인스타그램·유튜브, 책 소개 페이지 등" /></label>
       <label>로고(선택)<input type="file" name="logo" id="course-logo-input" accept="image/*" /></label>
       <div class="course-logo-preview" id="course-logo-preview"${c?.logoKey ? ` data-photo-key="${escapeHtml(c.logoKey)}"` : ""}></div>
       ${c?.logoKey ? `<label class="course-photo-remove"><input type="checkbox" name="removeLogo" /> 로고 빼기</label>` : ""}

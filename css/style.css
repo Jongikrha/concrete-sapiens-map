@@ -5793,6 +5793,12 @@ button.story-place-line:hover {
 }
 
 /* 소개 카드의 "더 알아보기 ›" + "공유하기"를 한 줄에 */
+.course-card-ext-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .course-card-links {
   display: flex;
   flex-wrap: wrap;
@@ -6428,6 +6434,7 @@ button.story-place-line:hover {
 /* 윗줄 버튼(2026-10-21) — "목록"·"공유하기" 알약, ✕ 회색 원. 높이 36px로 맞춰
    폰에서도 누르기 쉽게 한다 */
 .course-detail-back,
+.course-detail-ext-link,
 .course-detail-top-actions .course-card-share {
   display: inline-flex;
   align-items: center;
@@ -6451,6 +6458,33 @@ button.story-place-line:hover {
 
 .course-detail-back:hover {
   background: #E2E1DD;
+}
+
+/* 만든 사람 SNS 링크(2026-10-25) — "목록"과 같은 회색 알약, 인스타그램·유튜브는
+   아이콘을 붙인다. 좁은 폰에선 아이콘만 남겨 윗줄이 넘치지 않게 */
+.course-detail-ext-link {
+  padding-left: 12px;
+  background: #ECEBE8;
+  color: var(--cs-text-main);
+  text-decoration: none;
+}
+
+.course-detail-ext-link--text {
+  padding-left: 16px;
+}
+
+.course-detail-ext-link:hover {
+  background: #E2E1DD;
+}
+
+@media (max-width: 380px) {
+  .course-detail-ext-link:not(.course-detail-ext-link--text) {
+    padding: 0 9px;
+  }
+
+  .course-detail-ext-link:not(.course-detail-ext-link--text) span {
+    display: none;
+  }
 }
 
 .course-detail-top-actions .course-card-share {
