@@ -246,6 +246,13 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value;
 
+  // 메인 지도와 같은 도메인이라 그쪽에 관리자 아닌 계정으로 로그인돼 있으면 signIn이
+  // UserAlreadyAuthenticatedException으로 막힌다(2026-10-26, concretesapiens.com) — 먼저 끊는다.
+  try {
+    await getCurrentUser();
+    await signOut();
+  } catch (e) {}
+
   try {
     const result = await signIn({ username: email, password });
     if (!result.isSignedIn) {
