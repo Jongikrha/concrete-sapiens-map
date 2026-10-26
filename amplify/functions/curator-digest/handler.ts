@@ -50,30 +50,59 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 }
 
-type Row = { title: string; slug: string; yesterday: number; total: number };
+// 메일 막대그래프 기간 — 어제까지 최근 7일.
+const GRAPH_DAYS = 7;
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const BAR_MAX_PX = 48;
+
+// daily: 오래된 날 → 어제 순서의 GRAPH_DAYS개 조회 수(마지막이 어제).
+type Row = { title: string; slug: string; daily: number[]; total: number };
+
+/** day(YYYY-MM-DD)에서 n일 전 날짜. */
+const shiftDay = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) - n * 86400000).toISOString().slice(0, 10);
+
+// 최근 7일 막대 — 메일 앱(Gmail·네이버)은 SVG·스크립트를 지우거나 막아서
+// 표 칸 높이로 막대를 그린다. 어제 막대만 주황, 나머지는 회청색.
+function barGraph(day: string, daily: number[]): string {
+  const max = Math.max(...daily, 1);
+  const cell = (value: number, i: number) => {
+    const isYesterday = i === daily.length - 1;
+    const height = value ? Math.max(4, Math.round((value / max) * BAR_MAX_PX)) : 2;
+    const color = value ? (isYesterday ? '#e8590c' : '#b8c2d0') : '#eee';
+    const weekday = WEEKDAYS[new Date(`${shiftDay(day, daily.length - 1 - i)}T00:00:00Z`).getUTCDay()];
+    return `<td valign="bottom" align="center" style="padding:0 3px;width:14%">
+      <div style="font-size:11px;color:${isYesterday ? '#e8590c' : '#888'};line-height:1.2">${value || ''}</div>
+      <div style="height:${height}px;background:${color};border-radius:3px 3px 0 0;font-size:0;line-height:0">&nbsp;</div>
+      <div style="font-size:11px;color:${isYesterday ? '#222' : '#aaa'};padding-top:3px">${isYesterday ? '어제' : weekday}</div>
+    </td>`;
+  };
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:10px;border-collapse:collapse"><tr style="height:${BAR_MAX_PX + 32}px">${daily.map(cell).join('')}</tr></table>`;
+}
 
 /** 작가 한 명의 메일 — 로컬 시험 발송에서도 같은 모양을 쓰려고 따로 뺐다. */
 export function buildMail(day: string, rows: Row[]) {
-  const yesterdayTotal = rows.reduce((sum, r) => sum + r.yesterday, 0);
+  const yesterday = (r: Row) => r.daily[r.daily.length - 1];
+  const yesterdayTotal = rows.reduce((sum, r) => sum + yesterday(r), 0);
   const date = `${Number(day.slice(5, 7))}월 ${Number(day.slice(8, 10))}일`;
   const subject = `[콘크리트 사피엔스] 어제 내 발자취 조회 ${yesterdayTotal}회 — ${date}`;
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;background:#fafafa">
+  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"></head><body style="margin:0;background:#fafafa">
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;max-width:520px;margin:0 auto;padding:32px 20px;color:#222;line-height:1.6">
 <h1 style="font-size:19px;margin:0 0 16px">어제(${date}) 내 발자취를 ${yesterdayTotal}번 봤어요</h1>
 ${rows
   .map(
     (r) => `<div style="border:1px solid #eee;border-radius:10px;padding:12px 14px;margin:0 0 8px;font-size:14px;background:#fff">
   <a href="${SITE_URL}/?course=${encodeURIComponent(r.slug)}" style="color:#222;font-weight:600;text-decoration:none">${escapeHtml(r.title)}</a><br>
-  <span>어제 조회 <b style="color:#e8590c">${r.yesterday}</b> · 총 조회 <b>${r.total}</b></span>
+  <span>어제 조회 <b style="color:#e8590c">${yesterday(r)}</b> · 최근 7일 <b>${r.daily.reduce((a, b) => a + b, 0)}</b> · 총 조회 <b>${r.total}</b></span>
+  ${barGraph(day, r.daily)}
 </div>`,
   )
   .join('')}
-<p style="font-size:12px;color:#888;margin:16px 0 0">조회는 발자취에 들어가 장소 카드를 한 장 이상 본 횟수예요(같은 사람이 다시 걸어도 한 번 더 세요).<br>메일을 그만 받고 싶으면 이 메일에 회신해 주세요.</p>
+<p style="font-size:12px;color:#888;margin:16px 0 0">조회는 발자취에 들어가 장소 카드를 한 장 이상 본 횟수예요.<br>메일을 그만 받고 싶으면 이 메일에 회신해 주세요.</p>
 </div></body></html>`;
   const text = [
     `어제(${date}) 내 발자취 조회 ${yesterdayTotal}회`,
     '',
-    ...rows.map((r) => `- ${r.title}: 어제 조회 ${r.yesterday} · 총 조회 ${r.total}`),
+    ...rows.map((r) => `- ${r.title}: 어제 조회 ${yesterday(r)} · 최근 7일 ${r.daily.join('/')} · 총 조회 ${r.total}`),
     '',
     '메일을 그만 받고 싶으면 이 메일에 회신해 주세요.',
   ].join('\n');
@@ -101,11 +130,15 @@ export const handler = async (event: { day?: string; force?: boolean; to?: strin
   ]);
 
   const totalById = new Map(viewCounts.map((v) => [v.courseId, v.count || 0]));
-  const yesterdayBySlug = new Map<string, number>();
+  // 코스(slug)별 최근 7일 하루치 조회 — 인덱스 0이 가장 오래된 날, 마지막이 어제.
+  const days = Array.from({ length: GRAPH_DAYS }, (_, i) => shiftDay(day, GRAPH_DAYS - 1 - i));
+  const dailyBySlug = new Map<string, number[]>();
   events.forEach((e) => {
-    if (!e.createdAt || kstDay(e.createdAt) !== day) return;
+    const i = e.createdAt ? days.indexOf(kstDay(e.createdAt)) : -1;
+    if (i < 0) return;
     const slug = e.type.slice(VIEW_EVENT_PREFIX.length);
-    yesterdayBySlug.set(slug, (yesterdayBySlug.get(slug) ?? 0) + 1);
+    if (!dailyBySlug.has(slug)) dailyBySlug.set(slug, Array(GRAPH_DAYS).fill(0));
+    (dailyBySlug.get(slug) as number[])[i]++;
   });
 
   let sent = 0;
@@ -114,9 +147,9 @@ export const handler = async (event: { day?: string; force?: boolean; to?: strin
     if (event.to && curator.email !== event.to) continue;
     const rows = courses
       .filter((c) => c.authorId === curator.userId)
-      .map((c) => ({ title: c.title, slug: c.slug, yesterday: yesterdayBySlug.get(c.slug) ?? 0, total: totalById.get(c.id) ?? 0 }))
-      .sort((a, b) => b.yesterday - a.yesterday || b.total - a.total);
-    const yesterdayTotal = rows.reduce((sum, r) => sum + r.yesterday, 0);
+      .map((c) => ({ title: c.title, slug: c.slug, daily: dailyBySlug.get(c.slug) ?? Array(GRAPH_DAYS).fill(0), total: totalById.get(c.id) ?? 0 }))
+      .sort((a, b) => b.daily[GRAPH_DAYS - 1] - a.daily[GRAPH_DAYS - 1] || b.total - a.total);
+    const yesterdayTotal = rows.reduce((sum, r) => sum + r.daily[GRAPH_DAYS - 1], 0);
     if (!rows.length || (!yesterdayTotal && !event.force)) {
       skipped.push(curator.email);
       continue;
