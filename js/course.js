@@ -350,11 +350,12 @@ function courseProgressNote(c) {
   return seenCount > 0 ? ` · ${seenCount}곳 둘러봄` : "";
 }
 
-const COURSE_KIND_LABELS = { book: "책", person: "인물", influencer: "인플루언서", drama: "드라마·영화", music: "음악", org: "단체" };
+const COURSE_KIND_LABELS = { book: "책", person: "인물", influencer: "크리에이터", drama: "드라마·영화", music: "음악", org: "단체" };
 
 // 코스 목록 제목 아래 "OOO 지음" — 종류에 따라 붙는 말이 다르다(2026-10-16).
 // 음악은 뒤에 아무것도 안 붙이고 이름만(2026-10-25, 예전엔 "OOO 노래").
-const COURSE_AUTHOR_SUFFIX = { music: "", drama: "연출", influencer: "운영", etc: "운영" };
+// 크리에이터(값은 예전 이름 그대로 influencer)도 이름만(2026-10-26, 예전엔 "OOO 운영").
+const COURSE_AUTHOR_SUFFIX = { music: "", drama: "연출", influencer: "", etc: "운영" };
 function courseAuthorLine(c) {
   const suffix = COURSE_AUTHOR_SUFFIX[c.kind] ?? "지음";
   return suffix ? `${c.author} ${suffix}` : c.author;
