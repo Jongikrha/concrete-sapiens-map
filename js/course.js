@@ -1334,8 +1334,8 @@ function smartQuotes(text) {
 
 // 세로(9:16) 사진 지원(2026-10-25) — 사진 칸 모양은 코스 단위 설정(Course.photoRatio,
 // "portrait"이면 키 큰 칸, 비었거나 그 밖이면 기존 16:9). 장소마다 모양이 달라
-// 카드 높이·핀 위치가 출렁이지 않는다. 칸과 모양이 다른 사진은 잘라내지 않고
-// 통째로 보여주며 남는 자리는 같은 사진을 흐리게 깐다.
+// 카드 높이·핀 위치가 출렁이지 않는다. 사진은 어느 모양이든 칸을 꽉 채워 자르고
+// 보일 부분은 어드민에서 끌어 맞춘다(전체는 탭해서 크게 본다).
 function isCoursePhotoPortrait(course) {
   return !!course && course.photoRatio === "portrait";
 }
@@ -1456,22 +1456,11 @@ function renderCoursePlacePhoto(place) {
       img.className = "recall-card-photo-img";
       img.alt = "";
       img.src = url;
-      // 어드민에서 끌어서 정한 보일 부분(칸과 같은 모양일 때만 잘라 쓴다)
+      // 어드민에서 끌어서 정한 보일 부분 — 칸 모양(코스 설정)에 맞춰 잘라 쓴다.
+      // 전체 모습은 사진을 탭하면 크게 볼 수 있다.
       img.style.objectPosition = `${photo.focusX}% ${photo.focusY}%`;
       slides[i].replaceChildren(img);
       slides[i].dataset.url = url;
-      const slotPortrait = isCoursePhotoPortrait(activeCourse);
-      const settle = () => {
-        // 칸과 같은 모양의 사진은 꽉 채워 자르고(세로 칸의 세로 사진도 양옆이
-        // 비지 않게 확대, 2026-10-25), 모양이 다른 사진만 통째로 + 흐린 배경
-        const isPortrait = img.naturalHeight > img.naturalWidth;
-        if (isPortrait !== slotPortrait) {
-          slides[i].classList.add("course-photo-slide--contain");
-          slides[i].style.setProperty("--photo-bg", `url("${url}")`);
-        }
-      };
-      if (img.complete && img.naturalWidth) settle();
-      else img.addEventListener("load", settle, { once: true });
       img.addEventListener("click", () => openCoursePhotoViewer(url));
     });
   });

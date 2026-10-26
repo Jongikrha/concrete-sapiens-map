@@ -762,10 +762,9 @@ body {
   user-select: none;
 }
 
-.course-place-photo-crop.is-portrait {
-  aspect-ratio: 9 / 16;
-  width: 158px;
-  cursor: default;
+.course-place-photo-crop--portrait {
+  aspect-ratio: 4 / 5;
+  width: 224px;
 }
 
 .course-place-photo-crop.dragging {

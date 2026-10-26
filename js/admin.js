@@ -1786,7 +1786,7 @@ function courseFormHtml() {
         <option value="landscape"${c?.photoRatio === "portrait" ? "" : " selected"}>가로 (16:9, 기본)</option>
         <option value="portrait"${c?.photoRatio === "portrait" ? " selected" : ""}>세로 (9:16 사진 위주)</option>
       </select></label>
-      <p class="field-hint">이 발자취의 모든 장소 카드에 같은 모양으로 적용돼요. 모양이 다른 사진은 잘리지 않고 통째로 보여요(남는 자리는 흐리게). 사진을 탭하면 크게 볼 수 있어요.</p>
+      <p class="field-hint">이 발자취의 모든 장소 카드와 사진 올리는 칸에 같은 모양으로 적용돼요. 보일 부분은 장소 사진에서 끌어 맞추고, 카드에서 사진을 탭하면 전체를 크게 볼 수 있어요.</p>
       ${sessionRole === "curator" ? "" : `<label>목록 고정(1 이상이면 맨 앞에 고정, 작을수록 앞 · 0이면 조회수 많은 순)<input type="number" name="sortOrder" min="0" value="${c?.sortOrder ?? 0}" /></label>`}
       <div class="admin-card-actions">
         <button type="submit" class="btn-restore">${c ? "수정 저장" : "코스 만들기"}</button>
@@ -1919,12 +1919,15 @@ function getPlacePhotoSlots() {
 // 제목/출처를 따로 단다(카드에서 넘길 때 같이 바뀐다).
 function placePhotoFieldHtml() {
   const slots = getPlacePhotoSlots();
+  // 미리보기 칸 모양은 코스 설정(사진 모양)을 따른다 — 카드에서 실제로 보일 모양 그대로
+  const photoCourse = courses && courses.find((c) => c.id === selectedCourseId);
+  const cropClass = photoCourse && photoCourse.photoRatio === "portrait" ? " course-place-photo-crop--portrait" : "";
   const slotHtml = (slot, i) => {
     const focusAttrs = `data-focus-x="${slot.focus.x}" data-focus-y="${slot.focus.y}"`;
     if (slot.file && !slot.previewUrl) slot.previewUrl = URL.createObjectURL(slot.file);
     const preview = slot.file
-      ? `<div class="admin-card-photo course-place-photo-crop" data-slot="${i}" ${focusAttrs}><img src="${slot.previewUrl}" alt="" style="object-position:${slot.focus.x}% ${slot.focus.y}%" /></div>`
-      : `<div class="admin-card-photo course-place-photo-crop" data-slot="${i}" data-photo-key="${escapeHtml(slot.key)}" ${focusAttrs}></div>`;
+      ? `<div class="admin-card-photo course-place-photo-crop${cropClass}" data-slot="${i}" ${focusAttrs}><img src="${slot.previewUrl}" alt="" style="object-position:${slot.focus.x}% ${slot.focus.y}%" /></div>`
+      : `<div class="admin-card-photo course-place-photo-crop${cropClass}" data-slot="${i}" data-photo-key="${escapeHtml(slot.key)}" ${focusAttrs}></div>`;
     return `
       <div class="course-place-photo-slot">
         <div class="course-place-photo-slot-head">
@@ -1946,7 +1949,7 @@ function placePhotoFieldHtml() {
       ${slots.length < COURSE_PLACE_PHOTO_MAX ? `
         <label>사진 추가(선택, ${slots.length} / ${COURSE_PLACE_PHOTO_MAX}장)<input type="file" id="place-photo-input" accept="image/*" /></label>
       ` : ""}
-      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. 발자취 설정에서 사진 모양을 "세로"로 두면 칸이 키 큰 모양이 되고, 칸과 모양이 다른 사진은 잘리지 않고 통째로 보여요. ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
+      <p class="field-hint">카드에 가로로 납작하게(16:9) 잘려 보이고, 여러 장이면 옆으로 넘겨 봐요. 1번이 대표 사진이에요. 발자취 설정에서 사진 모양을 "세로"로 두면 이 칸도 키 큰 모양이 돼요(카드에서도 같은 모양). ${slots.length ? "<b>사진을 위아래(좌우)로 끌어서</b> 보일 부분을 맞춰주세요. " : ""}출처는 "출처 | 군산시"처럼 보이니 이름만 적어주세요. 직접 찍었거나 사용 허락을 받은 사진만 올려주세요.</p>
     </div>
   `;
 }
@@ -1992,14 +1995,9 @@ function bindPlacePhotoCrop() {
   document.querySelectorAll(".course-place-photo-crop[data-slot]").forEach((box) => {
     const slot = getPlacePhotoSlots()[Number(box.dataset.slot)];
     let drag = null;
-    // 세로 사진은 카드에서 잘리지 않고 통째로 보이므로 미리보기도 그대로 보여준다.
-    box.addEventListener("load", (e) => {
-      const im = e.target;
-      if (im && im.tagName === "IMG") box.classList.toggle("is-portrait", im.naturalHeight > im.naturalWidth);
-    }, true);
     box.addEventListener("pointerdown", (e) => {
       const img = box.querySelector("img");
-      if (!img || !img.naturalWidth || box.classList.contains("is-portrait")) return;
+      if (!img || !img.naturalWidth) return;
       const scale = Math.max(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight);
       const overflowX = img.naturalWidth * scale - box.clientWidth;
       const overflowY = img.naturalHeight * scale - box.clientHeight;

@@ -5458,41 +5458,13 @@ button.story-place-line:hover {
   scroll-snap-stop: always;
 }
 
-/* 세로(9:16) 사진(2026-10-25) — 대표 사진이 세로면 키 큰 칸. 폰 화면을 다 먹지
-   않게 높이에 상한을 둔다. 칸과 모양이 다른 사진(--contain)은 통째로 보여주고
-   남는 자리엔 같은 사진을 흐리게 깐다. */
-/* 화면 높이 비율(38dvh)로 잡았더니 폰에선 가로가 더 긴 칸이 돼 세로 사진이 절반만
-   보였다 — 폭 기준 3:4로 고정하고(2026-10-25), 카드 높이의 70%를 넘지 않게 해서
-   작은 폰에서도 사진 아래 글 첫 줄은 보이게 한다(카드 높이는 아래 .card-frame 규칙). */
+/* 세로 사진 코스(2026-10-25, Course.photoRatio "portrait") — 키 큰 칸. 폰 화면을
+   다 먹지 않게 폭 대비 4:5에 높이 상한을 둔다. 사진은 칸을 꽉 채워 자르고
+   보일 부분은 어드민에서 끌어 맞춘다. 탭하면 전체를 크게 본다. */
 .course-card .recall-card-photo.course-photo-carousel--portrait {
-  aspect-ratio: 3 / 4;
-  max-height: calc((100vh - 162px) * 0.7);
-  max-height: calc((100dvh - 162px) * 0.7);
-}
-
-@media (max-width: 767px) {
-  .course-card .recall-card-photo.course-photo-carousel--portrait {
-    max-height: calc((100vh - 252px) * 0.7);
-    max-height: calc((100dvh - 252px) * 0.7);
-  }
-}
-
-.course-photo-slide {
-  position: relative;
-  overflow: hidden;
-}
-
-.course-photo-slide--contain::before {
-  content: "";
-  position: absolute;
-  inset: -24px;
-  background: var(--photo-bg) center / cover no-repeat;
-  filter: blur(18px) brightness(0.8);
-}
-
-.course-photo-slide--contain .recall-card-photo-img {
-  position: relative;
-  object-fit: contain;
+  aspect-ratio: 4 / 5;
+  max-height: 52vh;
+  max-height: 52dvh;
 }
 
 .course-photo-slide .recall-card-photo-img {
