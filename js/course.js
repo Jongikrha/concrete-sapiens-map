@@ -1024,6 +1024,9 @@ function showCourseStep(index, { deferMusic = false } = {}) {
     if (!courseViewCounted && !isCoursePreview(activeCourse)) {
       courseViewCounted = true;
       Storage.recordCourseView(activeCourse.id);
+      // 작가 아침 메일의 "어제 조회"용 하루치 기록(2026-10-26, amplify/functions/curator-digest) —
+      // CourseViewCount는 누적 숫자만 있어 날짜별로 셀 수 없다.
+      Storage.logEvent(`course_viewed:${activeCourse.slug}`);
     }
     if (deferMusic) {
       setTimeout(() => {

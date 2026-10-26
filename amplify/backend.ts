@@ -8,6 +8,7 @@ import { storage } from './storage/resource';
 import { adminUsersFn } from './functions/admin-users/resource';
 import { reactionDigestFn, emailUnsubscribeFn } from './functions/reaction-digest/resource';
 import { visitDigestFn } from './functions/visit-digest/resource';
+import { curatorDigestFn } from './functions/curator-digest/resource';
 
 const backend = defineBackend({
   auth,
@@ -17,6 +18,7 @@ const backend = defineBackend({
   reactionDigestFn,
   emailUnsubscribeFn,
   visitDigestFn,
+  curatorDigestFn,
 });
 
 // 어드민 회원관리(adminListUsers 등)가 쓰는 Lambda — Cognito Admin API 호출용
@@ -70,6 +72,25 @@ for (const [env, model] of [
   tables[model].grantReadData(visitDigestLambda);
   backend.visitDigestFn.addEnvironment(env, tables[model].tableName);
 }
+
+// 작가용 "어제 내 발자취 조회수" 메일(2026-10-26, amplify/functions/curator-digest) —
+// 코스·조회수·조회 이벤트를 읽고, 받는 사람은 Curators 그룹에서 찾는다.
+const curatorDigestLambda = backend.curatorDigestFn.resources.lambda;
+for (const [env, model] of [
+  ['COURSE_TABLE', 'Course'],
+  ['COURSE_VIEW_COUNT_TABLE', 'CourseViewCount'],
+  ['APP_EVENT_TABLE', 'AppEvent'],
+] as const) {
+  tables[model].grantReadData(curatorDigestLambda);
+  backend.curatorDigestFn.addEnvironment(env, tables[model].tableName);
+}
+backend.curatorDigestFn.addEnvironment('USER_POOL_ID', backend.auth.resources.userPool.userPoolId);
+curatorDigestLambda.role?.addToPrincipalPolicy(
+  new PolicyStatement({
+    actions: ['cognito-idp:ListUsersInGroup'],
+    resources: [backend.auth.resources.userPool.userPoolArn],
+  })
+);
 
 // groups: ['Admins']를 쓰면 Identity Pool의 역할 매핑이 자동으로 "Token" 방식이
 // 된다 — 로그인 토큰에 그룹 역할이 실려 있으면 IAM 인증(js/backend.js의 기본
