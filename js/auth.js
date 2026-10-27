@@ -381,22 +381,28 @@ function renderAuthPanel() {
   const errorHtml = authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : "";
 
   if (authMode === "signup") {
-    const signupHeading = authReason === "publish"
-      ? `<h2 class="composer-title">이 기억을 지도에 남기려면<br />계정이 필요해요</h2>
-      <p class="field-hint">적어두신 기억은 그대로 있어요. 가입하면 바로 남겨져요.</p>`
-      : `<h2 class="composer-title">기억을 계속 남겨두려면<br />계정을 만들어주세요</h2>`;
+    // 가입 화면 개편(2026-10-27) — "인증 없이 바로 가입"을 제목으로. 가입 즉시
+    // 완료되는 건 pre-signup 람다가 autoConfirmUser를 켜 두었기 때문(이메일
+    // 인증 코드 단계가 없다). "10초" 같은 시간 약속은 못 지켜서 쓰지 않는다.
+    // 비밀번호 확인 칸은 눈 모양 버튼(입력 내용 보기)으로 대신해 뺐다.
+    const signupSub = authReason === "publish"
+      ? `이 기억을 지도에 남기려면 계정이 필요해요.<br />적어두신 기억은 그대로 있어요. 가입하면 바로 남겨져요.`
+      : `기억을 계속 남겨두려면 계정을 만들어주세요.`;
+    const eyeIcon = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>`;
     panel.innerHTML = `
-      ${signupHeading}
+      <h2 class="auth-hero">인증 없이<br /><em>바로 회원가입</em></h2>
+      <p class="auth-hero-sub">${signupSub}</p>
       ${kakaoButtonHtml()}
       <label class="field-label">이메일</label>
       <input type="email" id="auth-email" class="input-field" placeholder="you@example.com" value="${escapeHtml(authEmailValue)}" />
       <label class="field-label">비밀번호</label>
-      <input type="password" id="auth-password" class="input-field" placeholder="8자 이상" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
-      <label class="field-label">비밀번호 확인</label>
-      <input type="password" id="auth-password-confirm" class="input-field" placeholder="비밀번호를 다시 입력해주세요" maxlength="128" value="${escapeHtml(authPasswordConfirmValue)}" />
-      <p class="field-hint">8자 이상으로 만들어주세요.</p>
+      <div class="auth-pw-wrap">
+        <input type="password" id="auth-password" class="input-field" placeholder="8자 이상" maxlength="128" value="${escapeHtml(authPasswordValue)}" />
+        <button type="button" class="auth-pw-toggle" id="auth-pw-toggle" aria-label="비밀번호 보기" aria-pressed="false">${eyeIcon}</button>
+      </div>
+      <p class="field-hint">메일 주소를 정확히 입력해주세요. 비밀번호를 잊었을 때 이 주소로 안내해드려요.</p>
       ${errorHtml}
-      <button class="btn-primary" id="auth-submit">계정 만들기</button>
+      <button class="btn-primary" id="auth-submit">이메일로 가입하기</button>
       <button class="btn-secondary" id="auth-cancel">취소</button>
       <p class="auth-switch">이미 계정이 있나요? <button class="auth-switch-link" id="auth-goto-login">로그인</button></p>
       <p class="field-hint">
@@ -404,6 +410,12 @@ function renderAuthPanel() {
         <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
       </p>
     `;
+    panel.querySelector("#auth-pw-toggle").onclick = (e) => {
+      const input = panel.querySelector("#auth-password");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      e.currentTarget.setAttribute("aria-pressed", show ? "true" : "false");
+    };
     panel.querySelector("#auth-submit").onclick = handleSignupSubmit;
     panel.querySelector("#auth-goto-login").onclick = () => {
       authMode = "login";
@@ -508,7 +520,9 @@ function renderAuthPanel() {
 async function handleSignupSubmit() {
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
-  const passwordConfirm = document.getElementById("auth-password-confirm").value;
+  // 확인 칸은 없앴다(눈 모양 버튼으로 대신) — 칸이 남아 있는 화면이면 예전처럼 비교한다.
+  const confirmEl = document.getElementById("auth-password-confirm");
+  const passwordConfirm = confirmEl ? confirmEl.value : password;
   authEmailValue = email;
   authPasswordValue = password;
   authPasswordConfirmValue = passwordConfirm;
