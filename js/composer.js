@@ -826,6 +826,7 @@ function openComposerWizard(pin) {
     year: "",
     month: "",
     content: pin.prefillContent || "",
+    memoryPrompt: null,
     tagChips: [],
     youtubeUrl: "",
     musicArtist: "",
@@ -983,17 +984,60 @@ function openComposerWizard(pin) {
     });
   }
 
+  // 빈 입력창 대신 질문부터(2026-10-27) — 사람들이 기억을 잘 안 쓰는 이유가
+  // "뭘 써야 할지 모르겠다"일 거라는 가설. 칩을 하나 고르면 그 질문이 입력창
+  // 위에 뜨고 입력창 안내문도 질문으로 바뀐다. 안 골라도 되고(건너뛰기), 고른
+  // 주제는 어떤 질문이 글로 이어지는지 보려고 이벤트로만 센다(글에는 안 남긴다).
+  const MEMORY_PROMPTS = [
+    { id: "childhood", label: "어린 시절 동네", question: "어릴 때 살던 동네, 가장 먼저 떠오르는 장면은 무엇인가요?" },
+    { id: "love", label: "사랑했던 사람과", question: "그 사람과 이곳에서 있었던 일을 하나만 떠올려 볼까요?" },
+    { id: "vanished", label: "사라진 장소", question: "지금은 사라진 이곳에서 가장 그리운 것은 무엇인가요?" },
+    { id: "message", label: "누군가에게 남기는 말", question: "이곳에서 만나고 싶은 사람에게 한마디 남겨볼까요?" },
+  ];
+  const MEMORY_DEFAULT_PLACEHOLDER = "첫사랑, 추억, 직장생활, 없어진 곳에 대한 그리움 등\n당신의 기억을 자유롭게 작성해주세요.";
+
+  function memoryPromptById(id) {
+    return MEMORY_PROMPTS.find((m) => m.id === id) || null;
+  }
+
   function renderMemoryStepHtml() {
+    const picked = memoryPromptById(state.memoryPrompt);
     return `
-      <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="첫사랑, 추억, 직장생활, 없어진 곳에 대한 그리움 등
-당신의 기억을 자유롭게 작성해주세요.">${escapeHtml(state.content)}</textarea>
+      <div class="memory-prompts" role="group" aria-label="무엇부터 적을까요?">
+        <p class="memory-prompts-title">무엇부터 적어볼까요? <span>(안 골라도 돼요)</span></p>
+        <div class="memory-prompts-chips">
+          ${MEMORY_PROMPTS.map((m) => `<button type="button" class="memory-prompt-chip${picked && picked.id === m.id ? " memory-prompt-chip--active" : ""}" data-prompt="${m.id}" aria-pressed="${picked && picked.id === m.id ? "true" : "false"}">${escapeHtml(m.label)}</button>`).join("")}
+        </div>
+        <p class="memory-prompt-question${picked ? "" : " hidden"}" id="memory-prompt-question">${picked ? escapeHtml(picked.question) : ""}</p>
+      </div>
+      <textarea id="input-content" class="input-field textarea" maxlength="${CONFIG.MAX_CONTENT_LENGTH}" placeholder="${escapeHtml(picked ? picked.question + "\n짧게 한두 문장도 좋아요." : MEMORY_DEFAULT_PLACEHOLDER)}">${escapeHtml(state.content)}</textarea>
       <div class="char-count"><span id="char-count-num">${state.content.length}</span> / ${CONFIG.MAX_CONTENT_LENGTH}</div>
     `;
   }
 
   function wireMemoryStep() {
-    document.getElementById("input-content").addEventListener("input", (e) => {
+    const textarea = document.getElementById("input-content");
+    textarea.addEventListener("input", (e) => {
       document.getElementById("char-count-num").textContent = e.target.value.length;
+    });
+    const questionEl = document.getElementById("memory-prompt-question");
+    const chips = [...document.querySelectorAll(".memory-prompt-chip")];
+    chips.forEach((chip) => {
+      chip.onclick = () => {
+        // 같은 칩을 다시 누르면 선택을 푼다
+        const next = state.memoryPrompt === chip.dataset.prompt ? null : chip.dataset.prompt;
+        state.memoryPrompt = next;
+        const picked = memoryPromptById(next);
+        chips.forEach((c) => {
+          const on = !!picked && c.dataset.prompt === picked.id;
+          c.classList.toggle("memory-prompt-chip--active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        questionEl.textContent = picked ? picked.question : "";
+        questionEl.classList.toggle("hidden", !picked);
+        textarea.placeholder = picked ? picked.question + "\n짧게 한두 문장도 좋아요." : MEMORY_DEFAULT_PLACEHOLDER;
+        if (picked) Storage.logEvent(`memory_prompt:${picked.id}`);
+      };
     });
   }
 
@@ -1484,6 +1528,7 @@ function openComposerWizard(pin) {
   }
 
   function publishStory() {
+    if (state.memoryPrompt) Storage.logEvent(`publish_prompt:${state.memoryPrompt}`);
     prefetchMailOptOut();
     const sharedFields = buildSharedFieldsFromState();
     postedStory = {
