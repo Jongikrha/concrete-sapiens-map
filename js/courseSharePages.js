@@ -8,5 +8,6 @@ const COURSE_SHARE_PAGES = {
   "jeju_1960": "4ceedb14",
   "music": "29f39672",
   "Tak": "711a2f29",
-  "Jamju5": "8ea769a5"
+  "Jamju5": "8ea769a5",
+  "Hosoobi": "7cfc7787"
 };
