@@ -948,15 +948,15 @@ test("getCourseProgress: 본 장소의 다음부터 이어 걷기, 다 보면 �
   const resume = (c) => Storage.getCourseProgress(c).resumeIndex;
   assert.equal(resume(course), null);
   Storage.markCoursePlaceSeen("c1", "a");
-  // 첫 장소만 보고 나갔으면 이어 걸을 게 없다
-  assert.equal(resume(course), null);
+  // 첫 장소만 보고 나가도 다음 장소(b, index 1)부터
+  assert.equal(resume(course), 1);
   Storage.markCoursePlaceSeen("c1", "b");
   // b(2번째)까지 봤으면 c(3번째, index 2)부터
   assert.equal(resume(course), 2);
   assert.equal(Storage.getCourseProgress(course).seenCount, 2);
   assert.equal(Storage.getCourseProgress(course).finished, false);
   // 어드민이 순서를 바꿔도 본 장소의 다음으로
-  assert.equal(resume({ id: "c1", places: [{ id: "b" }, { id: "c" }, { id: "a" }, { id: "d" }] }), null);
+  assert.equal(resume({ id: "c1", places: [{ id: "b" }, { id: "c" }, { id: "a" }, { id: "d" }] }), 1);
   assert.equal(resume({ id: "c1", places: [{ id: "c" }, { id: "a" }, { id: "b" }, { id: "d" }] }), 3);
   // 그 장소가 지워졌으면 처음부터
   assert.equal(resume({ id: "c1", places: [{ id: "a" }, { id: "c" }] }), null);
