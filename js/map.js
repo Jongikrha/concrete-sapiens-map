@@ -261,7 +261,10 @@ function initMap() {
     // 의도). 3이었을 때 동네 수준으로 확대해도 계속 뭉쳐 보인다는 피드백이
     // 있어(2026-08-12) 동네/빌딩 군 정도에서는 풀리도록 5로 올림.
     minLevel: 5,
-    disableClickZoom: false,
+    // 뭉친 별을 눌러도 확대만 계속되고 글이 안 나와 불편하다는 피드백
+    // (2026-11-22) — 클릭 확대를 끄고, 아래 clusterclick에서 뭉친 기억 중
+    // 하나를 무작위로 바로 연다. 확대는 손가락/휠로 그대로 할 수 있다.
+    disableClickZoom: true,
     // 뭉친 지점도 개별 Memory Light와 같은 별+광훈 구성으로 보이도록
     // makeClusterBackground()가 만든 SVG를 배경 이미지로 꽂는다(숫자
     // 배지 없이, 은은한 빛무리 + 별만).
@@ -281,6 +284,8 @@ function initMap() {
       })(),
     ],
   });
+
+  kakao.maps.event.addListener(clusterer, "clusterclick", openRandomFromCluster);
 
   placesService = new kakao.maps.services.Places();
   geocoderService = new kakao.maps.services.Geocoder();
@@ -509,6 +514,22 @@ function refreshMarkerDotForGroup(group) {
   if (!entry) return;
   const selected = entry.marker === highlightedMarker;
   entry.marker.setImage(getDotImage(entry.group.key, tierForCount(entry.group.stories.length), selected, groupHasTodayStory(entry.group), groupHasUnseenStory(entry.group), groupHasPhoto(entry.group)));
+}
+
+// 뭉친 별(클러스터)을 누르면 그 안의 장소 중 하나를 무작위로 골라 글을
+// 연다. 같은 무리를 다시 누르면 방금 본 곳은 빼고 고르므로 누를 때마다
+// 다른 기억이 나온다.
+let lastClusterPickKey = null;
+function openRandomFromCluster(cluster) {
+  if (recallSessionOpen || courseModeOpen) return;
+  const inCluster = new Set(cluster.getMarkers());
+  let picks = markers.filter((m) => inCluster.has(m.marker));
+  if (!picks.length) return;
+  if (picks.length > 1) picks = picks.filter((m) => m.group.key !== lastClusterPickKey);
+  const entry = picks[Math.floor(Math.random() * picks.length)];
+  lastClusterPickKey = entry.group.key;
+  clearSearchPin();
+  openSheet(entry.group);
 }
 
 // ------------------------------------------------------------
